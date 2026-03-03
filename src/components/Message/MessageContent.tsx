@@ -7,19 +7,20 @@ import SmartMediaLayout from './SmartMediaLayout.tsx';
 
 export interface MessageContentProps {
   message: MessageType;
+  reelItems?: MessageType[];
   isOwn: boolean;
   hasOnlyMediaFiles: boolean;
 }
 
 const MessageContent = memo(
   forwardRef<HTMLDivElement, MessageContentProps>(
-    ({ message, isOwn, hasOnlyMediaFiles }, ref) => {
+    ({ message, reelItems, isOwn, hasOnlyMediaFiles }, ref) => {
       const isViewed = Boolean(message.viewers?.length);
 
       return (
         <div className={styles.message} ref={ref}>
           {message.files && message.files.length > 0 && (
-            <SmartMediaLayout files={message.files} />
+            <SmartMediaLayout files={message.files} reelItems={reelItems} />
           )}
 
           <div

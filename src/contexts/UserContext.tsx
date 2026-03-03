@@ -20,7 +20,7 @@ import type { WallpaperSetting } from './settings/types';
 import { UserContext, postJson } from './UserContextCore';
 import type { UserState, ApiResponse } from './UserContextCore';
 import type { File as FileType } from '@/types';
-import { setLastUserId } from '@/utils/chatStateStorage';
+import { setLastUserId, getLastUserId, deleteChatState } from '@/utils/chatStateStorage';
 
 const USER_CACHE_KEY = 'amica-user-cache';
 
@@ -374,6 +374,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   const logout = useCallback(async () => {
+    const userId = state.user?.id ?? getLastUserId();
+    if (userId && userId > 0) {
+      deleteChatState(userId).catch(() => {});
+    }
     try {
       await apiJson('/api/logout/', { method: 'POST' });
     } finally {
@@ -382,7 +386,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
       authLogout();
       setState({ user: null, loading: false, error: null });
     }
-  }, []);
+  }, [state.user?.id]);
 
   const value = useMemo(
     () => ({

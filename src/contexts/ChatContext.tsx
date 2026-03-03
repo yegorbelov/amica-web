@@ -49,6 +49,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   const initialFetchRef = useRef(true);
   const selectedChatIdRef = useRef(selectedChatId);
   const persistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editingMessageRef = useRef<Message | null>(null);
   selectedChatIdRef.current = selectedChatId;
   const { setActiveProfileTab } = useSettingsActions();
 
@@ -67,6 +68,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     setChats,
     initialMessagesCache,
   });
+
+  editingMessageRef.current = editingMessage;
 
   const selectedChat = useMemo(
     () => chats.find((c) => c.id === selectedChatId) ?? null,
@@ -320,7 +323,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
 
       const handleChats = (data: { chats?: unknown[] }) => {
         window.clearTimeout(timeoutId);
-        const chatsList = Array.isArray(data.chats) ? (data.chats as Chat[]) : [];
+        const chatsList = Array.isArray(data.chats)
+          ? (data.chats as Chat[])
+          : [];
         setChats(chatsList);
         setLoading(false);
         const hashRoomId = location.hash
@@ -330,10 +335,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
           setSelectedChatId(hashRoomId);
           const cached = getCachedMessages(hashRoomId);
           const chat = chatsList.find((c) => c.id === hashRoomId);
-          if (
-            chat?.last_message &&
-            (!cached || cached.length === 0)
-          ) {
+          if (chat?.last_message && (!cached || cached.length === 0)) {
             updateMessages([chat.last_message], hashRoomId);
           }
           fetchChat(hashRoomId);
@@ -364,6 +366,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (editingMessageRef.current) return;
         setSelectedChatId(null);
         setActiveProfileTab(null);
         location.hash = '';

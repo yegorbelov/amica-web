@@ -113,3 +113,20 @@ export async function setChatState(
     };
   });
 }
+
+export async function deleteChatState(userId: number): Promise<void> {
+  if (!userId || !Number.isFinite(userId)) return;
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const store = getStore(db, 'readwrite');
+    const req = store.delete(userId);
+    req.onerror = () => {
+      db.close();
+      reject(req.error);
+    };
+    req.onsuccess = () => {
+      db.close();
+      resolve();
+    };
+  });
+}

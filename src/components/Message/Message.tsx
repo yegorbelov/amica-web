@@ -6,17 +6,10 @@ import MessageContent from './MessageContent';
 
 export interface MessageProps {
   message: MessageType;
-  onContextMenu?: (e: React.MouseEvent) => void;
-  onTouchStart?: (e: React.TouchEvent<HTMLDivElement>) => void;
-  onTouchEnd?: (e: React.TouchEvent<HTMLDivElement>) => void;
+  reelItems?: MessageType[];
 }
 
-const Message: React.FC<MessageProps> = ({
-  message,
-  onContextMenu,
-  onTouchStart,
-  onTouchEnd,
-}) => {
+const Message: React.FC<MessageProps> = ({ message, reelItems }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   useMessageDimensions(containerRef);
 
@@ -34,9 +27,7 @@ const Message: React.FC<MessageProps> = ({
   return (
     <div
       className={`temp_full ${isOwn ? 'own-message' : 'other-message'}`}
-      onContextMenu={onContextMenu}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
+      data-message-id={message.id}
     >
       <div
         ref={containerRef}
@@ -44,6 +35,7 @@ const Message: React.FC<MessageProps> = ({
       >
         <MessageContent
           message={message}
+          reelItems={reelItems}
           isOwn={isOwn}
           hasOnlyMediaFiles={hasOnlyMediaFiles}
         />

@@ -7,14 +7,21 @@ import AudioLayout from './AudioLayout';
 import { useChatMessages } from '@/contexts/ChatContextCore';
 import Reel from './Reel';
 import type { File } from '@/types';
+import type { Message } from '@/types';
 import DocumentLayout from './DocumentLayout';
 
 interface Props {
   files: File[];
+  reelItems?: Message[];
   onClick?: (file: File) => void;
 }
 
-const SmartMediaLayout: React.FC<Props> = ({ files }) => {
+interface InnerProps {
+  files: File[];
+  items: Message[];
+}
+
+function SmartMediaLayoutInner({ files, items }: InnerProps) {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   const mediaFiles = useMemo(
@@ -46,7 +53,6 @@ const SmartMediaLayout: React.FC<Props> = ({ files }) => {
   }, []);
 
   const [reelVisible, setReelVisible] = useState(false);
-  const { messages } = useChatMessages();
 
   const lastTap = useRef<number>(0);
   const handleClick = () => {
@@ -66,10 +72,6 @@ const SmartMediaLayout: React.FC<Props> = ({ files }) => {
       }, DOUBLE_CLICK_DELAY);
     }
   };
-
-  const items = messages.filter(
-    (message) => Array.isArray(message.files) && message.files.length > 0,
-  );
 
   const MAX_W = Math.min(windowWidth - 60, 432);
   const MAX_H = 560;
@@ -188,6 +190,25 @@ const SmartMediaLayout: React.FC<Props> = ({ files }) => {
       )}
     </>
   );
+}
+
+function SmartMediaLayoutWithContext({ files }: { files: File[] }) {
+  const { messages } = useChatMessages();
+  const items = useMemo(
+    () =>
+      messages.filter(
+        (m) => Array.isArray(m.files) && m.files.length > 0,
+      ),
+    [messages],
+  );
+  return <SmartMediaLayoutInner files={files} items={items} />;
+}
+
+const SmartMediaLayout: React.FC<Props> = ({ files, reelItems: reelItemsProp }) => {
+  if (reelItemsProp != null) {
+    return <SmartMediaLayoutInner files={files} items={reelItemsProp} />;
+  }
+  return <SmartMediaLayoutWithContext files={files} />;
 };
 
 export default SmartMediaLayout;

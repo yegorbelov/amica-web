@@ -23,6 +23,9 @@ const MessageInput: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editableRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  /** Per-chat draft text; key = roomId */
+  const draftByChatIdRef = useRef<Record<number, string>>({});
+  const prevRoomIdRef = useRef<number | undefined>(undefined);
 
   const { selectedChat } = useSelectedChat();
   const { updateMessageInChat } = useMessagesActions();
@@ -31,6 +34,24 @@ const MessageInput: React.FC = () => {
   const { setTerm, setResults } = useSearchContext();
 
   const roomId = selectedChat?.id;
+
+  // Per-chat drafts: on chat switch save current to previous room, load new room's draft
+  useEffect(() => {
+    const prevId = prevRoomIdRef.current;
+    if (prevId !== undefined && prevId !== roomId) {
+      draftByChatIdRef.current[prevId] = message;
+      setEditingMessage(null);
+    }
+    prevRoomIdRef.current = roomId;
+    if (roomId !== undefined) {
+      const draft = draftByChatIdRef.current[roomId] ?? '';
+      setMessage(draft);
+      if (editableRef.current) {
+        editableRef.current.innerText = draft;
+      }
+    }
+  }, [roomId, setEditingMessage, message]);
+
   useEffect(() => {
     const handleGlobalKeydown = (e: KeyboardEvent): void => {
       if (
@@ -115,6 +136,8 @@ const MessageInput: React.FC = () => {
 
   useEffect(() => {
     if (!editingMessage || !roomId) return;
+    // Save current draft before showing message being edited so we can restore after edit
+    draftByChatIdRef.current[roomId] = message;
     const text = editingMessage.value ?? '';
     setMessage(text);
     if (editableRef.current) {
@@ -129,16 +152,17 @@ const MessageInput: React.FC = () => {
       selection?.removeAllRanges();
       selection?.addRange(range);
     }
-  }, [editingMessage?.id, roomId, editingMessage]);
+  }, [editingMessage?.id, roomId, editingMessage, message]);
 
   const cancelEdit = useCallback(() => {
     setEditingMessage(null);
-    setMessage('');
+    const draft =
+      roomId !== undefined ? (draftByChatIdRef.current[roomId] ?? '') : '';
+    setMessage(draft);
     if (editableRef.current) {
-      editableRef.current.innerText = '';
-      // editableRef.current.style.height = '20px';
+      editableRef.current.innerText = draft;
     }
-  }, [setEditingMessage]);
+  }, [setEditingMessage, roomId]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -245,6 +269,7 @@ const MessageInput: React.FC = () => {
     (e: React.KeyboardEvent) => {
       if (editingMessage && e.key === 'Escape') {
         e.preventDefault();
+        e.stopPropagation();
         cancelEdit();
         return;
       }
