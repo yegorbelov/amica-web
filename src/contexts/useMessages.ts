@@ -1,4 +1,10 @@
-import { useCallback, useState, useEffect, useRef } from 'react';
+import {
+  useCallback,
+  useState,
+  useEffect,
+  useRef,
+  startTransition,
+} from 'react';
 import type { Message, Chat } from '@/types';
 import type { WebSocketMessage } from '@/utils/websocket-manager';
 import { websocketManager } from '@/utils/websocket-manager';
@@ -6,6 +12,8 @@ import { websocketManager } from '@/utils/websocket-manager';
 export interface UseMessagesParams {
   selectedChatId: number | null;
   setChats: React.Dispatch<React.SetStateAction<Chat[]>>;
+  /** Initial cache from IndexedDB hydration; applied once when set */
+  initialMessagesCache?: Record<number, Message[]> | null;
 }
 
 export interface UseMessagesReturn {
@@ -27,6 +35,7 @@ export interface UseMessagesReturn {
 export function useMessages({
   selectedChatId,
   setChats,
+  initialMessagesCache,
 }: UseMessagesParams): UseMessagesReturn {
   const [messagesCache, setMessagesCache] = useState<{
     [roomId: number]: Message[];
@@ -34,10 +43,24 @@ export function useMessages({
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
 
   const messagesCacheRef = useRef(messagesCache);
+  const appliedInitialCacheRef = useRef(false);
 
   useEffect(() => {
     messagesCacheRef.current = messagesCache;
   }, [messagesCache]);
+
+  useEffect(() => {
+    if (
+      appliedInitialCacheRef.current ||
+      !initialMessagesCache ||
+      Object.keys(initialMessagesCache).length === 0
+    )
+      return;
+    appliedInitialCacheRef.current = true;
+    startTransition(() => {
+      setMessagesCache(initialMessagesCache);
+    });
+  }, [initialMessagesCache]);
 
   const messages = selectedChatId ? (messagesCache[selectedChatId] ?? []) : [];
 
@@ -129,7 +152,10 @@ export function useMessages({
         const result = { ...prev, [chatId]: newList };
         setChats((prevChats) => {
           const targetChat = prevChats.find((c) => c.id === chatId);
-          if (!targetChat?.last_message || Number(targetChat.last_message.id) !== mid)
+          if (
+            !targetChat?.last_message ||
+            Number(targetChat.last_message.id) !== mid
+          )
             return prevChats;
           const newLast =
             newList.length > 0 ? newList[newList.length - 1] : null;
@@ -145,7 +171,11 @@ export function useMessages({
 
   const handleMessageUpdated = useCallback(
     (data: WebSocketMessage) => {
-      if (data.type === 'message_updated' && data.chat_id != null && data.data) {
+      if (
+        data.type === 'message_updated' &&
+        data.chat_id != null &&
+        data.data
+      ) {
         const roomId = data.chat_id;
         const updatedMessage = data.data as unknown as Message;
         if (updatedMessage.is_deleted) {

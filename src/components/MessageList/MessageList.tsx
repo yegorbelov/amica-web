@@ -13,7 +13,7 @@ import { useMessageContextMenu } from './useMessageContextMenu';
 
 const MessageList: React.FC = () => {
   const { selectedChat } = useSelectedChat();
-  const { messages, setEditingMessage, removeMessageFromChat } =
+  const { messages, messagesLoading, setEditingMessage, removeMessageFromChat } =
     useChatMessages();
   const { containerRef: jumpContainerRef, setIsVisible } = useJumpActions();
   const { showSnackbar } = useSnackbar();
@@ -78,7 +78,10 @@ const MessageList: React.FC = () => {
         <ViewersList viewers={currentViewers} onClose={handleViewersClose} />
       )}
 
-      {messages.length === 0 && (
+      {messagesLoading && (
+        <div className={styles['messages-loading']}>Loading</div>
+      )}
+      {messages.length === 0 && !messagesLoading && (
         <div className={styles['no-messages']}>No messages yet</div>
       )}
       {reversedMessages.map((message) =>

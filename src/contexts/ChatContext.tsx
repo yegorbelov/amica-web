@@ -11,6 +11,7 @@ import { apiFetch, apiUpload } from '@/utils/apiFetch';
 import { websocketManager } from '@/utils/websocket-manager';
 import type { WebSocketMessage } from '@/utils/websocket-manager';
 import { useSettingsActions } from './settings/context';
+import { getChatState, setChatState } from '@/utils/chatStateStorage';
 import {
   ChatMetaContext,
   ChatMessagesContext,
@@ -26,16 +27,24 @@ import {
   type EditingContextType,
 } from './ChatContextCore';
 import { useMessages } from './useMessages';
+import { useUser } from './UserContextCore';
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
+  const { user } = useUser();
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialMessagesCache, setInitialMessagesCache] = useState<Record<
+    number,
+    Message[]
+  > | null>(null);
+  const [loadingChatId, setLoadingChatId] = useState<number | null>(null);
   const initialFetchRef = useRef(true);
   const selectedChatIdRef = useRef(selectedChatId);
+  const persistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   selectedChatIdRef.current = selectedChatId;
   const { setActiveProfileTab } = useSettingsActions();
 
@@ -49,7 +58,11 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     removeMessageFromChat,
     getCachedMessages,
     handleNewMessage,
-  } = useMessages({ selectedChatId, setChats });
+  } = useMessages({
+    selectedChatId,
+    setChats,
+    initialMessagesCache,
+  });
 
   const selectedChat = useMemo(
     () => chats.find((c) => c.id === selectedChatId) ?? null,
@@ -66,11 +79,13 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
 
   const fetchChat = useCallback(
     async (chatId: number) => {
+      setLoadingChatId(chatId);
       const applyChatData = (data: {
         media?: Chat['media'];
         members?: Chat['members'];
         messages?: Message[];
       }) => {
+        setLoadingChatId(null);
         if (data.media) {
           setChats((prevChats) =>
             prevChats.map((chat) =>
@@ -88,10 +103,13 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         setSelectedChatId(chatId);
       };
 
+      const clearLoading = () => setLoadingChatId(null);
+
       if (websocketManager.isConnected()) {
         const timeoutId = window.setTimeout(() => {
           websocketManager.off('chat', handleChat);
           websocketManager.off('message', handleError);
+          clearLoading();
           apiFetch(`/api/get_chat/${chatId}/`)
             .then((res) => (res.ok ? res.json() : Promise.reject(res)))
             .then(applyChatData)
@@ -121,6 +139,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
           window.clearTimeout(timeoutId);
           websocketManager.off('chat', handleChat);
           websocketManager.off('message', handleError);
+          clearLoading();
           apiFetch(`/api/get_chat/${chatId}/`)
             .then((res) => (res.ok ? res.json() : Promise.reject(res)))
             .then(applyChatData)
@@ -143,6 +162,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         applyChatData(data);
       } catch (err) {
         console.error(err);
+        clearLoading();
         updateMessages([], chatId);
         setSelectedChatId(chatId);
       }
@@ -287,13 +307,18 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
 
       const handleChats = (data: { chats?: unknown[] }) => {
         window.clearTimeout(timeoutId);
-        setChats(Array.isArray(data.chats) ? (data.chats as Chat[]) : []);
+        const chatsList = Array.isArray(data.chats) ? (data.chats as Chat[]) : [];
+        setChats(chatsList);
         setLoading(false);
         const hashRoomId = location.hash
           ? Number(location.hash.substring(1))
           : null;
         if (hashRoomId) {
           setSelectedChatId(hashRoomId);
+          const chat = chatsList.find((c) => c.id === hashRoomId);
+          if (chat?.last_message) {
+            updateMessages([chat.last_message], hashRoomId);
+          }
           fetchChat(hashRoomId);
         }
         websocketManager.off('chats', handleChats);
@@ -317,7 +342,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       setError(err instanceof Error ? err.message : 'Unknown error');
       setLoading(false);
     }
-  }, [fetchChat]);
+  }, [fetchChat, updateMessages]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -333,6 +358,49 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [setActiveProfileTab]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    getChatState(user.id)
+      .then((state) => {
+        if (!state) return;
+        if (state.chats?.length) setChats(state.chats);
+        if (state.selectedChatId != null) {
+          setSelectedChatId(state.selectedChatId);
+          const hash = state.selectedChatId;
+          if (hash !== Number(location.hash.substring(1))) {
+            location.hash = String(hash);
+          }
+        }
+        if (
+          state.messagesCache &&
+          Object.keys(state.messagesCache).length > 0
+        ) {
+          setInitialMessagesCache(state.messagesCache);
+        }
+      })
+      .catch(() => {});
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || chats.length === 0) return;
+    if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
+    persistTimeoutRef.current = setTimeout(() => {
+      persistTimeoutRef.current = null;
+      setChatState(user.id, {
+        chats,
+        selectedChatId,
+        messagesCache,
+        savedAt: '',
+      }).catch(() => {});
+    }, 500);
+    return () => {
+      if (persistTimeoutRef.current) {
+        clearTimeout(persistTimeoutRef.current);
+        persistTimeoutRef.current = null;
+      }
+    };
+  }, [user?.id, chats, selectedChatId, messagesCache]);
 
   const handleCreateTemporaryChat = useCallback(
     (user: User) => {
@@ -359,9 +427,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   const handleChatClick = useCallback(
     (chatId: number) => {
       if (selectedChatIdRef.current === chatId) return;
+      selectChat(chatId);
+      const chat = chats.find((c) => c.id === chatId);
+      if (chat?.last_message) {
+        updateMessages([chat.last_message], chatId);
+      }
       fetchChat(chatId);
     },
-    [fetchChat],
+    [chats, fetchChat, selectChat, updateMessages],
   );
 
   const valueMeta: ChatMetaContextType = useMemo(
@@ -408,6 +481,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     () => ({
       messages,
       messagesCache,
+      messagesLoading:
+        selectedChatId !== null && loadingChatId === selectedChatId,
       editingMessage,
       setEditingMessage,
       updateMessages,
@@ -421,6 +496,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     [
       messages,
       messagesCache,
+      selectedChatId,
+      loadingChatId,
       editingMessage,
       setEditingMessage,
       updateMessages,
