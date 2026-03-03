@@ -80,7 +80,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   const fetchUser = useCallback(async () => {
     setState((prev) => ({
       ...prev,
-      loading: prev.user?.id !== 0,
+      loading: !prev.user || prev.user.id === 0,
       error: null,
     }));
 
@@ -92,7 +92,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
     }) => {
       if (data.success && data.user) {
         setCachedUser(data.user);
-        setState({ user: data.user, loading: false, error: null });
         if (data.active_wallpaper) {
           setActiveWallpaper({
             id: data.active_wallpaper.id,
@@ -101,6 +100,16 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
             blur: 0,
           });
         }
+        setState((prev) => {
+          if (
+            prev.user &&
+            prev.user.id !== 0 &&
+            prev.user.id === data.user!.id
+          ) {
+            return { ...prev, loading: false };
+          }
+          return { user: data.user!, loading: false, error: null };
+        });
       } else {
         setCachedUser(null);
         setState({

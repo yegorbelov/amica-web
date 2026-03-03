@@ -375,10 +375,15 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
           if (hash !== Number(location.hash.substring(1))) {
             location.hash = String(hash);
           }
+          const chat = state.chats?.find((c) => c.id === state.selectedChatId);
+          if (chat?.last_message) {
+            updateMessages([chat.last_message], state.selectedChatId);
+          }
+          fetchChat(state.selectedChatId);
         }
       })
       .catch(() => {});
-  }, [user]);
+  }, [user, fetchChat, updateMessages]);
 
   useEffect(() => {
     if (!user?.id || chats.length === 0) return;
