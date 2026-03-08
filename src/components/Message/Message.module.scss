@@ -281,6 +281,18 @@
 :global(.message_select_check) {
   position: absolute;
   margin-left: 12px;
+  display: flex;
+  align-items: center;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+
+  svg {
+    width: 22px;
+    height: 22px;
+    color: currentColor;
+  }
 }
 
 :global(.time-left) {
@@ -341,7 +353,7 @@
 
 .message_div.selected_prepare {
   user-select: none;
-  margin-left: 40px;
+  // margin-left: 40px;
   transition: margin-left 0.4s;
 }
 

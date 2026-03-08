@@ -17,6 +17,9 @@ import { useSnackbar } from '@/contexts/snackbar/SnackbarContextCore';
 import type { Message as MessageType, User } from '@/types';
 import ViewersList from './ViewersList';
 import { useMessageContextMenu } from './useMessageContextMenu';
+import { websocketManager } from '@/utils/websocket-manager';
+import { Icon } from '../Icons/AutoIcons';
+import Button from '../ui/button/Button';
 
 const VISIBLE_BUFFER = 7;
 const PAGINATION_THRESHOLD_PX = 300;
@@ -44,12 +47,62 @@ const MessageList: React.FC = () => {
   const [viewersVisible, setViewersVisible] = useState(false);
   const [currentViewers, setCurrentViewers] = useState<User[]>([]);
 
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<number>>(
+    () => new Set(),
+  );
+
   const handleShowViewers = useCallback((msg: MessageType) => {
     setCurrentViewers(msg.viewers || []);
     setViewersVisible(true);
   }, []);
 
   const handleViewersClose = useCallback(() => setViewersVisible(false), []);
+
+  const enterSelectionMode = useCallback((message: MessageType) => {
+    setIsSelectionMode(true);
+    setSelectedMessageIds((prev) => new Set(prev).add(message.id));
+  }, []);
+
+  const toggleMessageSelection = useCallback((messageId: number) => {
+    setSelectedMessageIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(messageId)) next.delete(messageId);
+      else next.add(messageId);
+      return next;
+    });
+  }, []);
+
+  const exitSelectionMode = useCallback(() => {
+    setIsSelectionMode(false);
+    setSelectedMessageIds(new Set());
+  }, []);
+
+  const deleteSelectedMessages = useCallback(() => {
+    if (!selectedChat?.id || selectedMessageIds.size === 0) return;
+    const messagesById = messagesByIdRef.current;
+    const ownSelected = [...selectedMessageIds].filter((id) => {
+      const msg = messagesById.get(String(id));
+      return msg?.is_own;
+    });
+    ownSelected.forEach((messageId) => {
+      removeMessageFromChat(selectedChat.id, messageId);
+      websocketManager.sendMessage({
+        type: 'delete_message',
+        chat_id: selectedChat.id,
+        message_id: messageId,
+      });
+    });
+    exitSelectionMode();
+    if (ownSelected.length > 0)
+      showSnackbar(`Deleted ${ownSelected.length} message(s)`);
+  }, [
+    selectedChat,
+    selectedMessageIds,
+    removeMessageFromChat,
+    exitSelectionMode,
+    showSnackbar,
+  ]);
 
   const {
     menuItems,
@@ -69,6 +122,7 @@ const MessageList: React.FC = () => {
     canCopyToClipboard,
     onShowViewers: handleShowViewers,
     triggerClipboardCheck,
+    onSelectMessage: enterSelectionMode,
   });
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -108,12 +162,14 @@ const MessageList: React.FC = () => {
     handleTouchStart,
     handleTouchEnd,
   });
+
   useEffect(() => {
     messagesRef.current = messages;
-    const byId = new Map<string, MessageType>();
+    const byId = messagesByIdRef.current;
+    byId.clear();
     for (const m of messages) byId.set(String(m.id), m);
-    messagesByIdRef.current = byId;
   }, [messages]);
+
   useEffect(() => {
     handlersRef.current = {
       handleMessageContextMenu,
@@ -564,6 +620,29 @@ const MessageList: React.FC = () => {
 
   return (
     <div className='room_div' ref={mergedRef}>
+      {isSelectionMode && (
+        <div className={styles.selectionBar}>
+          <Button
+            type='button'
+            className={styles.selectionBarCancel}
+            onClick={exitSelectionMode}
+            aria-label='Cancel selection'
+          >
+            <Icon name='Cross' />
+            <span>Cancel</span>
+          </Button>
+          <Button
+            type='button'
+            className={styles.selectionBarDelete}
+            onClick={deleteSelectedMessages}
+            disabled={selectedMessageIds.size === 0}
+            aria-label='Delete selected'
+          >
+            <Icon name='Delete' />
+            <span>Delete ({selectedMessageIds.size})</span>
+          </Button>
+        </div>
+      )}
       {menuVisible && (
         <ContextMenu
           items={menuItems}
@@ -591,7 +670,14 @@ const MessageList: React.FC = () => {
       )}
       {reversedMessages.map((message) =>
         !message.is_deleted && (message.value || message.files?.length) ? (
-          <Message key={message.id} message={message} reelItems={reelItems} />
+          <Message
+            key={message.id}
+            message={message}
+            reelItems={reelItems}
+            selectionMode={isSelectionMode}
+            isSelected={selectedMessageIds.has(message.id)}
+            onToggleSelect={() => toggleMessageSelection(message.id)}
+          />
         ) : null,
       )}
     </div>

@@ -382,7 +382,9 @@ const MessageInput: React.FC = () => {
       if (!editableRef.current) return;
 
       const lines = text.split(/\r\n|\r|\n/);
-      const html = lines.join('<br>');
+      const escapeHtml = (s: string) =>
+        s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const html = lines.map(escapeHtml).join('<br>');
 
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0) return;
@@ -448,7 +450,7 @@ const MessageInput: React.FC = () => {
         {attachmentIcon}
       </>
     ),
-    [attachmentIcon],
+    [attachmentIcon, handleFileUpload],
   );
 
   useEffect(() => {

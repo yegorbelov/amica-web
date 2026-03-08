@@ -42,23 +42,23 @@
   z-index: -1;
 }
 
-:global(.left-menu)::after {
-  content: '';
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  backdrop-filter: blur(5px);
-  background: rgba(0, 0, 0, 0.2);
-  mask-image: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 1) 0px,
-    rgba(0, 0, 0, 0) calc(60px + var(--sat)),
-    rgba(0, 0, 0, 0) calc(100% - 60px - var(--sab)),
-    rgba(0, 0, 0, 1) 100%
-  );
-  pointer-events: none;
-}
+// :global(.left-menu)::after {
+//   content: '';
+//   position: fixed;
+//   bottom: 0;
+//   width: 100%;
+//   height: 100%;
+//   backdrop-filter: blur(5px);
+//   background: rgba(0, 0, 0, 0.2);
+//   mask-image: linear-gradient(
+//     to bottom,
+//     rgba(0, 0, 0, 1) 0px,
+//     rgba(0, 0, 0, 0) calc(60px + var(--sat)),
+//     rgba(0, 0, 0, 0) calc(100% - 60px - var(--sab)),
+//     rgba(0, 0, 0, 1) 100%
+//   );
+//   pointer-events: none;
+// }
 
 :global(.chat-list-title) {
   display: none;

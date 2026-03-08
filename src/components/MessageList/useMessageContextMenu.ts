@@ -20,6 +20,8 @@ export interface UseMessageContextMenuParams {
   onShowViewers: (msg: MessageType) => void;
   /** Call when menu opens so clipboard check can run lazily (avoids init re-render). */
   triggerClipboardCheck?: () => void;
+  /** Call when user chooses "Select" to enter multi-select mode with this message. */
+  onSelectMessage?: (msg: MessageType) => void;
 }
 
 export interface UseMessageContextMenuResult {
@@ -45,6 +47,7 @@ export function useMessageContextMenu({
   canCopyToClipboard,
   onShowViewers,
   triggerClipboardCheck,
+  onSelectMessage,
 }: UseMessageContextMenuParams): UseMessageContextMenuResult {
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -223,7 +226,18 @@ export function useMessageContextMenu({
         onClick: () => handleEditMessage(menuMessage),
       },
       { label: 'Forward', icon: 'Forward' as IconName, onClick: () => {} },
-      { label: 'Select', icon: 'Select' as IconName, onClick: () => {} },
+      {
+        label: 'Select',
+        icon: 'Select' as IconName,
+        onClick: () => {
+          if (menuMessage && onSelectMessage) {
+            onSelectMessage(menuMessage);
+            setMenuVisible(false);
+            setMenuPos(null);
+            setMenuMessage(null);
+          }
+        },
+      },
       ...(menuMessage?.is_own
         ? [
             { separator: true, label: '', onClick: () => {} },
@@ -255,6 +269,7 @@ export function useMessageContextMenu({
       handleEditMessage,
       handleDeleteMessage,
       onShowViewers,
+      onSelectMessage,
     ],
   );
 

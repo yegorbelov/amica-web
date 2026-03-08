@@ -232,7 +232,8 @@
   padding-bottom: max(10px, var(--sab));
   transition:
     padding-bottom 300ms cubic-bezier(0.075, 0.82, 0.165, 1),
-    margin-right 0.2s;
+    margin-right var(--side-bar-show-up-duration)
+      var(--side-bar-show-up-timing-function);
 
   width: var(--main-chat-window-width);
   max-width: 100%;

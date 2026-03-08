@@ -113,7 +113,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             className={`${styles['context-menu__item']} ${
               item.danger ? styles['context-menu__item--danger'] : ''
             }`}
-            style={{ animationDelay: `${idx * 25}ms` }}
+            style={{ animationDelay: `${idx * 15}ms` }}
             onClick={() => {
               item.onClick();
               onClose();

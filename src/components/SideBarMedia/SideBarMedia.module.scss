@@ -1,7 +1,7 @@
 .container {
   --sidebar-width: 420px;
-  --ttd: 0.4s;
-  --ttf: ease;
+  --ttd: var(--side-bar-show-up-duration);
+  --ttf: var(--side-bar-show-up-timing-function);
   position: absolute;
   width: 384px;
   height: 100%;

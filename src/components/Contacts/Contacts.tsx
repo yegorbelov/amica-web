@@ -14,7 +14,7 @@ const Contacts = () => {
   if (error) return <div>{t('contacts.error') ?? `Error: ${error}`}</div>;
 
   return (
-    <div>
+    <div className={styles.contacts}>
       {contacts.length > 0 && (
         <ul>
           {contacts.map((contact) => (

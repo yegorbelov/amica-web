@@ -44,7 +44,8 @@
   height: 100%;
   object-fit: cover;
   scale: 1.05;
-  transition: scale 0.2s ease-in-out;
+  transition: scale var(--side-bar-show-up-duration)
+    var(--side-bar-show-up-timing-function);
   pointer-events: none;
   // opacity: 0.8;
 }

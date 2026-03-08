@@ -153,7 +153,7 @@ const MainChatWindow: React.FC = () => {
           >
             <div className={`room_wrapper ${sideBarVisible ? 'shifted' : ''}`}>
               <Wallpaper />
-              <MessageList />
+              <MessageList key={selectedChat.id} />
             </div>
           </div>
           <SendArea />
