@@ -447,7 +447,6 @@ const MessageInput: React.FC<SendAreaProps> = ({
     () => (
       <>
         <Icon name='Cross' />
-        Cancel
       </>
     ),
     [],
