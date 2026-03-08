@@ -120,9 +120,11 @@ const MessageList: React.FC<MessageListProps> = ({
   const messagesRef = useRef(messages);
   const messagesByIdRef = useRef(new Map<string, MessageType>());
   const isSelectionModeRef = useRef(isSelectionMode);
+  const selectedMessageIdsRef = useRef(selectedMessageIds);
   const selectionGestureCandidateRef = useRef<{
     kind: 'mouse' | 'touch';
     messageId: number;
+    isSelected: boolean;
     startX: number;
     startY: number;
     pointerId?: number;
@@ -146,6 +148,10 @@ const MessageList: React.FC<MessageListProps> = ({
   useEffect(() => {
     isSelectionModeRef.current = isSelectionMode;
   }, [isSelectionMode]);
+
+  useEffect(() => {
+    selectedMessageIdsRef.current = selectedMessageIds;
+  }, [selectedMessageIds]);
 
   useEffect(() => {
     handlersRef.current = {
@@ -206,11 +212,17 @@ const MessageList: React.FC<MessageListProps> = ({
   );
 
   const beginSelectionGestureCandidate = useCallback(
-    (messageId: number, pointerId: number, startX: number, startY: number) => {
-      if (isSelectionModeRef.current) return;
+    (
+      messageId: number,
+      isSelected: boolean,
+      pointerId: number,
+      startX: number,
+      startY: number,
+    ) => {
       selectionGestureCandidateRef.current = {
         kind: 'mouse',
         messageId,
+        isSelected,
         startX,
         startY,
         pointerId,
@@ -235,7 +247,11 @@ const MessageList: React.FC<MessageListProps> = ({
       );
       if (distance < SELECTION_DRAG_THRESHOLD_PX) return false;
       selectionGestureCandidateRef.current = null;
-      beginPointerSelection(candidate.messageId, false, candidate.pointerId ?? null);
+      beginPointerSelection(
+        candidate.messageId,
+        candidate.isSelected,
+        candidate.pointerId ?? null,
+      );
       applyPointerSelectionAtPoint(clientX, clientY);
       return true;
     },
@@ -432,6 +448,7 @@ const MessageList: React.FC<MessageListProps> = ({
         selectionGestureCandidateRef.current = {
           kind: 'touch',
           messageId,
+          isSelected: selectedMessageIdsRef.current.has(messageId),
           startX: center.x,
           startY: center.y,
         };
@@ -833,6 +850,7 @@ const MessageList: React.FC<MessageListProps> = ({
             onSelectionGestureCandidateStart={(pointerId, clientX, clientY) =>
               beginSelectionGestureCandidate(
                 message.id,
+                selectedMessageIds.has(message.id),
                 pointerId,
                 clientX,
                 clientY,
