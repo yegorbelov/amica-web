@@ -130,31 +130,10 @@
   display: flex;
   margin: 3px 15px;
   z-index: 0;
-  // border-radius: 20px;
   max-width: min(432px, calc(100% - 60px));
   font-size: 1rem;
   overflow: hidden;
   position: relative;
-  --td: 0.15s;
-  --ttf: ease-out;
-  transition:
-    --mainColor 0.4s var(--ttf),
-    --messageGradientDegree 0.4s var(--ttf),
-    --messageColor1 0.4s var(--ttf),
-    --messageColor2 0.4s var(--ttf),
-    --messageColor3 0.4s var(--ttf),
-    --messageColor4 0.4s var(--ttf),
-    --messageColor5 0.4s var(--ttf),
-    --messageStop1 0.4s var(--ttf),
-    --messageStop2 0.4s var(--ttf),
-    --messageStop3 0.4s var(--ttf),
-    --messageStop4 0.4s var(--ttf),
-    --messageStop5 0.4s var(--ttf),
-    margin-left var(--td) var(--ttf),
-    width var(--td) var(--ttf),
-    height var(--td) var(--ttf),
-    opacity var(--td) var(--ttf),
-    translate var(--td) var(--ttf);
 
   &.right {
     margin-left: auto;
@@ -166,12 +145,30 @@
   border-radius: 20px;
 
   &.darker {
-    // background-color: rgb(from var(--mainColor) r g b / 90%);
-    // position: absolute;
-
-    // background-attachment: fixed;
+    --td: 0.15s;
+    --ttf: ease-out;
+    transition:
+      --mainColor 0.4s var(--ttf),
+      --messageGradientDegree 0.4s var(--ttf),
+      --messageColor1 0.4s var(--ttf),
+      --messageColor2 0.4s var(--ttf),
+      --messageColor3 0.4s var(--ttf),
+      --messageColor4 0.4s var(--ttf),
+      --messageColor5 0.4s var(--ttf),
+      --messageStop1 0.4s var(--ttf),
+      --messageStop2 0.4s var(--ttf),
+      --messageStop3 0.4s var(--ttf),
+      --messageStop4 0.4s var(--ttf),
+      --messageStop5 0.4s var(--ttf),
+      margin-left var(--td) var(--ttf),
+      width var(--td) var(--ttf),
+      height var(--td) var(--ttf),
+      opacity var(--td) var(--ttf),
+      translate var(--td) var(--ttf);
     clip-path: inset(0 round 20px);
+
     background: none;
+    border-radius: 0;
     backdrop-filter: none;
     outline: none;
     &::before {
@@ -179,10 +176,9 @@
       z-index: -1;
       content: '';
       position: fixed;
-      top: 0;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      inset: 0;
+      // contain-intrinsic-size: 432px 100%;
+      contain: strict;
 
       background: linear-gradient(
         var(--messageGradientDegree, 168deg),
@@ -196,11 +192,7 @@
       // background: linear-gradient(168deg, rgb(229, 124, 0), rgb(94, 0, 0));
       // background: linear-gradient(90deg, #08203e, #557c93);
     }
-
-    // background-size: cover;
-    // background-position: center;
   }
-  // animation: message_loaded 0.2s ease-in-out;
 }
 
 @keyframes message_loaded {

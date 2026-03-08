@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo } from 'react';
+import { useRef, useCallback, useMemo, useState, useEffect } from 'react';
 import styles from './Profile.module.scss';
 import { useSettings } from '@/contexts/settings/context';
 import Input from '../SideBarMedia/Input';
@@ -162,6 +162,12 @@ const suggestedGradients: GradientSuggestedType[] = [
   },
 ];
 
+const MAX_CUSTOM_GRADIENT_COLORS = 5;
+const DEFAULT_CUSTOM_GRADIENT = {
+  degree: 168,
+  colors: ['#ff0f7b', '#f89b29', '#8364e8', '#239eab', '#091970'],
+};
+
 const parseToHSL = (inputColor: string) => {
   const temp = document.createElement('div');
   temp.style.color = inputColor;
@@ -211,11 +217,66 @@ const parseToHSL = (inputColor: string) => {
   };
 };
 
+const normalizeDegree = (value: number) => {
+  const normalized = Math.round(value) % 360;
+  return normalized < 0 ? normalized + 360 : normalized;
+};
+
+const buildGradientFromEditor = (
+  degree: number,
+  colors: string[],
+): GradientSuggestedType => {
+  const activeColors = colors.slice(0, MAX_CUSTOM_GRADIENT_COLORS);
+  const gradientColors =
+    activeColors.length <= 1
+      ? [
+          { color: activeColors[0] ?? '#000000', stop: '0%' },
+          { color: activeColors[0] ?? '#000000', stop: '100%' },
+        ]
+      : activeColors.map((color, index) => ({
+          color,
+          stop: `${Math.round((index / (activeColors.length - 1)) * 100)}%`,
+        }));
+
+  return {
+    name: 'Custom',
+    degree: `${normalizeDegree(degree)}deg`,
+    colors: gradientColors,
+  };
+};
+
+const parseGradientForEditor = (
+  gradient: GradientSuggestedType | null,
+  accentColor: string,
+) => {
+  if (!gradient?.colors?.length) {
+    return {
+      degree: DEFAULT_CUSTOM_GRADIENT.degree,
+      colors: [accentColor, accentColor],
+    };
+  }
+
+  const parsedDegree = Number.parseInt(gradient.degree, 10);
+  const baseColors = gradient.colors.map((item) => item.color);
+  const allSame = baseColors.every((item) => item === baseColors[0]);
+  const colorCount = allSame
+    ? 1
+    : Math.min(Math.max(baseColors.length, 2), MAX_CUSTOM_GRADIENT_COLORS);
+
+  return {
+    degree: Number.isFinite(parsedDegree)
+      ? normalizeDegree(parsedDegree)
+      : DEFAULT_CUSTOM_GRADIENT.degree,
+    colors: baseColors.slice(0, colorCount),
+  };
+};
+
 const ColorPicker = () => {
-  const { setColor, color, setGradient } = useSettings();
+  const { setColor, color, gradient, setGradient } = useSettings();
 
   const hueRef = useRef<HTMLDivElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
+  const angleDialRef = useRef<HTMLDivElement>(null);
 
   const parsed = useMemo(() => parseToHSL(color), [color]);
   const hue = parsed?.h ?? 210;
@@ -224,6 +285,26 @@ const ColorPicker = () => {
 
   const animationFrameRef = useRef<number | null>(null);
   const targetColorRef = useRef({ h: hue, s: saturation, l: lightness });
+  const initialGradientEditor = useMemo(
+    () => parseGradientForEditor(gradient, color),
+    [gradient, color],
+  );
+  const [customGradientDegree, setCustomGradientDegree] = useState(
+    initialGradientEditor.degree,
+  );
+  const [customGradientColors, setCustomGradientColors] = useState<string[]>(
+    initialGradientEditor.colors,
+  );
+
+  useEffect(() => {
+    setCustomGradientDegree(initialGradientEditor.degree);
+    setCustomGradientColors(initialGradientEditor.colors);
+  }, [initialGradientEditor]);
+
+  const customGradientPreview = useMemo(
+    () => buildGradientFromEditor(customGradientDegree, customGradientColors),
+    [customGradientDegree, customGradientColors],
+  );
 
   const updateColor = useCallback(
     (h: number, s: number, l: number) => {
@@ -277,6 +358,45 @@ const ColorPicker = () => {
     [setColor],
   );
 
+  const handleCustomGradientColorCount = useCallback(
+    (count: number) => {
+      setCustomGradientColors((prev) => {
+        if (count <= prev.length) return prev.slice(0, count);
+        const next = [...prev];
+        while (next.length < count) {
+          next.push(next[next.length - 1] ?? color);
+        }
+        return next;
+      });
+    },
+    [color],
+  );
+
+  const handleCustomGradientColorChange = useCallback(
+    (index: number, value: string) => {
+      setCustomGradientColors((prev) =>
+        prev.map((item, itemIndex) => (itemIndex === index ? value : item)),
+      );
+    },
+    [],
+  );
+
+  const handleAngleDial = useCallback((clientX: number, clientY: number) => {
+    const el = angleDialRef.current;
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const radians = Math.atan2(clientY - centerY, clientX - centerX);
+    const degrees = normalizeDegree((radians * 180) / Math.PI + 90);
+    setCustomGradientDegree(degrees);
+  }, []);
+
+  const handleApplyCustomGradient = useCallback(() => {
+    setGradient(customGradientPreview);
+  }, [customGradientPreview, setGradient]);
+
   return (
     <div className={styles.colorPickerContainer}>
       <div className={styles.suggestedColors}>
@@ -317,6 +437,99 @@ const ColorPicker = () => {
           }
         >
           Set the Same as Accent
+        </Button>
+      </div>
+
+      <div className={styles.customGradientSection}>
+        <div className={styles.suggestedColorsTitle}>Custom background gradient</div>
+        <div className={styles.customGradientPreviewWrapper}>
+          <button
+            type='button'
+            className={styles.customGradientPreviewButton}
+            style={{
+              background: `linear-gradient(${customGradientPreview.degree}, ${customGradientPreview.colors.map((item) => `${item.color} ${item.stop}`).join(', ')})`,
+            }}
+            onClick={handleApplyCustomGradient}
+            aria-label='Use custom gradient'
+          />
+          <div className={styles.customGradientPreviewInfo}>
+            <div>{customGradientColors.length} color(s)</div>
+            <div>{customGradientDegree}deg</div>
+          </div>
+        </div>
+        <div className={styles.customGradientCountRow}>
+          {[1, 2, 3, 4, 5].map((count) => (
+            <Button
+              key={`custom-gradient-count-${count}`}
+              type='button'
+              className={`${styles.customGradientCountButton} ${
+                customGradientColors.length === count ? styles.active : ''
+              }`}
+              onClick={() => handleCustomGradientColorCount(count)}
+            >
+              {count}
+            </Button>
+          ))}
+        </div>
+        <div className={styles.customGradientColorsGrid}>
+          {customGradientColors.map((customColor, index) => (
+            <label
+              key={`custom-gradient-color-${index}`}
+              className={styles.customGradientColorCard}
+            >
+              <span className={styles.customGradientColorLabel}>
+                Color {index + 1}
+              </span>
+              <input
+                className={styles.customGradientColorInput}
+                type='color'
+                value={customColor}
+                onChange={(e) =>
+                  handleCustomGradientColorChange(index, e.target.value)
+                }
+                aria-label={`Gradient color ${index + 1}`}
+              />
+              <span className={styles.customGradientColorValue}>
+                {customColor.toUpperCase()}
+              </span>
+            </label>
+          ))}
+        </div>
+        <div className={styles.customGradientAngleSection}>
+          <div className={styles.customGradientAngleHeader}>
+            <span>Angle</span>
+            <span>{customGradientDegree}deg</span>
+          </div>
+          <div
+            ref={angleDialRef}
+            className={styles.customGradientAngleDial}
+            onPointerDown={(e) => handleAngleDial(e.clientX, e.clientY)}
+            onPointerMove={(e) =>
+              e.buttons === 1 && handleAngleDial(e.clientX, e.clientY)
+            }
+          >
+            <div className={styles.customGradientAngleDialInner} />
+            <div
+              className={styles.customGradientAngleIndicator}
+              style={{ rotate: `${customGradientDegree}deg` }}
+            />
+          </div>
+          <input
+            className={styles.customGradientAngleSlider}
+            type='range'
+            min='0'
+            max='359'
+            value={customGradientDegree}
+            onChange={(e) => setCustomGradientDegree(Number(e.target.value))}
+            aria-label='Gradient angle'
+          />
+        </div>
+        <Button
+          key='color-picker-apply-custom-gradient-button'
+          className={styles.setSameAsAccentButton}
+          onClick={handleApplyCustomGradient}
+        >
+          Use Custom Gradient
         </Button>
       </div>
 

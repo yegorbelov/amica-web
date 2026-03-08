@@ -525,3 +525,153 @@ $suggestedColorPreviewSize: 40px;
 .setSameAsAccentButton {
   width: 100% !important;
 }
+
+.customGradientSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.customGradientPreviewWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.customGradientPreviewButton {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.15),
+    0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+.customGradientPreviewInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9375rem;
+}
+
+.customGradientCountRow {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.customGradientCountButton {
+  width: 100% !important;
+  min-width: 0;
+
+  &.active {
+    background: rgba(127, 127, 127, 0.2) !important;
+  }
+}
+
+.customGradientColorsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.customGradientColorCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.customGradientColorLabel {
+  font-size: 0.875rem;
+  color: var(--secondaryColor);
+}
+
+.customGradientColorInput {
+  width: 100%;
+  height: 40px;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.customGradientColorValue {
+  font-size: 0.875rem;
+  font-family: monospace;
+}
+
+.customGradientAngleSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.customGradientAngleHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9375rem;
+}
+
+.customGradientAngleDial {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto;
+  border-radius: 50%;
+  cursor: grab;
+  touch-action: none;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.22),
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.22)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.customGradientAngleDialInner {
+  position: absolute;
+  inset: 18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.customGradientAngleIndicator {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  width: 2px;
+  height: calc(50% - 18px);
+  transform-origin: center calc(100% - 12px);
+  translate: -50% 0;
+  border-radius: 999px;
+  background: linear-gradient(to bottom, var(--mainColor), transparent);
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -2px;
+    translate: -50% 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--mainColor);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
+  }
+}
+
+.customGradientAngleSlider {
+  width: 100%;
+}

@@ -8,12 +8,9 @@
   --jump-to-bottom-height: 45px;
   bottom: calc(var(--jump-to-bottom-bottom) + var(--jump-to-bottom-height));
   margin-bottom: calc((var(--jump-to-bottom-height)) * -1);
-  overflow: hidden;
   border-radius: 100%;
   width: 45px !important;
   height: var(--jump-to-bottom-height) !important;
-  text-align: center;
-  user-select: none;
   opacity: 0;
   transform: scale(0);
 }
