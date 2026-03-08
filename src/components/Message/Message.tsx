@@ -11,6 +11,12 @@ export interface MessageProps {
   selectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
+  onPointerSelectStart?: (pointerId: number) => void;
+  onSelectionGestureCandidateStart?: (
+    pointerId: number,
+    clientX: number,
+    clientY: number,
+  ) => void;
 }
 
 const Message: React.FC<MessageProps> = ({
@@ -19,8 +25,11 @@ const Message: React.FC<MessageProps> = ({
   selectionMode = false,
   isSelected = false,
   onToggleSelect,
+  onPointerSelectStart,
+  onSelectionGestureCandidateStart,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const suppressSelectionClickRef = useRef(false);
   useMessageDimensions(containerRef);
 
   const isOwn = message.is_own;
@@ -36,9 +45,36 @@ const Message: React.FC<MessageProps> = ({
 
   return (
     <div
-      className={`temp_full ${isOwn ? 'own-message' : 'other-message'} ${selectionMode && isSelected ? 'selected' : ''}`}
+      className={`temp_full ${isOwn ? 'own-message' : 'other-message'} ${selectionMode && isSelected ? 'selected' : ''} ${selectionMode ? 'selection-mode' : ''}`}
       data-message-id={message.id}
-      onClick={selectionMode ? onToggleSelect : undefined}
+      onPointerDown={
+        (e) => {
+          if (!selectionMode && e.pointerType === 'mouse' && e.button === 0) {
+            onSelectionGestureCandidateStart?.(
+              e.pointerId,
+              e.clientX,
+              e.clientY,
+            );
+            return;
+          }
+          if (!selectionMode) return;
+          if (e.pointerType === 'touch') return;
+          e.preventDefault();
+          suppressSelectionClickRef.current = true;
+          onPointerSelectStart?.(e.pointerId);
+        }
+      }
+      onClick={
+        selectionMode && onToggleSelect
+          ? () => {
+              if (suppressSelectionClickRef.current) {
+                suppressSelectionClickRef.current = false;
+                return;
+              }
+              onToggleSelect();
+            }
+          : undefined
+      }
       role={selectionMode ? 'button' : undefined}
       tabIndex={selectionMode ? 0 : undefined}
       onKeyDown={

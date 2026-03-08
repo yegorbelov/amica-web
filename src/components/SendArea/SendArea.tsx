@@ -23,7 +23,19 @@ import JumpToBottom from '../JumpToBottom/JumpToBottom';
 import Button from '../ui/button/Button';
 import FilesPreview from './FilesPreview';
 
-const MessageInput: React.FC = () => {
+interface SendAreaProps {
+  isSelectionMode?: boolean;
+  selectedMessagesCount?: number;
+  onExitSelectionMode?: () => void;
+  onDeleteSelectedMessages?: () => void;
+}
+
+const MessageInput: React.FC<SendAreaProps> = ({
+  isSelectionMode = false,
+  selectedMessagesCount = 0,
+  onExitSelectionMode,
+  onDeleteSelectedMessages,
+}) => {
   const [message, setMessage] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -431,7 +443,24 @@ const MessageInput: React.FC = () => {
     () => <Icon name='SendMobile' className={styles['send_svg']} />,
     [],
   );
-  const crossIcon = useMemo(() => <Icon name='Cross' />, []);
+  const crossIcon = useMemo(
+    () => (
+      <>
+        <Icon name='Cross' />
+        Cancel
+      </>
+    ),
+    [],
+  );
+  const deleteIcon = useMemo(
+    () => (
+      <>
+        <Icon name='Delete' />
+        Delete
+      </>
+    ),
+    [],
+  );
   const editIcon = useMemo(
     () => <Icon name='Edit' className={styles['edit-bar-icon']} />,
     [],
@@ -463,75 +492,102 @@ const MessageInput: React.FC = () => {
       <div className='send_area'>
         <JumpToBottom />
         <div className={styles['send_div_container']}>
-          {files.length > 0 && (
-            <FilesPreview
-              files={files}
-              onClearAll={() => setFiles([])}
-              onRemoveFile={removeFile}
-            />
-          )}
-          <form
-            className={styles['send_div']}
-            encType='multipart/form-data'
-            onSubmit={handleSubmit}
-            ref={formRef}
-          >
-            <Button
-              className={styles['file_div']}
-              onClick={handleFileClick}
-              onKeyDown={(e) => e.key === 'Enter' && handleFileClick()}
-            >
-              {fileButtonContent}
-            </Button>
-
-            <div className={styles['textarea_container']}>
-              {editingMessage && (
-                <div className={styles['edit-bar']}>
-                  <span className={styles['edit-bar-label']}>
-                    {editIcon} Editing message
-                  </span>
-                  <Button
-                    key={'send-area-cancel-edit-button'}
-                    onClick={cancelEdit}
-                    aria-label='Cancel edit'
-                    className={styles['edit-bar-cancel']}
-                  >
-                    {crossIcon}
-                  </Button>
-                </div>
-              )}
-              <div className={styles['textarea-container']}>
-                <div
-                  ref={editableRef}
-                  onInput={handleInput}
-                  onKeyDown={handleKeyDown}
-                  onPaste={handlePaste}
-                  className={styles['textarea']}
-                  contentEditable
-                  suppressContentEditableWarning
-                  spellCheck={false}
-                  autoFocus={false}
-                />
-                <span
-                  className={`${styles['textarea_placeholder']} ${message ? styles.hidden : ''}`}
-                >
-                  Message
-                </span>
-              </div>
+          {isSelectionMode ? (
+            <div className={styles['selection-bar']}>
+              <Button
+                className={styles['selection-bar-cancel']}
+                onClick={onExitSelectionMode}
+                aria-label='Cancel selection'
+              >
+                {crossIcon}
+              </Button>
+              <span className={styles['selection-bar-count']}>
+                Selected {selectedMessagesCount}
+              </span>
+              <Button
+                className={styles['selection-bar-delete']}
+                onClick={onDeleteSelectedMessages}
+                disabled={selectedMessagesCount === 0}
+                aria-label='Delete selected'
+              >
+                {deleteIcon}
+              </Button>
             </div>
+          ) : (
+            <>
+              {files.length > 0 && (
+                <FilesPreview
+                  files={files}
+                  onClearAll={() => setFiles([])}
+                  onRemoveFile={removeFile}
+                />
+              )}
+              <form
+                className={styles['send_div']}
+                encType='multipart/form-data'
+                onSubmit={handleSubmit}
+                ref={formRef}
+              >
+                <Button
+                  className={styles['file_div']}
+                  onClick={handleFileClick}
+                  onKeyDown={(e) => e.key === 'Enter' && handleFileClick()}
+                >
+                  {fileButtonContent}
+                </Button>
 
-            <Button
-              onPointerDown={(e) => {
-                e.preventDefault();
-              }}
-              onClick={handleSubmit}
-              className={styles['input_submit']}
-              disabled={(!message.trim() && files.length === 0) || isUploading}
-              aria-label='Send Message'
-            >
-              {sendIcon}
-            </Button>
-          </form>
+                <div className={styles['textarea_container']}>
+                  {editingMessage && (
+                    <div className={styles['edit-bar']}>
+                      <span className={styles['edit-bar-label']}>
+                        {editIcon} Editing message
+                      </span>
+                      <Button
+                        key={'send-area-cancel-edit-button'}
+                        onClick={cancelEdit}
+                        aria-label='Cancel edit'
+                        className={styles['edit-bar-cancel']}
+                      >
+                        {crossIcon}
+                      </Button>
+                    </div>
+                  )}
+                  <div className={styles['textarea-container']}>
+                    <div
+                      ref={editableRef}
+                      onInput={handleInput}
+                      onKeyDown={handleKeyDown}
+                      onPaste={handlePaste}
+                      className={styles['textarea']}
+                      contentEditable
+                      suppressContentEditableWarning
+                      spellCheck={false}
+                      autoFocus={false}
+                    />
+                    <span
+                      className={`${styles['textarea_placeholder']} ${message ? styles.hidden : ''}`}
+                    >
+                      Message
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                  }}
+                  onClick={handleSubmit}
+                  className={styles['input_submit']}
+                  disabled={
+                    (!message.trim() && files.length === 0) || isUploading
+                  }
+                  aria-label='Send Message'
+                >
+                  {sendIcon}
+                </Button>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </>

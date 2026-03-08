@@ -17,15 +17,27 @@ import { useSnackbar } from '@/contexts/snackbar/SnackbarContextCore';
 import type { Message as MessageType, User } from '@/types';
 import ViewersList from './ViewersList';
 import { useMessageContextMenu } from './useMessageContextMenu';
-import { websocketManager } from '@/utils/websocket-manager';
-import { Icon } from '../Icons/AutoIcons';
-import Button from '../ui/button/Button';
 
 const VISIBLE_BUFFER = 7;
 const PAGINATION_THRESHOLD_PX = 300;
 const MIN_MESSAGES_TO_TRIM = 40;
 const TRIM_DEBOUNCE_MS = 1000;
-const MessageList: React.FC = () => {
+const SELECTION_DRAG_THRESHOLD_PX = 8;
+interface MessageListProps {
+  isSelectionMode: boolean;
+  selectedMessageIds: Set<number>;
+  onSelectMessage: (message: MessageType) => void;
+  onToggleMessageSelection: (messageId: number) => void;
+  onSetMessageSelection: (messageId: number, selected: boolean) => void;
+}
+
+const MessageList: React.FC<MessageListProps> = ({
+  isSelectionMode,
+  selectedMessageIds,
+  onSelectMessage,
+  onToggleMessageSelection,
+  onSetMessageSelection,
+}) => {
   const { selectedChat } = useSelectedChat();
   const {
     messages,
@@ -47,62 +59,12 @@ const MessageList: React.FC = () => {
   const [viewersVisible, setViewersVisible] = useState(false);
   const [currentViewers, setCurrentViewers] = useState<User[]>([]);
 
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<number>>(
-    () => new Set(),
-  );
-
   const handleShowViewers = useCallback((msg: MessageType) => {
     setCurrentViewers(msg.viewers || []);
     setViewersVisible(true);
   }, []);
 
   const handleViewersClose = useCallback(() => setViewersVisible(false), []);
-
-  const enterSelectionMode = useCallback((message: MessageType) => {
-    setIsSelectionMode(true);
-    setSelectedMessageIds((prev) => new Set(prev).add(message.id));
-  }, []);
-
-  const toggleMessageSelection = useCallback((messageId: number) => {
-    setSelectedMessageIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(messageId)) next.delete(messageId);
-      else next.add(messageId);
-      return next;
-    });
-  }, []);
-
-  const exitSelectionMode = useCallback(() => {
-    setIsSelectionMode(false);
-    setSelectedMessageIds(new Set());
-  }, []);
-
-  const deleteSelectedMessages = useCallback(() => {
-    if (!selectedChat?.id || selectedMessageIds.size === 0) return;
-    const messagesById = messagesByIdRef.current;
-    const ownSelected = [...selectedMessageIds].filter((id) => {
-      const msg = messagesById.get(String(id));
-      return msg?.is_own;
-    });
-    ownSelected.forEach((messageId) => {
-      removeMessageFromChat(selectedChat.id, messageId);
-      websocketManager.sendMessage({
-        type: 'delete_message',
-        chat_id: selectedChat.id,
-        message_id: messageId,
-      });
-    });
-    exitSelectionMode();
-    if (ownSelected.length > 0)
-      showSnackbar(`Deleted ${ownSelected.length} message(s)`);
-  }, [
-    selectedChat,
-    selectedMessageIds,
-    removeMessageFromChat,
-    exitSelectionMode,
-    showSnackbar,
-  ]);
 
   const {
     menuItems,
@@ -122,7 +84,7 @@ const MessageList: React.FC = () => {
     canCopyToClipboard,
     onShowViewers: handleShowViewers,
     triggerClipboardCheck,
-    onSelectMessage: enterSelectionMode,
+    onSelectMessage,
   });
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -157,6 +119,17 @@ const MessageList: React.FC = () => {
   const mergedRef = containerRef;
   const messagesRef = useRef(messages);
   const messagesByIdRef = useRef(new Map<string, MessageType>());
+  const isSelectionModeRef = useRef(isSelectionMode);
+  const selectionGestureCandidateRef = useRef<{
+    kind: 'mouse' | 'touch';
+    messageId: number;
+    startX: number;
+    startY: number;
+    pointerId?: number;
+  } | null>(null);
+  const dragPointerIdRef = useRef<number | null>(null);
+  const dragSelectionModeRef = useRef<'select' | 'deselect' | null>(null);
+  const dragVisitedIdsRef = useRef<Set<number>>(new Set());
   const handlersRef = useRef({
     handleMessageContextMenu,
     handleTouchStart,
@@ -171,12 +144,124 @@ const MessageList: React.FC = () => {
   }, [messages]);
 
   useEffect(() => {
+    isSelectionModeRef.current = isSelectionMode;
+  }, [isSelectionMode]);
+
+  useEffect(() => {
     handlersRef.current = {
       handleMessageContextMenu,
       handleTouchStart,
       handleTouchEnd,
     };
   }, [handleMessageContextMenu, handleTouchStart, handleTouchEnd]);
+
+  const stopPointerSelection = useCallback(() => {
+    selectionGestureCandidateRef.current = null;
+    dragPointerIdRef.current = null;
+    dragSelectionModeRef.current = null;
+    dragVisitedIdsRef.current.clear();
+  }, []);
+
+  const beginPointerSelection = useCallback(
+    (messageId: number, isSelected: boolean, pointerId: number | null) => {
+      dragPointerIdRef.current = pointerId;
+      dragSelectionModeRef.current = isSelected ? 'deselect' : 'select';
+      dragVisitedIdsRef.current = new Set([messageId]);
+      onSetMessageSelection(
+        messageId,
+        dragSelectionModeRef.current === 'select',
+      );
+    },
+    [onSetMessageSelection],
+  );
+
+  const handlePointerSelectionStart = useCallback(
+    (messageId: number, isSelected: boolean, pointerId: number) => {
+      if (!isSelectionMode) return;
+      beginPointerSelection(messageId, isSelected, pointerId);
+    },
+    [beginPointerSelection, isSelectionMode],
+  );
+
+  const applyPointerSelectionAtPoint = useCallback(
+    (clientX: number, clientY: number) => {
+      const target = document.elementFromPoint(clientX, clientY);
+      const messageEl = target?.closest('[data-message-id]');
+      const messageIdAttr = messageEl?.getAttribute('data-message-id');
+      if (messageIdAttr == null) return;
+      const messageId = Number(messageIdAttr);
+      if (
+        Number.isNaN(messageId) ||
+        dragVisitedIdsRef.current.has(messageId) ||
+        dragSelectionModeRef.current == null
+      )
+        return;
+      dragVisitedIdsRef.current.add(messageId);
+      onSetMessageSelection(
+        messageId,
+        dragSelectionModeRef.current === 'select',
+      );
+    },
+    [onSetMessageSelection],
+  );
+
+  const beginSelectionGestureCandidate = useCallback(
+    (messageId: number, pointerId: number, startX: number, startY: number) => {
+      if (isSelectionModeRef.current) return;
+      selectionGestureCandidateRef.current = {
+        kind: 'mouse',
+        messageId,
+        startX,
+        startY,
+        pointerId,
+      };
+    },
+    [],
+  );
+
+  const maybeActivateSelectionGesture = useCallback(
+    (clientX: number, clientY: number, pointerId?: number) => {
+      const candidate = selectionGestureCandidateRef.current;
+      if (!candidate) return false;
+      if (
+        pointerId != null &&
+        candidate.pointerId != null &&
+        candidate.pointerId !== pointerId
+      )
+        return false;
+      const distance = Math.hypot(
+        clientX - candidate.startX,
+        clientY - candidate.startY,
+      );
+      if (distance < SELECTION_DRAG_THRESHOLD_PX) return false;
+      selectionGestureCandidateRef.current = null;
+      beginPointerSelection(candidate.messageId, false, candidate.pointerId ?? null);
+      applyPointerSelectionAtPoint(clientX, clientY);
+      return true;
+    },
+    [applyPointerSelectionAtPoint, beginPointerSelection],
+  );
+
+  const getTouchesCenter = useCallback((touches: TouchList) => {
+    const first = touches[0];
+    const second = touches[1];
+    return {
+      x: (first.clientX + second.clientX) / 2,
+      y: (first.clientY + second.clientY) / 2,
+    };
+  }, []);
+
+  useEffect(() => {
+    const endSelection = () => {
+      stopPointerSelection();
+    };
+    window.addEventListener('pointerup', endSelection, { passive: true });
+    window.addEventListener('pointercancel', endSelection, { passive: true });
+    return () => {
+      window.removeEventListener('pointerup', endSelection);
+      window.removeEventListener('pointercancel', endSelection);
+    };
+  }, [stopPointerSelection]);
 
   const clearScheduledTrim = useCallback(() => {
     if (trimDebounceRef.current) {
@@ -336,6 +421,27 @@ const MessageList: React.FC = () => {
         );
     };
     const onTouchStart = (e: TouchEvent) => {
+      if (isSelectionModeRef.current) {
+        handlersRef.current.handleTouchEnd();
+        return;
+      }
+      if (e.touches.length === 2) {
+        handlersRef.current.handleTouchEnd();
+        const msgEl = (e.target as HTMLElement).closest('[data-message-id]');
+        const id = msgEl?.getAttribute('data-message-id');
+        if (id == null) return;
+        const messageId = Number(id);
+        if (Number.isNaN(messageId)) return;
+        const center = getTouchesCenter(e.touches);
+        selectionGestureCandidateRef.current = {
+          kind: 'touch',
+          messageId,
+          startX: center.x,
+          startY: center.y,
+        };
+        return;
+      }
+      selectionGestureCandidateRef.current = null;
       const msgEl = (e.target as HTMLElement).closest('[data-message-id]');
       const id = msgEl?.getAttribute('data-message-id');
       if (id == null) return;
@@ -346,18 +452,53 @@ const MessageList: React.FC = () => {
           message,
         );
     };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 2) {
+        if (
+          selectionGestureCandidateRef.current?.kind === 'touch' &&
+          dragSelectionModeRef.current == null
+        ) {
+          selectionGestureCandidateRef.current = null;
+        }
+        return;
+      }
+      const center = getTouchesCenter(e.touches);
+      if (maybeActivateSelectionGesture(center.x, center.y)) {
+        e.preventDefault();
+        return;
+      }
+      if (dragSelectionModeRef.current != null) {
+        e.preventDefault();
+        applyPointerSelectionAtPoint(center.x, center.y);
+      }
+    };
     const onTouchEnd = () => {
       handlersRef.current.handleTouchEnd();
+      if (selectionGestureCandidateRef.current?.kind === 'touch') {
+        selectionGestureCandidateRef.current = null;
+      }
+      if (dragSelectionModeRef.current != null) {
+        stopPointerSelection();
+      }
     };
     el.addEventListener('contextmenu', onContextMenu);
     el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
     el.addEventListener('touchend', onTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', onTouchEnd, { passive: true });
     return () => {
       el.removeEventListener('contextmenu', onContextMenu);
       el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
       el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
     };
-  }, []);
+  }, [
+    applyPointerSelectionAtPoint,
+    getTouchesCenter,
+    maybeActivateSelectionGesture,
+    stopPointerSelection,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -619,30 +760,29 @@ const MessageList: React.FC = () => {
   );
 
   return (
-    <div className='room_div' ref={mergedRef}>
-      {isSelectionMode && (
-        <div className={styles.selectionBar}>
-          <Button
-            type='button'
-            className={styles.selectionBarCancel}
-            onClick={exitSelectionMode}
-            aria-label='Cancel selection'
-          >
-            <Icon name='Cross' />
-            <span>Cancel</span>
-          </Button>
-          <Button
-            type='button'
-            className={styles.selectionBarDelete}
-            onClick={deleteSelectedMessages}
-            disabled={selectedMessageIds.size === 0}
-            aria-label='Delete selected'
-          >
-            <Icon name='Delete' />
-            <span>Delete ({selectedMessageIds.size})</span>
-          </Button>
-        </div>
-      )}
+    <div
+      className='room_div'
+      ref={mergedRef}
+      onPointerMove={(e) => {
+        if (
+          dragSelectionModeRef.current != null &&
+          dragPointerIdRef.current === e.pointerId
+        ) {
+          applyPointerSelectionAtPoint(e.clientX, e.clientY);
+          return;
+        }
+        const candidate = selectionGestureCandidateRef.current;
+        if (
+          candidate?.kind === 'mouse' &&
+          candidate.pointerId === e.pointerId &&
+          (e.buttons & 1) === 1
+        ) {
+          maybeActivateSelectionGesture(e.clientX, e.clientY, e.pointerId);
+        }
+      }}
+      onPointerUp={stopPointerSelection}
+      onPointerCancel={stopPointerSelection}
+    >
       {menuVisible && (
         <ContextMenu
           items={menuItems}
@@ -676,7 +816,22 @@ const MessageList: React.FC = () => {
             reelItems={reelItems}
             selectionMode={isSelectionMode}
             isSelected={selectedMessageIds.has(message.id)}
-            onToggleSelect={() => toggleMessageSelection(message.id)}
+            onToggleSelect={() => onToggleMessageSelection(message.id)}
+            onPointerSelectStart={(pointerId) =>
+              handlePointerSelectionStart(
+                message.id,
+                selectedMessageIds.has(message.id),
+                pointerId,
+              )
+            }
+            onSelectionGestureCandidateStart={(pointerId, clientX, clientY) =>
+              beginSelectionGestureCandidate(
+                message.id,
+                pointerId,
+                clientX,
+                clientY,
+              )
+            }
           />
         ) : null,
       )}

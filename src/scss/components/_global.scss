@@ -112,6 +112,7 @@ html {
 html,
 body {
   user-select: none;
+  -webkit-user-select: none;
   overflow: hidden;
   height: calc(var(--sat) + 100%);
   max-height: calc(var(--sat) + 100%);

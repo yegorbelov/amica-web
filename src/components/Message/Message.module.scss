@@ -260,6 +260,19 @@
   transition: background 1.5s;
   position: relative;
   width: 100%;
+
+  // &::before {
+  //   content: '';
+  //   position: absolute;
+  //   top: 0;
+  //   left: 0;
+  //   left: 50%;
+  //   transform: translateX(-50%);
+  //   width: 100dvw;
+  //   height: 100dvh;
+  //   z-index: -1;
+  //   pointer-events: manipulation;
+  // }
 }
 
 :global(.temp_full.active) {
@@ -273,25 +286,43 @@
   transition: background 0.4s;
 }
 
+:global(.temp_full.selection-mode) {
+  touch-action: pan-y;
+}
+
 :global(.temp_full.new_message_not_own),
 :global(.temp_full.new_message_own) {
   animation: temp_full_new_message_not_own 0.85s cubic-bezier(0.19, 1, 0.22, 1);
 }
 
 :global(.message_select_check) {
-  position: absolute;
   margin-left: 12px;
+  animation: message_select_check_animation 0.5s ease-in-out;
   display: flex;
   align-items: center;
   left: 0;
-  top: 50%;
-  transform: translateY(-50%);
   pointer-events: none;
 
   svg {
     width: 22px;
     height: 22px;
     color: currentColor;
+  }
+}
+
+@keyframes message_select_check_animation {
+  0% {
+    transform: scale(1);
+    margin-left: -22px;
+    opacity: 0;
+  }
+  50% {
+    transform: scale(0.9);
+    margin-left: 12px;
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
   }
 }
 
