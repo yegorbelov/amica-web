@@ -39,6 +39,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   const { user } = useUser();
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
+  const [temporaryChat, setTemporaryChat] = useState<Chat | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingChatId, setLoadingChatId] = useState<number | null>(null);
@@ -71,6 +72,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     prependMessages,
     appendMessages,
     updateMessageInChat,
+    removeMessagesForChat,
+    moveMessagesToChat,
     removeMessageFromChat,
     getCachedMessages,
     handleNewMessage,
@@ -82,10 +85,16 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
 
   editingMessageRef.current = editingMessage;
 
-  const selectedChat = useMemo(
-    () => chats.find((c) => c.id === selectedChatId) ?? null,
-    [chats, selectedChatId],
-  );
+  const selectedChat = useMemo(() => {
+    if (
+      selectedChatId != null &&
+      selectedChatId < 0 &&
+      temporaryChat?.id === selectedChatId
+    ) {
+      return temporaryChat;
+    }
+    return chats.find((c) => c.id === selectedChatId) ?? null;
+  }, [chats, selectedChatId, temporaryChat]);
 
   const loadOlderMessages = useCallback(
     async (chatId: number): Promise<boolean> => {
@@ -121,8 +130,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   const loadNewerMessages = useCallback(
     async (chatId: number): Promise<boolean> => {
       const cached = getCachedMessages(chatId);
-      const newestId =
-        cached?.length ? (cached[cached.length - 1]?.id as number) : undefined;
+      const newestId = cached?.length
+        ? (cached[cached.length - 1]?.id as number)
+        : undefined;
       if (newestId == null) return false;
       setLoadingNewerChatId(chatId);
       try {
@@ -178,7 +188,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       if (!cached || cached.length <= keepCount) return;
       const trimmed = cached.slice(-keepCount);
       updateMessages(trimmed, chatId, { updateChatLastMessage: false });
-      nextCursorByChatRef.current[chatId] = (trimmed[0]?.id ?? null) as number | null;
+      nextCursorByChatRef.current[chatId] = (trimmed[0]?.id ?? null) as
+        | number
+        | null;
     },
     [getCachedMessages, updateMessages],
   );
@@ -191,7 +203,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       const trimmed = cached.slice(startIndex, endIndex + 1);
       if (trimmed.length >= cached.length) return;
       updateMessages(trimmed, chatId, { updateChatLastMessage: false });
-      nextCursorByChatRef.current[chatId] = (trimmed[0]?.id ?? null) as number | null;
+      nextCursorByChatRef.current[chatId] = (trimmed[0]?.id ?? null) as
+        | number
+        | null;
     },
     [getCachedMessages, updateMessages],
   );
@@ -451,7 +465,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
           if (chat?.last_message && (!cached || cached.length === 0)) {
             updateMessages([chat.last_message], hashRoomId);
           }
-          fetchChat(hashRoomId);
+          if (hashRoomId > 0) {
+            fetchChat(hashRoomId);
+          }
         }
         websocketManager.off('chats', handleChats);
         websocketManager.off('message', handleError);
@@ -481,6 +497,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       if (e.key === 'Escape') {
         if (editingMessageRef.current) return;
         setSelectedChatId(null);
+        setTemporaryChat(null);
         setActiveProfileTab(null);
         location.hash = '';
       }
@@ -513,7 +530,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
           if (chat?.last_message) {
             updateMessages([chat.last_message], state.selectedChatId);
           }
-          fetchChat(state.selectedChatId);
+          if (state.selectedChatId > 0) {
+            fetchChat(state.selectedChatId);
+          }
         }
         if (
           state.messagesCache &&
@@ -540,13 +559,76 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   }, [user, fetchChats]);
 
   useEffect(() => {
+    const handleChatCreated = (
+      payload: WebSocketMessage & { temp_chat_id?: number; chat?: unknown },
+    ) => {
+      const tempChatId = payload.temp_chat_id;
+      const createdChat = payload.chat as Chat | undefined;
+
+      if (!createdChat?.id) return;
+
+      setChats((prevChats) => {
+        const nextChats = prevChats.filter(
+          (chat) => chat.id !== createdChat.id && chat.id !== tempChatId,
+        );
+        return [createdChat, ...nextChats];
+      });
+
+      if (createdChat.last_message) {
+        updateMessages([createdChat.last_message], createdChat.id, {
+          updateChatLastMessage: false,
+        });
+      }
+
+      if (typeof tempChatId === 'number') {
+        moveMessagesToChat(tempChatId, createdChat.id);
+        setTemporaryChat((prev) => (prev?.id === tempChatId ? null : prev));
+
+        if (selectedChatIdRef.current === tempChatId) {
+          setSelectedChatId(createdChat.id);
+          location.hash = String(createdChat.id);
+        }
+      }
+    };
+
+    websocketManager.on('chat_created', handleChatCreated);
+    return () => {
+      websocketManager.off('chat_created', handleChatCreated);
+    };
+  }, [moveMessagesToChat, updateMessages]);
+
+  useEffect(() => {
+    const handleChatDeleted = (payload: WebSocketMessage) => {
+      const deletedChatId = payload.chat_id;
+      if (deletedChatId == null) return;
+
+      setChats((prevChats) =>
+        prevChats.filter((chat) => chat.id !== deletedChatId),
+      );
+      removeMessagesForChat(deletedChatId);
+
+      if (selectedChatIdRef.current === deletedChatId) {
+        setSelectedChatId(null);
+        setTemporaryChat(null);
+        location.hash = '';
+      }
+    };
+
+    websocketManager.on('chat_deleted', handleChatDeleted);
+    return () => {
+      websocketManager.off('chat_deleted', handleChatDeleted);
+    };
+  }, [removeMessagesForChat]);
+
+  useEffect(() => {
     if (!user?.id || chats.length === 0) return;
     if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
     persistTimeoutRef.current = setTimeout(() => {
       persistTimeoutRef.current = null;
       setChatState(user.id, {
         chats,
-        selectedChatId,
+        selectedChatId:
+          selectedChatId != null && selectedChatId > 0 ? selectedChatId : null,
         messagesCache,
         savedAt: '',
       }).catch(() => {});
@@ -561,6 +643,26 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
 
   const handleCreateTemporaryChat = useCallback(
     (user: User) => {
+      const chatHasUser = (chat: Chat) =>
+        Array.isArray(chat.members) &&
+        chat.members.some((member) => member.id === user.id);
+
+      const existingChat = chats.find(
+        (chat) => chat.type === 'D' && chatHasUser(chat),
+      );
+      if (existingChat) {
+        setTemporaryChat(null);
+        window.history.pushState({}, '', `#${existingChat.id}`);
+        selectChat(existingChat.id);
+        return;
+      }
+
+      if (temporaryChat && chatHasUser(temporaryChat)) {
+        window.history.pushState({}, '', `#${temporaryChat.id}`);
+        selectChat(temporaryChat.id);
+        return;
+      }
+
       const tempId = Math.min(...chats.map((c) => c.id), 0) - 1;
       const tempChat: Chat = {
         id: tempId,
@@ -574,16 +676,33 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         primary_media: user.profile.primary_media,
       };
 
-      setChats((prev) => [tempChat, ...prev]);
-
+      setTemporaryChat(tempChat);
+      window.history.pushState({}, '', `#${tempId}`);
       selectChat(tempId);
     },
-    [chats, selectChat],
+    [chats, selectChat, temporaryChat],
   );
+
+  const deleteChat = useCallback((chatId: number) => {
+    if (chatId < 0) {
+      if (temporaryChat?.id === chatId) {
+        setTemporaryChat(null);
+      }
+      if (selectedChatIdRef.current === chatId) {
+        setSelectedChatId(null);
+        location.hash = '';
+      }
+      removeMessagesForChat(chatId);
+      return;
+    }
+
+    websocketManager.sendDeleteChat(chatId);
+  }, [temporaryChat, removeMessagesForChat]);
 
   const handleChatClick = useCallback(
     (chatId: number) => {
       if (selectedChatIdRef.current === chatId) return;
+      setTemporaryChat(null);
       selectChat(chatId);
       const cached = getCachedMessages(chatId);
       const chat = chats.find((c) => c.id === chatId);
@@ -604,6 +723,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       fetchChat,
       handleChatClick,
       handleCreateTemporaryChat,
+      deleteChat,
       addContact,
       deleteContact,
       saveContact,
@@ -618,6 +738,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       fetchChat,
       handleChatClick,
       handleCreateTemporaryChat,
+      deleteChat,
       addContact,
       deleteContact,
       saveContact,
@@ -654,6 +775,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       updateMessages,
       prependMessages,
       updateMessageInChat,
+      removeMessagesForChat,
       removeMessageFromChat,
       getCachedMessages,
       updateChatLastMessage,
@@ -676,6 +798,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       updateMessages,
       prependMessages,
       updateMessageInChat,
+      removeMessagesForChat,
       removeMessageFromChat,
       getCachedMessages,
       updateChatLastMessage,
@@ -698,6 +821,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       updateMessages,
       prependMessages,
       updateMessageInChat,
+      removeMessagesForChat,
       removeMessageFromChat,
       updateChatLastMessage,
       updateChatUnreadCount,
@@ -707,6 +831,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       updateMessages,
       prependMessages,
       updateMessageInChat,
+      removeMessagesForChat,
       removeMessageFromChat,
       updateChatLastMessage,
       updateChatUnreadCount,

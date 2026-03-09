@@ -11,6 +11,7 @@ export interface ChatMetaContextType {
   fetchChat: (chatId: number) => Promise<void>;
   handleChatClick: (chatId: number) => void;
   handleCreateTemporaryChat: (user: User) => void;
+  deleteChat: (chatId: number) => void;
   addContact: (userId: number) => void;
   deleteContact: (contactId: number) => void;
   saveContact: (contactId: number, name: string) => void;
@@ -45,6 +46,7 @@ export interface MessagesActionsContextType {
     messageId: number,
     updates: Partial<Message>,
   ) => void;
+  removeMessagesForChat: (chatId: number) => void;
   removeMessageFromChat: (chatId: number, messageId: number) => void;
   updateChatLastMessage: (chatId: number, lastMessage: Message | null) => void;
   updateChatUnreadCount: (chatId: number, unreadCount: number) => void;
@@ -85,6 +87,7 @@ export interface ChatMessagesContextType {
     messageId: number,
     updates: Partial<Message>,
   ) => void;
+  removeMessagesForChat: (chatId: number) => void;
   removeMessageFromChat: (chatId: number, messageId: number) => void;
   getCachedMessages: (roomId: number) => Message[] | null;
   updateChatLastMessage: (chatId: number, lastMessage: Message | null) => void;

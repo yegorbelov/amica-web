@@ -11,6 +11,7 @@ import {
   ChatListError,
   ChatListEmpty,
 } from './ChatListStates';
+import ContextMenu, { type MenuItem } from '../ContextMenu/ContextMenu';
 
 const MemoizedChatListItem = memo(ChatListItem);
 const ChatListContent = memo(function ChatListContent({
@@ -18,6 +19,7 @@ const ChatListContent = memo(function ChatListContent({
   selectedChatId,
   setChatItemRef,
   onChatClick,
+  onChatContextMenu,
   shouldAnimateOnInit,
   shouldHideBeforeInitAnimation,
 }: {
@@ -25,6 +27,10 @@ const ChatListContent = memo(function ChatListContent({
   selectedChatId: number | null;
   setChatItemRef: (chatId: number, el: HTMLDivElement | null) => void;
   onChatClick: (chatId: number) => void;
+  onChatContextMenu: (
+    chatId: number,
+    position: { x: number; y: number },
+  ) => void;
   shouldAnimateOnInit: boolean;
   shouldHideBeforeInitAnimation: boolean;
 }) {
@@ -40,6 +46,7 @@ const ChatListContent = memo(function ChatListContent({
           unread_count={chat.unread_count}
           isActive={selectedChatId === chat.id}
           onChatClick={onChatClick}
+          onChatContextMenu={onChatContextMenu}
           ref={(el) => setChatItemRef(chat.id, el)}
           index={index}
           shouldAnimateOnInit={shouldAnimateOnInit}
@@ -51,9 +58,12 @@ const ChatListContent = memo(function ChatListContent({
 });
 
 function ChatList() {
-  const { chats, loading, error, fetchChats, handleChatClick } = useChatMeta();
+  const { chats, loading, error, fetchChats, handleChatClick, deleteChat } =
+    useChatMeta();
   const { selectedChatId } = useSelectedChat();
   const { term } = useSearchContext();
+  const [contextMenuChatId, setContextMenuChatId] = useState<number | null>(null);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
 
   const sortedChats = useSortedChats(chats);
   const { displayChats, setChatItemRef } = useAnimatedChatOrder(sortedChats);
@@ -91,6 +101,32 @@ function ChatList() {
   const chatListRef = useRef<HTMLDivElement>(null);
   const isActive = chats.length > 0 && term.length === 0;
   const isEmpty = displayChats.length === 0;
+  const contextMenuItems = React.useMemo<MenuItem[]>(
+    () =>
+      contextMenuChatId == null
+        ? []
+        : [
+            {
+              label: 'Delete chat',
+              icon: 'Delete',
+              danger: true,
+              onClick: () => deleteChat(contextMenuChatId),
+            },
+          ],
+    [contextMenuChatId, deleteChat],
+  );
+
+  const handleContextMenuClose = React.useCallback(() => {
+    setContextMenuChatId(null);
+  }, []);
+
+  const handleChatContextMenu = React.useCallback(
+    (chatId: number, position: { x: number; y: number }) => {
+      setContextMenuChatId(chatId);
+      setContextMenuPosition(position);
+    },
+    [],
+  );
 
   if (shouldShowInitialLoading) return <ChatListLoading />;
   if (error) return <ChatListError message={error} onRetry={fetchChats} />;
@@ -117,8 +153,16 @@ function ChatList() {
           selectedChatId={selectedChatId}
           setChatItemRef={setChatItemRef}
           onChatClick={handleChatClick}
+          onChatContextMenu={handleChatContextMenu}
           shouldAnimateOnInit={shouldAnimateOnInit}
           shouldHideBeforeInitAnimation={shouldHideBeforeInitAnimation}
+        />
+      )}
+      {contextMenuChatId != null && (
+        <ContextMenu
+          items={contextMenuItems}
+          position={contextMenuPosition}
+          onClose={handleContextMenuClose}
         />
       )}
     </div>

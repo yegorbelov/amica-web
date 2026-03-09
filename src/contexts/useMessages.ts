@@ -37,6 +37,8 @@ export interface UseMessagesReturn {
     messageId: number,
     updates: Partial<Message>,
   ) => void;
+  removeMessagesForChat: (chatId: number) => void;
+  moveMessagesToChat: (fromChatId: number, toChatId: number) => void;
   removeMessageFromChat: (chatId: number, messageId: number) => void;
   getCachedMessages: (roomId: number) => Message[] | null;
   handleNewMessage: (data: WebSocketMessage) => void;
@@ -211,6 +213,38 @@ export function useMessages({
     [],
   );
 
+  const moveMessagesToChat = useCallback((fromChatId: number, toChatId: number) => {
+    if (fromChatId === toChatId) return;
+
+    setMessagesCache((prev) => {
+      const fromMessages = prev[fromChatId] ?? [];
+      const toMessages = prev[toChatId] ?? [];
+
+      const mergedMessages = [...toMessages];
+      const existingIds = new Set(mergedMessages.map((message) => message.id));
+
+      for (const message of fromMessages) {
+        if (existingIds.has(message.id)) continue;
+        mergedMessages.push(message);
+      }
+
+      const nextCache = { ...prev };
+      delete nextCache[fromChatId];
+      nextCache[toChatId] = mergedMessages;
+
+      return nextCache;
+    });
+  }, []);
+
+  const removeMessagesForChat = useCallback((chatId: number) => {
+    setMessagesCache((prev) => {
+      if (!(chatId in prev)) return prev;
+      const nextCache = { ...prev };
+      delete nextCache[chatId];
+      return nextCache;
+    });
+  }, []);
+
   const removeMessageFromChat = useCallback(
     (chatId: number, messageId: number) => {
       const mid = Number(messageId);
@@ -301,6 +335,8 @@ export function useMessages({
     prependMessages,
     appendMessages,
     updateMessageInChat,
+    removeMessagesForChat,
+    moveMessagesToChat,
     removeMessageFromChat,
     getCachedMessages,
     handleNewMessage,

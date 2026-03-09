@@ -5,8 +5,13 @@ import Avatar from '../Avatar/Avatar';
 import { useChatMeta } from '@/contexts/ChatContextCore';
 
 const GlobalSearchList: React.FC = () => {
-  const { results, loading, error } = useSearchContext<User>();
+  const { results, loading, error, clear } = useSearchContext<User>();
   const { handleCreateTemporaryChat } = useChatMeta();
+
+  const handleUserSelect = (user: User) => {
+    handleCreateTemporaryChat(user);
+    clear();
+  };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div className='text-red-500'>{error}</div>;
@@ -16,9 +21,18 @@ const GlobalSearchList: React.FC = () => {
         <li
           key={user.id}
           className={styles['search-item']}
-          onClick={() => {
-            handleCreateTemporaryChat(user);
+          onMouseDown={(e) => {
+            e.preventDefault();
+            handleUserSelect(user);
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleUserSelect(user);
+            }
+          }}
+          role='button'
+          tabIndex={0}
         >
           <Avatar
             displayName={user.username}

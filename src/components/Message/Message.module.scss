@@ -8,6 +8,13 @@
   line-height: normal;
 }
 
+.message__link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 1px;
+  overflow-wrap: anywhere;
+}
+
 .message_div_temp_separator {
   color: var(--messageMainColor);
   padding: 6px 8px;

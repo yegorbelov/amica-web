@@ -17,6 +17,10 @@ export interface ChatListItemProps {
   unread_count: number;
   isActive: boolean;
   onChatClick: (chatId: number) => void;
+  onChatContextMenu?: (
+    chatId: number,
+    position: { x: number; y: number },
+  ) => void;
 }
 
 const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
@@ -32,12 +36,19 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
       unread_count,
       isActive,
       onChatClick,
+      onChatContextMenu,
     },
     ref,
   ) => {
+    const LONG_PRESS_MS = 250;
+    const MOVE_CANCEL_THRESHOLD_PX = 8;
     const lastMessageDate =
       lastMessage && lastMessageDateFormat(lastMessage.date);
     const container = useRef<HTMLDivElement>(null);
+    const longPressTimerRef = useRef<number | null>(null);
+    const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+    const suppressNextMouseDownRef = useRef(false);
+    const longPressTriggeredRef = useRef(false);
 
     useImperativeHandle(ref, () => container.current as HTMLDivElement);
 
@@ -71,6 +82,13 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
     const goToChat = (
       e: React.MouseEvent<HTMLDivElement, MouseEvent>,
     ): void => {
+      if (suppressNextMouseDownRef.current) {
+        suppressNextMouseDownRef.current = false;
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
 
@@ -94,6 +112,57 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
       setTimeout(() => {
         onChatClick(id);
       }, 0);
+    };
+
+    const clearLongPressTimer = () => {
+      if (longPressTimerRef.current != null) {
+        window.clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    };
+
+    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+      longPressTriggeredRef.current = false;
+      clearLongPressTimer();
+      longPressTimerRef.current = window.setTimeout(() => {
+        suppressNextMouseDownRef.current = true;
+        longPressTriggeredRef.current = true;
+        onChatContextMenu?.(chatId, {
+          x: touch.clientX,
+          y: touch.clientY,
+        });
+      }, LONG_PRESS_MS);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+      if (!touchStartRef.current || e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      const movedX = Math.abs(touch.clientX - touchStartRef.current.x);
+      const movedY = Math.abs(touch.clientY - touchStartRef.current.y);
+      if (
+        movedX > MOVE_CANCEL_THRESHOLD_PX ||
+        movedY > MOVE_CANCEL_THRESHOLD_PX
+      ) {
+        clearLongPressTimer();
+      }
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+      clearLongPressTimer();
+      touchStartRef.current = null;
+      if (!longPressTriggeredRef.current) return;
+      e.preventDefault();
+      e.stopPropagation();
+      longPressTriggeredRef.current = false;
+    };
+
+    const handleTouchCancel = () => {
+      clearLongPressTimer();
+      touchStartRef.current = null;
+      longPressTriggeredRef.current = false;
     };
     const getAttachmentText = (files: File[] = []) => {
       if (!files.length) return '';
@@ -132,6 +201,15 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
           shouldAnimateOnInit ? styles['chat-list-item--animate-in'] : ''
         }`}
         onMouseDown={goToChat}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onChatContextMenu?.(chatId, { x: e.clientX, y: e.clientY });
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
         style={{ '--index': `${index}` } as React.CSSProperties}
         ref={container}
       >

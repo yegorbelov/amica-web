@@ -411,7 +411,7 @@ const ColorPicker = () => {
             />
           ))}
         </div>
-        <div className={styles.suggestedColorsSubtitle}>Background</div>
+        <div className={styles.suggestedColorsSubtitle}>Message Background</div>
 
         <div className={styles.suggestedColorsContainer}>
           {suggestedGradients.map((g) => (
@@ -441,7 +441,9 @@ const ColorPicker = () => {
       </div>
 
       <div className={styles.customGradientSection}>
-        <div className={styles.suggestedColorsTitle}>Custom background gradient</div>
+        <div className={styles.suggestedColorsTitle}>
+          Custom message background gradient
+        </div>
         <div className={styles.customGradientPreviewWrapper}>
           <button
             type='button'

@@ -29,6 +29,8 @@ export interface WebSocketMessage {
   type: string;
   chat_id?: number;
   data?: WebSocketMessageData;
+  temp_chat_id?: number;
+  chat?: unknown;
   message_id?: number;
   message?: string;
   token?: string;
@@ -43,6 +45,10 @@ interface WebSocketEventMap {
   disconnected: (data: { code: number; reason: string }) => void;
   error: (error: Error) => void;
   message: (data: WebSocketMessage) => void;
+  chat_created: (
+    data: WebSocketMessage & { temp_chat_id?: number; chat?: unknown },
+  ) => void;
+  chat_deleted: (data: WebSocketMessage) => void;
   chat_message: (data: WebSocketMessage) => void;
   message_updated: (data: WebSocketMessage) => void;
   message_deleted: (data: WebSocketMessage) => void;
@@ -295,7 +301,7 @@ class WebSocketManager {
       ) {
         setAccessToken((data as unknown as { access: string }).access);
       }
-      startTransition(() => {
+      const runSwitch = () => {
         switch (data.type) {
           case 'connection_established':
             this.emit('connection_established', data);
@@ -314,6 +320,12 @@ class WebSocketManager {
           case 'error':
             console.error('WS error:', data.message);
             this.emit('error', data);
+            break;
+          case 'chat_created':
+            if (data.chat) this.emit('chat_created', data);
+            break;
+          case 'chat_deleted':
+            if (data.chat_id !== undefined) this.emit('chat_deleted', data);
             break;
           case 'chat_message':
             if (data.data && data.chat_id !== undefined)
@@ -367,7 +379,16 @@ class WebSocketManager {
             this.emit('chat', data);
             break;
         }
-      });
+      };
+      if (
+        data.type === 'chat_created' ||
+        data.type === 'chat_message' ||
+        data.type === 'chat_deleted'
+      ) {
+        runSwitch();
+      } else {
+        startTransition(runSwitch);
+      }
     });
   }
 
@@ -426,6 +447,13 @@ class WebSocketManager {
       type: 'chat_message',
       chat_id: chatId,
       data: { value: message },
+    });
+  }
+
+  public sendDeleteChat(chatId: number) {
+    return this.sendMessage({
+      type: 'delete_chat',
+      chat_id: chatId,
     });
   }
 
