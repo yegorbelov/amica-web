@@ -8,7 +8,6 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 32px;
   z-index: 1000;
-  //   max-width: 200px;
   width: max-content;
   overflow: hidden;
   padding: 10px;
@@ -60,11 +59,13 @@
   }
   transform: scale(0);
   opacity: 0;
-  --trans-dur: 0.2s;
+  --trans-dur: 0.3s;
+  --trans-timing-function: cubic-bezier(0.18, 0.89, 0.32, 1.08);
+
   transition:
-    opacity var(--trans-dur) ease-in-out,
-    transform var(--trans-dur) ease-in-out,
-    filter var(--trans-dur) ease-in-out;
+    opacity var(--trans-dur) var(--trans-timing-function),
+    transform var(--trans-dur) var(--trans-timing-function),
+    filter var(--trans-dur) var(--trans-timing-function);
   filter: blur(5px);
   &--visible {
     transform: scale(1);

@@ -1,9 +1,4 @@
-import {
-  useState,
-  useCallback,
-  useMemo,
-  useRef,
-} from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import type { MenuItem } from '../ContextMenu/ContextMenu';
 import type { IconName } from '../Icons/AutoIcons';
 import type { Message as MessageType, File } from '@/types';
@@ -184,12 +179,12 @@ export function useMessageContextMenu({
 
   const menuItems = useMemo<MenuItem[]>(
     () => [
-      {
-        label: 'Reply',
-        icon: 'Reply' as IconName,
-        onClick: () => {},
-      },
-      { separator: true, label: '', onClick: () => {} },
+      // {
+      //   label: 'Reply',
+      //   icon: 'Reply' as IconName,
+      //   onClick: () => {},
+      // },
+      // { separator: true, label: '', onClick: () => {} },
       ...(menuMessage?.value
         ? [
             {
@@ -220,12 +215,16 @@ export function useMessageContextMenu({
           ]
         : []),
       { separator: true, label: '', onClick: () => {} },
-      {
-        label: 'Edit',
-        icon: 'Edit' as IconName,
-        onClick: () => handleEditMessage(menuMessage),
-      },
-      { label: 'Forward', icon: 'Forward' as IconName, onClick: () => {} },
+      ...(menuMessage?.is_own
+        ? [
+            {
+              label: 'Edit',
+              icon: 'Edit' as IconName,
+              onClick: () => handleEditMessage(menuMessage),
+            },
+          ]
+        : []),
+      // { label: 'Forward', icon: 'Forward' as IconName, onClick: () => {} },
       {
         label: 'Select',
         icon: 'Select' as IconName,

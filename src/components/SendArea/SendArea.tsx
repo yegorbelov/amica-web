@@ -498,7 +498,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
                 onClick={onExitSelectionMode}
                 aria-label='Cancel selection'
               >
-                {crossIcon}
+                Cancel
               </Button>
               <span className={styles['selection-bar-count']}>
                 Selected {selectedMessagesCount}

@@ -43,6 +43,7 @@ function AttachmentPreview({ file }: { file: File }) {
           {objectUrl && (
             <video
               className={styles['chat-list-item__attachment']}
+              preload='none'
               src={file.file_url ? file.file_url + '#t=0.001' : ''}
               loop
               muted

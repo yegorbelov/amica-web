@@ -58,7 +58,7 @@ export const JWTVideo = forwardRef<HTMLVideoElement, JWTVideoProps>(
         muted={muted}
         controlsList='nodownload'
         loop
-        preload='metadata'
+        preload='none'
         style={{
           width: '100%',
           height: '100%',

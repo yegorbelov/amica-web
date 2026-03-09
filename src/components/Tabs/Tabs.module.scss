@@ -92,10 +92,9 @@
   background: none;
   border: none;
   cursor: pointer;
-  transition: all 0.2s ease;
   fill: #ffffff;
   color: #ffffff;
-
+  transition: scale 0.4s cubic-bezier(0.175, 0.885, 0.32, 2.2);
   &:hover {
     .icon,
     .avatar {
@@ -103,12 +102,15 @@
     }
   }
 
+  &:active {
+    scale: 1.1;
+  }
+
   &.active {
     // background: var(--color-accent);
     background: rgba(90, 90, 90, 0.5);
     fill: var(--mainColor);
     color: var(--mainColor);
-    animation: pulse 0.4s ease-in-out;
   }
 }
 
@@ -137,21 +139,4 @@
   display: block;
   // min-height: 100%;
   width: 100%;
-}
-
-@keyframes pulse {
-  0% {
-    scale: 1;
-  }
-
-  33% {
-    scale: 0.9;
-  }
-  66% {
-    scale: 1.05;
-  }
-
-  100% {
-    scale: 1;
-  }
 }
