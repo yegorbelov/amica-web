@@ -14,7 +14,7 @@ interface ChooseListProps {
     email: string;
   } | null;
   onLogout?: () => void;
-  onRoomSelect?: (roomId: number) => void;
+  onChatSelect?: (chatId: number) => void;
 }
 
 const LeftSideBar: React.FC<ChooseListProps> = () => {

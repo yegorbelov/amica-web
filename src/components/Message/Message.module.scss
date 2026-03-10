@@ -150,28 +150,28 @@
   backdrop-filter: blur(3px);
   outline: 1px solid rgba(127, 127, 127, 0.3);
   border-radius: 20px;
+  --td: 0.15s;
+  --ttf: ease-out;
+  transition:
+    --mainColor 0.4s var(--ttf),
+    --messageGradientDegree 0.4s var(--ttf),
+    --messageColor1 0.4s var(--ttf),
+    --messageColor2 0.4s var(--ttf),
+    --messageColor3 0.4s var(--ttf),
+    --messageColor4 0.4s var(--ttf),
+    --messageColor5 0.4s var(--ttf),
+    --messageStop1 0.4s var(--ttf),
+    --messageStop2 0.4s var(--ttf),
+    --messageStop3 0.4s var(--ttf),
+    --messageStop4 0.4s var(--ttf),
+    --messageStop5 0.4s var(--ttf),
+    margin-left var(--td) var(--ttf),
+    width var(--td) var(--ttf),
+    height var(--td) var(--ttf),
+    opacity var(--td) var(--ttf),
+    translate var(--td) var(--ttf);
 
   &.darker {
-    --td: 0.15s;
-    --ttf: ease-out;
-    transition:
-      --mainColor 0.4s var(--ttf),
-      --messageGradientDegree 0.4s var(--ttf),
-      --messageColor1 0.4s var(--ttf),
-      --messageColor2 0.4s var(--ttf),
-      --messageColor3 0.4s var(--ttf),
-      --messageColor4 0.4s var(--ttf),
-      --messageColor5 0.4s var(--ttf),
-      --messageStop1 0.4s var(--ttf),
-      --messageStop2 0.4s var(--ttf),
-      --messageStop3 0.4s var(--ttf),
-      --messageStop4 0.4s var(--ttf),
-      --messageStop5 0.4s var(--ttf),
-      margin-left var(--td) var(--ttf),
-      width var(--td) var(--ttf),
-      height var(--td) var(--ttf),
-      opacity var(--td) var(--ttf),
-      translate var(--td) var(--ttf);
     clip-path: inset(0 round 20px);
 
     background: none;

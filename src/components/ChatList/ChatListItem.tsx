@@ -5,6 +5,8 @@ import styles from './ChatListItem.module.scss';
 import type { DisplayMedia, File, Message } from '@/types';
 import AttachmentPreview from './AttachmentPreview';
 import { Icon } from '../Icons/AutoIcons';
+import { useSettings } from '@/contexts/settings/context';
+import { useTranslation } from '@/contexts/languageCore';
 
 export interface ChatListItemProps {
   index?: number;
@@ -42,8 +44,15 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
   ) => {
     const LONG_PRESS_MS = 250;
     const MOVE_CANCEL_THRESHOLD_PX = 8;
+    const { settings } = useSettings();
+    const { t } = useTranslation();
     const lastMessageDate =
-      lastMessage && lastMessageDateFormat(lastMessage.date);
+      lastMessage &&
+      lastMessageDateFormat(lastMessage.date, {
+        timeFormat:
+          settings.timeFormat === 'auto' ? '12h' : settings.timeFormat,
+        t,
+      });
     const container = useRef<HTMLDivElement>(null);
     const longPressTimerRef = useRef<number | null>(null);
     const touchStartRef = useRef<{ x: number; y: number } | null>(null);

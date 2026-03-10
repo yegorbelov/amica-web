@@ -212,7 +212,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
 
   const selectChat = useCallback((chatId: number | null) => {
     setSelectedChatId(chatId);
-    // Don't clear editingMessage here — SendArea restores or clears it when roomId changes
+    // Don't clear editingMessage here — SendArea restores or clears it when chatId changes
   }, []);
 
   const fetchChat = useCallback(
@@ -683,21 +683,24 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     [chats, selectChat, temporaryChat],
   );
 
-  const deleteChat = useCallback((chatId: number) => {
-    if (chatId < 0) {
-      if (temporaryChat?.id === chatId) {
-        setTemporaryChat(null);
+  const deleteChat = useCallback(
+    (chatId: number) => {
+      if (chatId < 0) {
+        if (temporaryChat?.id === chatId) {
+          setTemporaryChat(null);
+        }
+        if (selectedChatIdRef.current === chatId) {
+          setSelectedChatId(null);
+          location.hash = '';
+        }
+        removeMessagesForChat(chatId);
+        return;
       }
-      if (selectedChatIdRef.current === chatId) {
-        setSelectedChatId(null);
-        location.hash = '';
-      }
-      removeMessagesForChat(chatId);
-      return;
-    }
 
-    websocketManager.sendDeleteChat(chatId);
-  }, [temporaryChat, removeMessagesForChat]);
+      websocketManager.sendDeleteChat(chatId);
+    },
+    [temporaryChat, removeMessagesForChat],
+  );
 
   const handleChatClick = useCallback(
     (chatId: number) => {

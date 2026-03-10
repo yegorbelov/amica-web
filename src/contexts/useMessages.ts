@@ -17,7 +17,7 @@ export interface UseMessagesParams {
 }
 
 export interface UseMessagesReturn {
-  messagesCache: { [roomId: number]: Message[] };
+  messagesCache: { [chatId: number]: Message[] };
   messages: Message[];
   editingMessage: Message | null;
   setEditingMessage: (message: Message | null) => void;
@@ -40,7 +40,7 @@ export interface UseMessagesReturn {
   removeMessagesForChat: (chatId: number) => void;
   moveMessagesToChat: (fromChatId: number, toChatId: number) => void;
   removeMessageFromChat: (chatId: number, messageId: number) => void;
-  getCachedMessages: (roomId: number) => Message[] | null;
+  getCachedMessages: (chatId: number) => Message[] | null;
   handleNewMessage: (data: WebSocketMessage) => void;
 }
 
@@ -50,7 +50,7 @@ export function useMessages({
   initialMessagesCache,
 }: UseMessagesParams): UseMessagesReturn {
   const [messagesCache, setMessagesCache] = useState<{
-    [roomId: number]: Message[];
+    [chatId: number]: Message[];
   }>({});
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
 
@@ -79,24 +79,24 @@ export function useMessages({
   const handleNewMessage = useCallback(
     (data: WebSocketMessage) => {
       if (data.type === 'chat_message' && data.chat_id && data.data) {
-        const roomId = data.chat_id;
+        const chatId = data.chat_id;
         const newMessage = data.data as unknown as Message;
 
         setChats((prevChats) =>
           prevChats.map((chat) =>
-            chat.id === roomId ? { ...chat, last_message: newMessage } : chat,
+            chat.id === chatId ? { ...chat, last_message: newMessage } : chat,
           ),
         );
 
         setMessagesCache((prevCache) => {
-          const existingMessages = prevCache[roomId] || [];
+          const existingMessages = prevCache[chatId] || [];
           const isDuplicate = existingMessages.some(
             (msg) => msg.id === newMessage.id,
           );
           if (isDuplicate) return prevCache;
           return {
             ...prevCache,
-            [roomId]: [...existingMessages, newMessage],
+            [chatId]: [...existingMessages, newMessage],
           };
         });
       }
@@ -213,28 +213,33 @@ export function useMessages({
     [],
   );
 
-  const moveMessagesToChat = useCallback((fromChatId: number, toChatId: number) => {
-    if (fromChatId === toChatId) return;
+  const moveMessagesToChat = useCallback(
+    (fromChatId: number, toChatId: number) => {
+      if (fromChatId === toChatId) return;
 
-    setMessagesCache((prev) => {
-      const fromMessages = prev[fromChatId] ?? [];
-      const toMessages = prev[toChatId] ?? [];
+      setMessagesCache((prev) => {
+        const fromMessages = prev[fromChatId] ?? [];
+        const toMessages = prev[toChatId] ?? [];
 
-      const mergedMessages = [...toMessages];
-      const existingIds = new Set(mergedMessages.map((message) => message.id));
+        const mergedMessages = [...toMessages];
+        const existingIds = new Set(
+          mergedMessages.map((message) => message.id),
+        );
 
-      for (const message of fromMessages) {
-        if (existingIds.has(message.id)) continue;
-        mergedMessages.push(message);
-      }
+        for (const message of fromMessages) {
+          if (existingIds.has(message.id)) continue;
+          mergedMessages.push(message);
+        }
 
-      const nextCache = { ...prev };
-      delete nextCache[fromChatId];
-      nextCache[toChatId] = mergedMessages;
+        const nextCache = { ...prev };
+        delete nextCache[fromChatId];
+        nextCache[toChatId] = mergedMessages;
 
-      return nextCache;
-    });
-  }, []);
+        return nextCache;
+      });
+    },
+    [],
+  );
 
   const removeMessagesForChat = useCallback((chatId: number) => {
     setMessagesCache((prev) => {
@@ -283,16 +288,29 @@ export function useMessages({
         data.chat_id != null &&
         data.data
       ) {
-        const roomId = data.chat_id;
-        const updatedMessage = data.data as unknown as Message;
-        if (updatedMessage.is_deleted) {
-          removeMessageFromChat(roomId, updatedMessage.id);
+        const chatId = data.chat_id;
+        const serverMessage = data.data as unknown as Message;
+        if (serverMessage.is_deleted) {
+          removeMessageFromChat(chatId, serverMessage.id);
           return;
         }
-        updateMessageInChat(roomId, updatedMessage.id, updatedMessage);
+        // Server sends full message (MessageSerializer) including edit_date; overwrites optimistic value
+        updateMessageInChat(chatId, serverMessage.id, serverMessage);
+        // Update chat's last_message so sidebar preview updates for all recipients
+        setChats((prevChats) => {
+          const chat = prevChats.find((c) => c.id === chatId);
+          if (
+            !chat?.last_message ||
+            Number(chat.last_message.id) !== Number(serverMessage.id)
+          )
+            return prevChats;
+          return prevChats.map((c) =>
+            c.id === chatId ? { ...c, last_message: serverMessage } : c,
+          );
+        });
       }
     },
-    [updateMessageInChat, removeMessageFromChat],
+    [updateMessageInChat, removeMessageFromChat, setChats],
   );
 
   useEffect(() => {
@@ -322,8 +340,8 @@ export function useMessages({
     };
   }, [handleMessageDeleted]);
 
-  const getCachedMessages = useCallback((roomId: number) => {
-    return messagesCacheRef.current[roomId] || null;
+  const getCachedMessages = useCallback((chatId: number) => {
+    return messagesCacheRef.current[chatId] || null;
   }, []);
 
   return {

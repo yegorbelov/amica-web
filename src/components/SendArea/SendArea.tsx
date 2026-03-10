@@ -43,13 +43,13 @@ const MessageInput: React.FC<SendAreaProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editableRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  /** Per-chat draft text; key = roomId */
+  /** Per-chat draft text; key = chatId */
   const draftByChatIdRef = useRef<Record<number, string>>({});
   /** Saved edit session when user switches chat while editing; restored on return */
   const editStateByChatIdRef = useRef<
     Record<number, { message: Message; editText: string } | null>
   >({});
-  const prevRoomIdRef = useRef<number | undefined>(undefined);
+  const prevChatIdRef = useRef<number | undefined>(undefined);
   const messageRef = useRef(message);
   messageRef.current = message;
   const editingMessageRef =
@@ -57,7 +57,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
   /** When restoring edit from another chat, pass edit text so effect doesn't overwrite */
   const pendingRestoreEditTextRef = useRef<string | null>(null);
   /** Chat in which we started editing; used to avoid overwriting other chats' drafts when switching while in edit mode */
-  const editingRoomIdRef = useRef<number | undefined>(undefined);
+  const editingChatIdRef = useRef<number | undefined>(undefined);
 
   const { selectedChat } = useSelectedChat();
   const { updateMessageInChat } = useMessagesActions();
@@ -67,7 +67,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
 
   editingMessageRef.current = editingMessage;
 
-  const roomId = selectedChat?.id;
+  const chatId = selectedChat?.id;
 
   const placeCaretAtEnd = useCallback((el: HTMLDivElement) => {
     el.focus();
@@ -79,10 +79,10 @@ const MessageInput: React.FC<SendAreaProps> = ({
     selection?.addRange(range);
   }, []);
 
-  // Per-chat drafts: on chat switch save current to previous room, load new room's draft or edit state
+  // Per-chat drafts: on chat switch save current to previous chat, load new chat's draft or edit state
   useEffect(() => {
-    const prevId = prevRoomIdRef.current;
-    if (prevId !== undefined && prevId !== roomId) {
+    const prevId = prevChatIdRef.current;
+    if (prevId !== undefined && prevId !== chatId) {
       if (editingMessageRef.current) {
         editStateByChatIdRef.current[prevId] = {
           message: editingMessageRef.current,
@@ -93,18 +93,18 @@ const MessageInput: React.FC<SendAreaProps> = ({
       }
       setEditingMessage(null);
     }
-    prevRoomIdRef.current = roomId;
-    if (roomId !== undefined) {
-      const editState = editStateByChatIdRef.current[roomId];
+    prevChatIdRef.current = chatId;
+    if (chatId !== undefined) {
+      const editState = editStateByChatIdRef.current[chatId];
       if (editState) {
         pendingRestoreEditTextRef.current = editState.editText;
         setEditingMessage(editState.message);
-        editStateByChatIdRef.current[roomId] = null;
+        editStateByChatIdRef.current[chatId] = null;
       } else {
         if (!editingMessageRef.current) {
-          editingRoomIdRef.current = undefined;
+          editingChatIdRef.current = undefined;
         }
-        const draft = draftByChatIdRef.current[roomId] ?? '';
+        const draft = draftByChatIdRef.current[chatId] ?? '';
         setMessage(draft);
         if (editableRef.current) {
           editableRef.current.innerText = draft;
@@ -112,12 +112,12 @@ const MessageInput: React.FC<SendAreaProps> = ({
         }
       }
     }
-  }, [roomId, setEditingMessage, placeCaretAtEnd]);
+  }, [chatId, setEditingMessage, placeCaretAtEnd]);
 
-  // Clear editing room ref when edit mode is left (so next edit in any chat is "fresh")
+  // Clear editing chat ref when edit mode is left (so next edit in any chat is "fresh")
   useEffect(() => {
     if (!editingMessage) {
-      editingRoomIdRef.current = undefined;
+      editingChatIdRef.current = undefined;
     }
   }, [editingMessage]);
 
@@ -164,15 +164,15 @@ const MessageInput: React.FC<SendAreaProps> = ({
 
   const sendFilesViaHttp = useCallback(
     async (filesToSend: File[], textMessage: string = '') => {
-      if (!user?.id || !roomId) {
-        console.error('User ID or Room ID is missing');
+      if (!user?.id || !chatId) {
+        console.error('User ID or Chat ID is missing');
         return false;
       }
 
       const formData = new FormData();
 
       formData.append('message', textMessage);
-      formData.append('chat_id', roomId.toString());
+      formData.append('chat_id', chatId.toString());
 
       filesToSend.forEach((file) => {
         formData.append('file', file);
@@ -192,7 +192,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
         setIsUploading(false);
       }
     },
-    [user?.id, roomId],
+    [user?.id, chatId],
   );
 
   const handleInput = useCallback(() => {
@@ -204,12 +204,12 @@ const MessageInput: React.FC<SendAreaProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!editingMessage || !roomId) return;
+    if (!editingMessage || !chatId) return;
     if (pendingRestoreEditTextRef.current !== null) {
       const editText = pendingRestoreEditTextRef.current;
       pendingRestoreEditTextRef.current = null;
-      if (roomId !== undefined) {
-        editingRoomIdRef.current = roomId;
+      if (chatId !== undefined) {
+        editingChatIdRef.current = chatId;
       }
       setMessage(editText);
       if (editableRef.current) {
@@ -220,15 +220,15 @@ const MessageInput: React.FC<SendAreaProps> = ({
     }
     // Switched to another chat while edit was active: switch effect already set field to that chat's draft; don't overwrite with previous chat's edit
     if (
-      editingRoomIdRef.current !== undefined &&
-      editingRoomIdRef.current !== roomId
+      editingChatIdRef.current !== undefined &&
+      editingChatIdRef.current !== chatId
     ) {
       return;
     }
     // Save "new message" draft only on first entering edit (messageRef still has draft); do not overwrite with edit text on re-runs
-    if (roomId !== undefined && editingRoomIdRef.current === undefined) {
-      editingRoomIdRef.current = roomId;
-      draftByChatIdRef.current[roomId] = messageRef.current;
+    if (chatId !== undefined && editingChatIdRef.current === undefined) {
+      editingChatIdRef.current = chatId;
+      draftByChatIdRef.current[chatId] = messageRef.current;
     }
     const text = editingMessage.value ?? '';
     setMessage(text);
@@ -237,22 +237,22 @@ const MessageInput: React.FC<SendAreaProps> = ({
       el.innerText = text;
       placeCaretAtEnd(el);
     }
-  }, [editingMessage?.id, roomId, editingMessage, placeCaretAtEnd]);
+  }, [editingMessage?.id, chatId, editingMessage, placeCaretAtEnd]);
 
   const cancelEdit = useCallback(() => {
     setEditingMessage(null);
-    editingRoomIdRef.current = undefined;
-    if (roomId !== undefined) {
-      editStateByChatIdRef.current[roomId] = null;
+    editingChatIdRef.current = undefined;
+    if (chatId !== undefined) {
+      editStateByChatIdRef.current[chatId] = null;
     }
     const draft =
-      roomId !== undefined ? (draftByChatIdRef.current[roomId] ?? '') : '';
+      chatId !== undefined ? (draftByChatIdRef.current[chatId] ?? '') : '';
     setMessage(draft);
     if (editableRef.current) {
       editableRef.current.innerText = draft;
       placeCaretAtEnd(editableRef.current);
     }
-  }, [setEditingMessage, roomId, placeCaretAtEnd]);
+  }, [setEditingMessage, chatId, placeCaretAtEnd]);
 
   // Escape cancels edit even when input is not focused (global listener)
   useEffect(() => {
@@ -270,17 +270,20 @@ const MessageInput: React.FC<SendAreaProps> = ({
     async (e: React.FormEvent) => {
       e.preventDefault();
 
-      if (editingMessage && roomId) {
+      if (editingMessage && chatId) {
         if (!message.trim()) return;
         setTerm('');
         setResults([]);
         const newValue = message.trim();
-        updateMessageInChat(roomId, editingMessage.id, { value: newValue });
+        updateMessageInChat(chatId, editingMessage.id, {
+          value: newValue,
+          edit_date: new Date().toISOString(),
+        });
         cancelEdit();
         websocketManager.sendMessage({
           type: 'edit_message',
           message_id: editingMessage.id,
-          chat_id: roomId,
+          chat_id: chatId,
           data: { value: newValue },
         });
         return;
@@ -303,11 +306,11 @@ const MessageInput: React.FC<SendAreaProps> = ({
         } else {
           websocketManager.sendMessage({
             type: 'chat_message',
-            chat_id: roomId,
+            chat_id: chatId,
             data: {
               value: message.trim(),
               user_id:
-                roomId && roomId < 0
+                chatId && chatId < 0
                   ? selectedChat?.members[0]?.id || 0
                   : undefined,
             },
@@ -329,7 +332,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
     [
       message,
       files,
-      roomId,
+      chatId,
       selectedChat?.members,
       sendFilesViaHttp,
       setTerm,

@@ -17,6 +17,8 @@ export interface WebSocketMessageData {
   userId?: number;
   days?: number;
   value?: string;
+  /** Server-set edit timestamp (ISO string) in message_updated payload */
+  edit_date?: string | null;
   media?: File;
   reaction?: { reaction_type: string };
   object_id?: number;

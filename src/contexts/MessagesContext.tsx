@@ -8,41 +8,41 @@ export const MessagesProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [state, dispatch] = useReducer(messagesReducer, initialState);
 
-  const getRoomMessages = (roomId: number): Message[] => {
-    return state.messages[roomId] || [];
+  const getChatMessages = (chatId: number): Message[] => {
+    return state.messages[chatId] || [];
   };
 
-  const addMessage = (roomId: number, message: Message) => {
-    dispatch({ type: 'ADD_MESSAGE', payload: { roomId, message } });
+  const addMessage = (chatId: number, message: Message) => {
+    dispatch({ type: 'ADD_MESSAGE', payload: { chatId, message } });
   };
 
   const updateMessage = (
-    roomId: number,
+    chatId: number,
     messageId: number,
     updates: Partial<Message>,
   ) => {
     dispatch({
       type: 'UPDATE_MESSAGE',
-      payload: { roomId, messageId, updates },
+      payload: { chatId, messageId, updates },
     });
   };
 
-  const deleteMessage = (roomId: number, messageId: number) => {
-    dispatch({ type: 'DELETE_MESSAGE', payload: { roomId, messageId } });
+  const deleteMessage = (chatId: number, messageId: number) => {
+    dispatch({ type: 'DELETE_MESSAGE', payload: { chatId, messageId } });
   };
 
-  const likeMessage = (roomId: number, messageId: number) => {
-    dispatch({ type: 'LIKE_MESSAGE', payload: { roomId, messageId } });
+  const likeMessage = (chatId: number, messageId: number) => {
+    dispatch({ type: 'LIKE_MESSAGE', payload: { chatId, messageId } });
   };
 
-  const loadMessages = (roomId: number, messages: Message[]) => {
-    dispatch({ type: 'LOAD_MESSAGES', payload: { roomId, messages } });
+  const loadMessages = (chatId: number, messages: Message[]) => {
+    dispatch({ type: 'LOAD_MESSAGES', payload: { chatId, messages } });
   };
 
   const value: MessagesContextType = {
     state,
     dispatch,
-    getRoomMessages,
+    getChatMessages,
     addMessage,
     updateMessage,
     deleteMessage,

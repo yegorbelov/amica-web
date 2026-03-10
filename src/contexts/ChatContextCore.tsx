@@ -29,8 +29,8 @@ export interface SelectedChatContextType {
 /** Message list data – changes when messages/editing change. Use only where you need to render the list. */
 export interface MessagesDataContextType {
   messages: Message[];
-  messagesCache: { [roomId: number]: Message[] };
-  getCachedMessages: (roomId: number) => Message[] | null;
+  messagesCache: { [chatId: number]: Message[] };
+  getCachedMessages: (chatId: number) => Message[] | null;
 }
 
 /** Message actions – stable references. Use in SendArea etc. to avoid re-renders when one message is updated. */
@@ -62,7 +62,7 @@ export interface EditingContextType {
 /** Full messages context – use when you need both data and actions. Re-renders on any message change. */
 export interface ChatMessagesContextType {
   messages: Message[];
-  messagesCache: { [roomId: number]: Message[] };
+  messagesCache: { [chatId: number]: Message[] };
   messagesLoading: boolean;
   loadingOlderMessages: boolean;
   loadingNewerMessages: boolean;
@@ -89,7 +89,7 @@ export interface ChatMessagesContextType {
   ) => void;
   removeMessagesForChat: (chatId: number) => void;
   removeMessageFromChat: (chatId: number, messageId: number) => void;
-  getCachedMessages: (roomId: number) => Message[] | null;
+  getCachedMessages: (chatId: number) => Message[] | null;
   updateChatLastMessage: (chatId: number, lastMessage: Message | null) => void;
   updateChatUnreadCount: (chatId: number, unreadCount: number) => void;
   handleNewMessage: (data: WebSocketMessage) => void;
