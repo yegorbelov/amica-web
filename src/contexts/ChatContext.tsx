@@ -16,6 +16,7 @@ import {
   setChatState,
   getLastUserId,
 } from '@/utils/chatStateStorage';
+import { useSnackbar } from '@/contexts/snackbar/SnackbarContextCore';
 import {
   ChatMetaContext,
   ChatMessagesContext,
@@ -58,10 +59,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   const selectedChatIdRef = useRef(selectedChatId);
   const persistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editingMessageRef = useRef<Message | null>(null);
+  const pendingChatDeletionRef = useRef<{
+    chat: Chat;
+    index: number;
+    messages: Message[];
+    wasSelected: boolean;
+    previousHash: string;
+    timeoutId: ReturnType<typeof setTimeout>;
+  } | null>(null);
   /** Guard: server chats already applied — don't overwrite with IDB */
   const hasServerChatsRef = useRef(false);
   selectedChatIdRef.current = selectedChatId;
   const { setActiveProfileTab } = useSettingsActions();
+  const { showSnackbar, dismissSnackbar } = useSnackbar();
 
   const {
     messagesCache,
@@ -181,6 +191,40 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     },
     [],
   );
+
+  const finalizePendingChatDeletion = useCallback(() => {
+    const pending = pendingChatDeletionRef.current;
+    if (!pending) return;
+    window.clearTimeout(pending.timeoutId);
+    pendingChatDeletionRef.current = null;
+    dismissSnackbar();
+    websocketManager.sendDeleteChat(pending.chat.id);
+  }, [dismissSnackbar]);
+
+  const restorePendingChatDeletion = useCallback(() => {
+    const pending = pendingChatDeletionRef.current;
+    if (!pending) return;
+
+    window.clearTimeout(pending.timeoutId);
+    pendingChatDeletionRef.current = null;
+    dismissSnackbar();
+
+    setChats((prevChats) => {
+      if (prevChats.some((chat) => chat.id === pending.chat.id)) return prevChats;
+      const nextChats = [...prevChats];
+      nextChats.splice(Math.min(pending.index, nextChats.length), 0, pending.chat);
+      return nextChats;
+    });
+
+    updateMessages(pending.messages, pending.chat.id, {
+      updateChatLastMessage: false,
+    });
+
+    if (pending.wasSelected) {
+      setSelectedChatId(pending.chat.id);
+      location.hash = pending.previousHash || String(pending.chat.id);
+    }
+  }, [dismissSnackbar, updateMessages]);
 
   const trimMessagesToLast = useCallback(
     (chatId: number, keepCount: number) => {
@@ -602,6 +646,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       const deletedChatId = payload.chat_id;
       if (deletedChatId == null) return;
 
+      if (pendingChatDeletionRef.current?.chat.id === deletedChatId) {
+        window.clearTimeout(pendingChatDeletionRef.current.timeoutId);
+        pendingChatDeletionRef.current = null;
+        dismissSnackbar();
+      }
+
       setChats((prevChats) =>
         prevChats.filter((chat) => chat.id !== deletedChatId),
       );
@@ -618,7 +668,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     return () => {
       websocketManager.off('chat_deleted', handleChatDeleted);
     };
-  }, [removeMessagesForChat]);
+  }, [dismissSnackbar, removeMessagesForChat]);
 
   useEffect(() => {
     if (!user?.id || chats.length === 0) return;
@@ -697,9 +747,60 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         return;
       }
 
-      websocketManager.sendDeleteChat(chatId);
+      const chatToDelete = chats.find((chat) => chat.id === chatId);
+      if (!chatToDelete) return;
+
+      if (pendingChatDeletionRef.current) {
+        finalizePendingChatDeletion();
+      }
+
+      const cachedMessages = getCachedMessages(chatId) ?? [];
+      const chatIndex = chats.findIndex((chat) => chat.id === chatId);
+      const wasSelected = selectedChatIdRef.current === chatId;
+      const previousHash = location.hash.replace(/^#/, '');
+
+      setChats((prevChats) => prevChats.filter((chat) => chat.id !== chatId));
+      removeMessagesForChat(chatId);
+
+      if (wasSelected) {
+        setSelectedChatId(null);
+        setTemporaryChat(null);
+        location.hash = '';
+      }
+
+      const timeoutId = window.setTimeout(() => {
+        const pending = pendingChatDeletionRef.current;
+        if (!pending || pending.chat.id !== chatId) return;
+        pendingChatDeletionRef.current = null;
+        dismissSnackbar();
+        websocketManager.sendDeleteChat(chatId);
+      }, 5000);
+
+      pendingChatDeletionRef.current = {
+        chat: chatToDelete,
+        index: chatIndex,
+        messages: cachedMessages,
+        wasSelected,
+        previousHash,
+        timeoutId,
+      };
+
+      showSnackbar('Chat deleted', {
+        duration: 5000,
+        actionLabel: 'Undo',
+        onAction: restorePendingChatDeletion,
+      });
     },
-    [temporaryChat, removeMessagesForChat],
+    [
+      chats,
+      dismissSnackbar,
+      finalizePendingChatDeletion,
+      getCachedMessages,
+      removeMessagesForChat,
+      restorePendingChatDeletion,
+      showSnackbar,
+      temporaryChat,
+    ],
   );
 
   const handleChatClick = useCallback(

@@ -10,7 +10,7 @@ export interface UseMessageContextMenuParams {
   selectedChat: { id: number } | null;
   setEditingMessage: (msg: MessageType | null) => void;
   removeMessageFromChat: (chatId: number, messageId: number) => void;
-  showSnackbar: (msg: string) => void;
+  showToast: (msg: string) => void;
   canCopyToClipboard: boolean;
   onShowViewers: (msg: MessageType) => void;
   /** Call when menu opens so clipboard check can run lazily (avoids init re-render). */
@@ -40,7 +40,7 @@ export function useMessageContextMenu({
   selectedChat,
   setEditingMessage,
   removeMessageFromChat,
-  showSnackbar,
+  showToast,
   canCopyToClipboard,
   onShowViewers,
   triggerClipboardCheck,
@@ -78,7 +78,7 @@ export function useMessageContextMenu({
           const imageBlob = new Blob([blob], { type: 'image/png' });
           const clipboardItem = new ClipboardItem({ 'image/png': imageBlob });
           await navigator.clipboard.write([clipboardItem]);
-          showSnackbar('Media copied');
+          showToast('Media copied');
         } catch {
           const img = new Image();
           img.crossOrigin = 'anonymous';
@@ -99,13 +99,13 @@ export function useMessageContextMenu({
           await navigator.clipboard.write([
             new ClipboardItem({ 'image/png': pngBlob }),
           ]);
-          showSnackbar('Media copied');
+          showToast('Media copied');
         }
       } catch (err) {
         console.error('Clipboard error:', err);
       }
     },
-    [showSnackbar],
+    [showToast],
   );
 
   const handleSaveFile = useCallback(
@@ -126,15 +126,15 @@ export function useMessageContextMenu({
         link.download = filename;
         document.body.appendChild(link);
         link.click();
-        showSnackbar('File downloaded');
+        showToast('File downloaded');
         document.body.removeChild(link);
         URL.revokeObjectURL(blobUrl);
       } catch (err) {
         console.error('Failed to download file', err);
-        showSnackbar('Failed to download file');
+        showToast('Failed to download file');
       }
     },
-    [showSnackbar],
+    [showToast],
   );
 
   const handleEditMessage = useCallback(
@@ -169,7 +169,7 @@ export function useMessageContextMenu({
       if (navigator.clipboard?.writeText) {
         navigator.clipboard
           .writeText(text)
-          .then(() => showSnackbar('Message copied'))
+          .then(() => showToast('Message copied'))
           .catch((err) => {
             console.error('Clipboard error:', err);
             fallbackCopy(text);
@@ -178,7 +178,7 @@ export function useMessageContextMenu({
         fallbackCopy(text);
       }
     },
-    [showSnackbar],
+    [showToast],
   );
 
   const menuItems = useMemo<MenuItem[]>(

@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, memo } from 'react';
 import { useChatMeta, useSelectedChat, useChatMessages } from '@/contexts/ChatContextCore';
-import { useSnackbar } from '@/contexts/snackbar/SnackbarContextCore';
+import { useToast } from '@/contexts/toast/ToastContextCore';
 import { formatLastSeen } from '@/utils/activityFormatter';
 import SideBarMediaHeader from './SideBarMediaHeader';
 import SideBarAvatarSection from './SideBarAvatarSection';
@@ -29,7 +29,7 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
   const { addContact, deleteContact, saveContact } = useChatMeta();
   const { selectedChat } = useSelectedChat();
   const { messages } = useChatMessages();
-  const { showSnackbar } = useSnackbar();
+  const { showToast } = useToast();
 
   const sidebarRef = useRef<HTMLDivElement>(null);
   const sidebarInnerRef = useRef<HTMLDivElement>(null);
@@ -103,11 +103,11 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
     if (!interlocutor?.email) return;
     try {
       await navigator.clipboard.writeText(interlocutor.email);
-      showSnackbar('Email copied');
+      showToast('Email copied');
     } catch (err) {
       console.error('Copy failed', err);
     }
-  }, [interlocutor, showSnackbar]);
+  }, [interlocutor, showToast]);
 
   const handleBackOrClose = useCallback(() => {
     if (interlocutorEditVisible) {

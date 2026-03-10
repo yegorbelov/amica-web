@@ -27,7 +27,7 @@ import AppearanceMenu from './AppearanceMenu';
 import Wallpaper from '@/pages/Wallpaper';
 import type { Message as MessageType } from '@/types';
 import { websocketManager } from '@/utils/websocket-manager';
-import { useSnackbar } from '@/contexts/snackbar/SnackbarContextCore';
+import { useToast } from '@/contexts/toast/ToastContextCore';
 
 const fullscreenExitIcon = <Icon name='FullscreenExit' />;
 const EMPTY_SELECTED_MESSAGE_IDS = new Set<number>();
@@ -46,7 +46,7 @@ const MainChatWindow: React.FC = () => {
   const { messages } = useMessagesData();
   const { removeMessageFromChat } = useMessagesActions();
   const { setContainerRef, setIsVisible } = useJumpActions();
-  const { showSnackbar } = useSnackbar();
+  const { showToast } = useToast();
 
   const [sideBarVisible, setSideBarVisible] = useState(false);
   const [selectionState, setSelectionState] = useState<{
@@ -166,7 +166,7 @@ const MainChatWindow: React.FC = () => {
     if (ownSelectedMessages.length > 0) {
       const messageLabel =
         ownSelectedMessages.length === 1 ? 'message' : 'messages';
-      showSnackbar(`Deleted ${ownSelectedMessages.length} ${messageLabel}`);
+      showToast(`Deleted ${ownSelectedMessages.length} ${messageLabel}`);
     }
   }, [
     selectedChat,
@@ -174,7 +174,7 @@ const MainChatWindow: React.FC = () => {
     messages,
     removeMessageFromChat,
     exitSelectionMode,
-    showSnackbar,
+    showToast,
   ]);
 
   useEffect(() => {

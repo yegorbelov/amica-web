@@ -13,7 +13,7 @@ import ContextMenu from '../ContextMenu/ContextMenu';
 import styles from './MessageList.module.scss';
 import { useJumpActions } from '@/hooks/useJump';
 import { useLazyCanCopyToClipboard } from '@/hooks/useCanCopyToClipboard';
-import { useSnackbar } from '@/contexts/snackbar/SnackbarContextCore';
+import { useToast } from '@/contexts/toast/ToastContextCore';
 import type { Message as MessageType, User } from '@/types';
 import ViewersList from './ViewersList';
 import { useMessageContextMenu } from './useMessageContextMenu';
@@ -52,7 +52,7 @@ const MessageList: React.FC<MessageListProps> = ({
   } = useChatMessages();
   const { selectedChatId } = useSelectedChat();
   const { containerRef: jumpContainerRef } = useJumpActions();
-  const { showSnackbar } = useSnackbar();
+  const { showToast } = useToast();
   const { canCopy: canCopyToClipboard, triggerCheck: triggerClipboardCheck } =
     useLazyCanCopyToClipboard();
 
@@ -82,7 +82,7 @@ const MessageList: React.FC<MessageListProps> = ({
     selectedChat,
     setEditingMessage,
     removeMessageFromChat,
-    showSnackbar,
+    showToast,
     canCopyToClipboard,
     onShowViewers: handleShowViewers,
     triggerClipboardCheck,

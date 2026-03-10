@@ -2,10 +2,21 @@ import { createContext, useContext } from 'react';
 
 export type SnackbarType = {
   message: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  duration?: number;
 } | null;
 
 export type SnackbarContextType = {
-  showSnackbar: (message: string, duration?: number) => void;
+  showSnackbar: (
+    message: string,
+    options?: {
+      duration?: number;
+      actionLabel?: string;
+      onAction?: () => void;
+    },
+  ) => void;
+  dismissSnackbar: () => void;
 };
 
 export const SnackbarContext = createContext<SnackbarContextType | null>(null);

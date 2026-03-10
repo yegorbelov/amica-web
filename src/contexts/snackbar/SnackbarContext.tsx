@@ -13,28 +13,52 @@ export const SnackbarProvider = ({
   const [showKey, setShowKey] = useState(0);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showSnackbar = useCallback((message: string, duration = 2000) => {
+  const dismissSnackbar = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    setShowKey((k) => k + 1);
-    setSnackbar({ message });
-    setOpen(true);
-
-    timeoutRef.current = setTimeout(() => {
-      timeoutRef.current = null;
-      setOpen(false);
-    }, duration);
+    setOpen(false);
   }, []);
+
+  const showSnackbar = useCallback(
+    (
+      message: string,
+      options?: {
+        duration?: number;
+        actionLabel?: string;
+        onAction?: () => void;
+      },
+    ) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      const duration = options?.duration ?? 5000;
+      setShowKey((k) => k + 1);
+      setSnackbar({
+        message,
+        actionLabel: options?.actionLabel,
+        onAction: options?.onAction,
+        duration,
+      });
+      setOpen(true);
+
+      timeoutRef.current = setTimeout(() => {
+        timeoutRef.current = null;
+        setOpen(false);
+      }, duration);
+    },
+    [],
+  );
 
   const handleExited = () => {
     setSnackbar(null);
   };
 
   const value = useMemo(
-    () => ({ showSnackbar }),
-    [showSnackbar],
+    () => ({ showSnackbar, dismissSnackbar }),
+    [showSnackbar, dismissSnackbar],
   );
 
   return (
@@ -44,6 +68,12 @@ export const SnackbarProvider = ({
         <Snackbar
           key={showKey}
           message={snackbar.message}
+          actionLabel={snackbar.actionLabel}
+          duration={snackbar.duration ?? 5000}
+          onAction={() => {
+            snackbar.onAction?.();
+            dismissSnackbar();
+          }}
           open={open}
           onExited={handleExited}
         />
