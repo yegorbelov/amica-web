@@ -12,7 +12,10 @@
 }
 
 .contacts {
+  height: 100%;
   padding-bottom: (var(--main-navigation-height));
+  overflow-y: scroll;
+  overscroll-behavior: contain;
 }
 
 .avatar {

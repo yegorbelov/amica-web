@@ -19,9 +19,15 @@
   transition:
     background 0.3s,
     border-bottom 0.3s,
-    color 0.3s;
-  transform-origin: center top;
+    color 0.3s,
+    transform 0.3s ease;
+  transform: scale(1);
+  // transform-origin: center top;
   will-change: transform;
+
+  &--pressed {
+    transform: scale(0.95);
+  }
 
   &--animate-in {
     --animation-duration: 0.4s;

@@ -33,8 +33,10 @@
   --appear-duration: 0.4s;
   display: flex;
   width: 100%;
+  height: 100%;
   flex-direction: column;
-  overflow-y: visible;
+  overflow-y: scroll;
+  overscroll-behavior: contain;
 
   min-height: 100%;
   opacity: 0;
@@ -44,9 +46,16 @@
   position: absolute;
 
   padding-bottom: calc(var(--sab) + var(--main-navigation-height));
+  padding-top: 50px;
   transition-duration: var(--appear-duration);
   transition-timing-function: ease;
   transition-property: opacity, transform;
+
+  mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 1) calc(60px + var(--sat))
+  );
 
   &--active {
     opacity: 1;

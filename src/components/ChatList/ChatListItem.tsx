@@ -1,4 +1,10 @@
-import React, { forwardRef, useRef, useImperativeHandle, useMemo } from 'react';
+import React, {
+  forwardRef,
+  useRef,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from 'react';
 import { lastMessageDateFormat, unreadCountFormat } from '../../utils/index';
 import Avatar from '../Avatar/Avatar';
 import styles from './ChatListItem.module.scss';
@@ -42,7 +48,7 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
     },
     ref,
   ) => {
-    const LONG_PRESS_MS = 250;
+    const LONG_PRESS_MS = 100;
     const MOVE_CANCEL_THRESHOLD_PX = 8;
     const { settings } = useSettings();
     const { t } = useTranslation();
@@ -59,6 +65,8 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
     const suppressNextMouseDownRef = useRef(false);
     const suppressNextContextMenuRef = useRef(false);
     const longPressTriggeredRef = useRef(false);
+    const [pressed, setPressed] = useState(false);
+    const mouseLongPressTimerRef = useRef<number | null>(null);
 
     useImperativeHandle(ref, () => container.current as HTMLDivElement);
 
@@ -102,6 +110,12 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
       e.preventDefault();
       e.stopPropagation();
 
+      clearMouseLongPressTimer();
+      mouseLongPressTimerRef.current = window.setTimeout(() => {
+        mouseLongPressTimerRef.current = null;
+        setPressed(true);
+      }, LONG_PRESS_MS);
+
       window.history.pushState({}, '', `#${chatId}`);
 
       const ripple = document.createElement('span');
@@ -131,6 +145,14 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
       }
     };
 
+    const clearMouseLongPressTimer = () => {
+      if (mouseLongPressTimerRef.current != null) {
+        window.clearTimeout(mouseLongPressTimerRef.current);
+        mouseLongPressTimerRef.current = null;
+      }
+      setPressed(false);
+    };
+
     const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
       if (e.touches.length !== 1) return;
       const touch = e.touches[0];
@@ -138,6 +160,7 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
       longPressTriggeredRef.current = false;
       clearLongPressTimer();
       longPressTimerRef.current = window.setTimeout(() => {
+        setPressed(true);
         suppressNextMouseDownRef.current = true;
         suppressNextContextMenuRef.current = true;
         longPressTriggeredRef.current = true;
@@ -162,6 +185,7 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
     };
 
     const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+      setPressed(false);
       clearLongPressTimer();
       touchStartRef.current = null;
       if (!longPressTriggeredRef.current) return;
@@ -171,6 +195,7 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
     };
 
     const handleTouchCancel = () => {
+      setPressed(false);
       clearLongPressTimer();
       touchStartRef.current = null;
       longPressTriggeredRef.current = false;
@@ -208,10 +233,14 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
       <div
         className={`${styles['chat-list-item']} ${
           isActive ? styles['chat-list-item--active'] : ''
-        } ${shouldHideBeforeInitAnimation ? styles['chat-list-item--pre-init-hidden'] : ''} ${
-          shouldAnimateOnInit ? styles['chat-list-item--animate-in'] : ''
-        }`}
+        } ${pressed ? styles['chat-list-item--pressed'] : ''} ${
+          shouldHideBeforeInitAnimation
+            ? styles['chat-list-item--pre-init-hidden']
+            : ''
+        } ${shouldAnimateOnInit ? styles['chat-list-item--animate-in'] : ''}`}
         onMouseDown={goToChat}
+        onMouseUp={clearMouseLongPressTimer}
+        onMouseLeave={clearMouseLongPressTimer}
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();

@@ -68,7 +68,7 @@
 }
 
 .timer-progress {
-  stroke: #8ec5ff;
+  stroke: var(--mainColor);
   stroke-linecap: round;
   stroke-dasharray: 56.55;
   stroke-dashoffset: 0;
@@ -80,7 +80,7 @@
   appearance: none;
   border: none;
   background: transparent;
-  color: #8ec5ff;
+  color: var(--mainColor);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;

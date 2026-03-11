@@ -33,6 +33,10 @@
 
   --bodyBackground: #{$bodyBackground};
 
+  @media screen and (max-width: 768px) {
+    --bodyBackground: #000;
+  }
+
   --left-side-bar-width: 384px;
   --main-chat-window-width: 700px;
   --global-gap: 10px;
