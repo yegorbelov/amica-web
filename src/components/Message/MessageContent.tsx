@@ -496,7 +496,6 @@ const MessageContent = memo(
             })}
           </div>
         ) : null;
-
       return (
         <div
           className={styles.message}

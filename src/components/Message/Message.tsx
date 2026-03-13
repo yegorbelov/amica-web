@@ -32,6 +32,12 @@ const Message: React.FC<MessageProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const suppressSelectionClickRef = useRef(false);
+  const lastPointerTapRef = useRef<{
+    ts: number;
+    x: number;
+    y: number;
+    pointerType: string;
+  } | null>(null);
   useMessageDimensions(containerRef);
 
   const isOwn = message.is_own;
@@ -49,23 +55,47 @@ const Message: React.FC<MessageProps> = ({
     <div
       className={`temp_full ${isOwn ? 'own-message' : 'other-message'} ${selectionMode && isSelected ? 'selected' : ''} ${selectionMode ? 'selection-mode' : ''}`}
       data-message-id={message.id}
-      onPointerDown={
-        (e) => {
-          if (!selectionMode && e.pointerType === 'mouse' && e.button === 0) {
-            onSelectionGestureCandidateStart?.(
-              e.pointerId,
-              e.clientX,
-              e.clientY,
-            );
-            return;
+      onPointerDown={(e) => {
+        if (!selectionMode && e.button === 0) {
+          const target = e.target as HTMLElement | null;
+          if (
+            !target?.closest('button') &&
+            !target?.closest('a') &&
+            !target?.closest('[data-reaction-type]')
+          ) {
+            const now = performance.now();
+            const prevTap = lastPointerTapRef.current;
+            const isDoubleTap =
+              prevTap &&
+              prevTap.pointerType === e.pointerType &&
+              now - prevTap.ts <= 280 &&
+              Math.hypot(e.clientX - prevTap.x, e.clientY - prevTap.y) <= 24;
+
+            if (isDoubleTap) {
+              onReactionClick?.(message, 'heart');
+              lastPointerTapRef.current = null;
+              return;
+            }
+
+            lastPointerTapRef.current = {
+              ts: now,
+              x: e.clientX,
+              y: e.clientY,
+              pointerType: e.pointerType,
+            };
           }
-          if (!selectionMode) return;
-          if (e.pointerType === 'touch') return;
-          e.preventDefault();
-          suppressSelectionClickRef.current = true;
-          onPointerSelectStart?.(e.pointerId);
         }
-      }
+
+        if (!selectionMode && e.pointerType === 'mouse' && e.button === 0) {
+          onSelectionGestureCandidateStart?.(e.pointerId, e.clientX, e.clientY);
+          return;
+        }
+        if (!selectionMode) return;
+        if (e.pointerType === 'touch') return;
+        e.preventDefault();
+        suppressSelectionClickRef.current = true;
+        onPointerSelectStart?.(e.pointerId);
+      }}
       onClick={
         selectionMode && onToggleSelect
           ? () => {
@@ -91,7 +121,7 @@ const Message: React.FC<MessageProps> = ({
       }
     >
       {selectionMode && (
-        <span className="message_select_check" aria-hidden>
+        <span className='message_select_check' aria-hidden>
           <Icon name={isSelected ? 'Select' : 'Circle'} />
         </span>
       )}
@@ -104,7 +134,9 @@ const Message: React.FC<MessageProps> = ({
           reelItems={reelItems}
           isOwn={isOwn}
           hasOnlyMediaFiles={hasOnlyMediaFiles}
-          onReactionClick={(reactionType) => onReactionClick?.(message, reactionType)}
+          onReactionClick={(reactionType) =>
+            onReactionClick?.(message, reactionType)
+          }
         />
       </div>
     </div>

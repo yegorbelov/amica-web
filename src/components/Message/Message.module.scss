@@ -369,8 +369,8 @@
   pointer-events: none;
   z-index: 2000;
   mix-blend-mode: screen;
-  transform: translate(-50%, -50%) scale(0.2);
-  animation: reaction_burst_pop 0.85s ease-out forwards;
+  transform: translate(-50%, -50%) scale(1);
+  // animation: reaction_burst_pop 0.85s ease-out forwards;
 }
 
 @keyframes reaction_burst_pop {
