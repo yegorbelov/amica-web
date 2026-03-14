@@ -18,6 +18,7 @@ import type { Message as MessageType, User } from '@/types';
 import ViewersList from './ViewersList';
 import { useMessageContextMenu } from './useMessageContextMenu';
 import { websocketManager } from '@/utils/websocket-manager';
+import { buildOptimisticReactionUpdate } from './reactionOptimistic';
 
 const VISIBLE_BUFFER = 7;
 const PAGINATION_THRESHOLD_PX = 300;
@@ -50,6 +51,7 @@ const MessageList: React.FC<MessageListProps> = ({
     trimMessagesToRange,
     setEditingMessage,
     removeMessageFromChat,
+    updateMessageInChat,
   } = useChatMessages();
   const { selectedChatId } = useSelectedChat();
   const { containerRef: jumpContainerRef } = useJumpActions();
@@ -70,13 +72,19 @@ const MessageList: React.FC<MessageListProps> = ({
   const handleMessageReactionClick = useCallback(
     (message: MessageType, reactionType: string) => {
       if (!selectedChatIdForReaction) return;
+      updateMessageInChat(
+        selectedChatIdForReaction,
+        message.id,
+        (currentMessage) =>
+          buildOptimisticReactionUpdate(currentMessage, reactionType),
+      );
       websocketManager.sendMessageReaction(
         selectedChatIdForReaction,
         message.id,
         reactionType,
       );
     },
-    [selectedChatIdForReaction],
+    [selectedChatIdForReaction, updateMessageInChat],
   );
 
   const {
@@ -98,6 +106,7 @@ const MessageList: React.FC<MessageListProps> = ({
     selectedChat,
     setEditingMessage,
     removeMessageFromChat,
+    updateMessageInChat,
     showToast,
     canCopyToClipboard,
     onShowViewers: handleShowViewers,

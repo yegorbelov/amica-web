@@ -6,11 +6,19 @@ import { apiFetch } from '@/utils/apiFetch';
 import { websocketManager } from '@/utils/websocket-manager';
 import { fallbackCopy } from './clipboardUtils';
 import { MESSAGE_REACTION_OPTIONS } from '@/constants/messageReactions';
+import { buildOptimisticReactionUpdate } from './reactionOptimistic';
 
 export interface UseMessageContextMenuParams {
   selectedChat: { id: number } | null;
   setEditingMessage: (msg: MessageType | null) => void;
   removeMessageFromChat: (chatId: number, messageId: number) => void;
+  updateMessageInChat: (
+    chatId: number,
+    messageId: number,
+    updates:
+      | Partial<MessageType>
+      | ((currentMessage: MessageType) => Partial<MessageType>),
+  ) => void;
   showToast: (msg: string) => void;
   canCopyToClipboard: boolean;
   onShowViewers: (msg: MessageType) => void;
@@ -52,6 +60,7 @@ export function useMessageContextMenu({
   selectedChat,
   setEditingMessage,
   removeMessageFromChat,
+  updateMessageInChat,
   showToast,
   canCopyToClipboard,
   onShowViewers,
@@ -196,6 +205,12 @@ export function useMessageContextMenu({
   const handleReactionSelect = useCallback(
     (reactionType: string) => {
       if (!menuMessage || !selectedChat?.id) return;
+      updateMessageInChat(
+        selectedChat.id,
+        menuMessage.id,
+        (currentMessage) =>
+          buildOptimisticReactionUpdate(currentMessage, reactionType),
+      );
       websocketManager.sendMessageReaction(
         selectedChat.id,
         menuMessage.id,
@@ -203,7 +218,7 @@ export function useMessageContextMenu({
       );
       setIsMenuHiding(true);
     },
-    [menuMessage, selectedChat?.id],
+    [menuMessage, selectedChat?.id, updateMessageInChat],
   );
 
   const menuItems = useMemo<MenuItem[]>(

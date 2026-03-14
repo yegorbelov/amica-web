@@ -35,7 +35,7 @@ export interface UseMessagesReturn {
   updateMessageInChat: (
     chatId: number,
     messageId: number,
-    updates: Partial<Message>,
+    updates: Partial<Message> | ((currentMessage: Message) => Partial<Message>),
   ) => void;
   removeMessagesForChat: (chatId: number) => void;
   moveMessagesToChat: (fromChatId: number, toChatId: number) => void;
@@ -200,13 +200,22 @@ export function useMessages({
   );
 
   const updateMessageInChat = useCallback(
-    (chatId: number, messageId: number, updates: Partial<Message>) => {
+    (
+      chatId: number,
+      messageId: number,
+      updates:
+        | Partial<Message>
+        | ((currentMessage: Message) => Partial<Message>),
+    ) => {
       const mid = Number(messageId);
       setMessagesCache((prev) => {
         const list = prev[chatId] ?? [];
-        const newList = list.map((m) =>
-          Number(m.id) === mid ? { ...m, ...updates } : m,
-        );
+        const newList = list.map((m) => {
+          if (Number(m.id) !== mid) return m;
+          const nextUpdates =
+            typeof updates === 'function' ? updates(m) : updates;
+          return { ...m, ...nextUpdates };
+        });
         return { ...prev, [chatId]: newList };
       });
     },

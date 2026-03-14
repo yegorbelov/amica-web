@@ -44,7 +44,7 @@ export interface MessagesActionsContextType {
   updateMessageInChat: (
     chatId: number,
     messageId: number,
-    updates: Partial<Message>,
+    updates: Partial<Message> | ((currentMessage: Message) => Partial<Message>),
   ) => void;
   removeMessagesForChat: (chatId: number) => void;
   removeMessageFromChat: (chatId: number, messageId: number) => void;
@@ -85,7 +85,7 @@ export interface ChatMessagesContextType {
   updateMessageInChat: (
     chatId: number,
     messageId: number,
-    updates: Partial<Message>,
+    updates: Partial<Message> | ((currentMessage: Message) => Partial<Message>),
   ) => void;
   removeMessagesForChat: (chatId: number) => void;
   removeMessageFromChat: (chatId: number, messageId: number) => void;
