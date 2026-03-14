@@ -78,40 +78,83 @@
   }
 }
 
+@property --panel-reveal {
+  syntax: '<percentage>';
+  initial-value: 0%;
+  inherits: true;
+}
+
 .reaction-panel {
+  --panel-reveal: 0%;
   position: fixed;
   z-index: 1001;
   overflow: visible;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background-color: color-mix(in srgb, rgb(24, 24, 24) 76%, transparent);
-  backdrop-filter: blur(6px);
+  align-items: flex-end;
   opacity: 0;
-  transform: translateY(4px) scale(0.94);
-  --trans-dur: 0.3s;
-  --trans-timing-function: cubic-bezier(0.18, 0.89, 0.32, 1.08);
+  --trans-dur: 0.35s;
+  --trans-timing-function: cubic-bezier(0.34, 1.2, 0.64, 1);
   transition:
     opacity var(--trans-dur) var(--trans-timing-function),
-    transform var(--trans-dur) var(--trans-timing-function),
     filter var(--trans-dur) var(--trans-timing-function);
   filter: blur(5px);
 
   &--visible {
     opacity: 1;
     filter: blur(0);
-    transform: translateY(0) scale(1);
+    --panel-reveal: 100%;
+
+    .reaction-panel__content {
+      --panel-reveal: 100%;
+    }
   }
 
   &--hiding {
     opacity: 0;
     filter: blur(5px);
+    --panel-reveal: 0%;
+
+    .reaction-panel__content {
+      --panel-reveal: 0%;
+    }
+  }
+
+  &__content {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background-color: color-mix(in srgb, rgb(24, 24, 24) 76%, transparent);
+    backdrop-filter: blur(6px);
+    transform-origin: 100% 50%;
+    transform: scale(0);
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      transparent calc(100% - var(--panel-reveal) - 12%),
+      black calc(100% - var(--panel-reveal) - 6%),
+      black 100%
+    );
+    mask-size: 100% 100%;
+    mask-position: 0 0;
+    mask-repeat: no-repeat;
+    transition:
+      transform var(--trans-dur) var(--trans-timing-function),
+      --panel-reveal var(--trans-dur) var(--trans-timing-function);
+  }
+
+  &--visible &__content {
+    transform: scale(1);
+  }
+
+  &--hiding &__content {
+    transform: scale(0.92);
   }
 
   &__item {
+    position: relative;
     width: 40px;
     height: 40px;
     border: none;
@@ -123,6 +166,9 @@
     align-items: center;
     justify-content: center;
     font-size: 1.15rem;
+    opacity: 0;
+    transform: scale(0);
+    animation: reactionBounce 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     transition:
       box-shadow 0.2s,
       background-color 0.2s;
@@ -131,17 +177,29 @@
       background-color: rgba(255, 255, 255, 0.08);
     }
 
-    &--selected {
+    &--selected::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      border-radius: 50%;
       background-color: rgba(255, 255, 255, 0.2);
+      opacity: 0;
+      pointer-events: none;
+      animation: selectedBgIn 0.32s ease-out 0.25s forwards;
     }
   }
 
   &__emoji {
+    position: relative;
+    z-index: 1;
     line-height: 1;
     transform: translateY(-0.5px);
   }
 
   &__icon {
+    position: relative;
+    z-index: 1;
     width: 26px;
     height: 26px;
     object-fit: cover;
@@ -189,6 +247,33 @@
   }
   100% {
     scale: 1;
+    opacity: 1;
+  }
+}
+
+@keyframes reactionBounce {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  75% {
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes selectedBgIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
     opacity: 1;
   }
 }

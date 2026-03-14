@@ -146,15 +146,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           } ${isHiding ? styles['reaction-panel--hiding'] : ''}`}
           style={{ left: position.x, top: position.y }}
         >
-          {reactions.map((reaction) => (
-            <button
-              key={reaction.type}
+          <div className={styles['reaction-panel__content']}>
+            {reactions.map((reaction, index) => (
+              <button
+                key={reaction.type}
               type='button'
               className={`${styles['reaction-panel__item']} ${
                 selectedReactionTypes.includes(reaction.type)
                   ? styles['reaction-panel__item--selected']
                   : ''
               }`}
+              style={{ animationDelay: `${index * 55}ms` }}
               onClick={() => onReactionSelect?.(reaction.type)}
               aria-label={`React with ${reaction.emoji}`}
             >
@@ -171,6 +173,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
               )}
             </button>
           ))}
+          </div>
           <div
             className={styles['reaction-panel__thoughts']}
             aria-hidden='true'
