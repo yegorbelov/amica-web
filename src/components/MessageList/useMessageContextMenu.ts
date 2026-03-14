@@ -32,7 +32,8 @@ export interface ReactionMenuOption {
   type: string;
   emoji: string;
   iconUrl?: string;
-  videoUrl: string;
+  webmUrl: string;
+  movUrl: string;
 }
 
 export interface UseMessageContextMenuResult {

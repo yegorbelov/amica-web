@@ -206,7 +206,10 @@ const MessageContent = memo(
           new Map<string, { webmUrl: string; movUrl: string }>(
             MESSAGE_REACTION_OPTIONS.map((reaction) => [
               reaction.type,
-              { webmUrl: reaction.videoUrl, movUrl: reaction.movUrl },
+              {
+                webmUrl: reaction.webmUrl,
+                movUrl: reaction.movUrl,
+              },
             ]),
           ),
         [],
@@ -687,8 +690,8 @@ const MessageContent = memo(
                 }}
                 onEnded={() => setReactionBurst(null)}
               >
+                <source src={reactionBurst.movUrl} type='video/quicktime' />
                 <source src={reactionBurst.webmUrl} type='video/webm' />
-                {/* <source src={reactionBurst.movUrl} type='video/quicktime' /> */}
               </video>,
               document.body,
             )}

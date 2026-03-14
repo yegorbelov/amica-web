@@ -16,7 +16,8 @@ export interface ReactionItem {
   type: string;
   emoji: string;
   iconUrl?: string;
-  videoUrl: string;
+  webmUrl: string;
+  movUrl: string;
 }
 
 interface ContextMenuProps {
@@ -160,15 +161,20 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
               {reaction.iconUrl ? (
                 <img
                   src={reaction.iconUrl}
-                  alt=""
+                  alt=''
                   className={styles['reaction-panel__icon']}
                 />
               ) : (
-                <span className={styles['reaction-panel__emoji']}>{reaction.emoji}</span>
+                <span className={styles['reaction-panel__emoji']}>
+                  {reaction.emoji}
+                </span>
               )}
             </button>
           ))}
-          <div className={styles['reaction-panel__thoughts']} aria-hidden='true'>
+          <div
+            className={styles['reaction-panel__thoughts']}
+            aria-hidden='true'
+          >
             <span className={styles['reaction-panel__thought-bubble']} />
             <span
               className={`${styles['reaction-panel__thought-bubble']} ${styles['reaction-panel__thought-bubble--small']}`}
