@@ -36,7 +36,7 @@ export const MESSAGE_REACTION_OPTIONS = [
       '../assets/reactions/webm/celebration.webm',
       import.meta.url,
     ).href,
-    movUrl: new URL('../assets/reactions/mov/celebration2.mov', import.meta.url)
+    movUrl: new URL('../assets/reactions/mov/celebration.mov', import.meta.url)
       .href,
   },
   {
