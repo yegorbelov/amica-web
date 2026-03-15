@@ -45,7 +45,7 @@ export const MESSAGE_REACTION_OPTIONS = [
     iconUrl: reactionIconUrl('reaction-wow'),
     webmUrl: new URL('../assets/reactions/webm/fireworks.webm', import.meta.url)
       .href,
-    movUrl: new URL('../assets/reactions/mov/fireworks.mov', import.meta.url)
+    movUrl: new URL('../assets/reactions/mov/fireworks2.mov', import.meta.url)
       .href,
   },
   {
