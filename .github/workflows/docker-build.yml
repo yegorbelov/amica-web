@@ -39,7 +39,8 @@ jobs:
           file: Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/amica-web:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Stable key: reuse cache when only app code changes (not Dockerfile/deps).
+          cache-from: type=gha,key=buildx-amica-web-${{ hashFiles('Dockerfile', 'package.json', 'pnpm-lock.yaml') }}
+          cache-to: type=gha,mode=max,key=buildx-amica-web-${{ hashFiles('Dockerfile', 'package.json', 'pnpm-lock.yaml') }}
           provenance: false
           sbom: false
