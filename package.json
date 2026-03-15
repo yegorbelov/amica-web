@@ -13,7 +13,8 @@
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
     "gen:icons": "node scripts/generate-icons.ts",
-    "test": "echo \"No tests yet\""
+    "test": "echo \"No tests yet\"",
+    "update-build-lockfile": "node scripts/update-build-lockfile.mjs"
   },
   "dependencies": {
     "react": "^19.1.1",

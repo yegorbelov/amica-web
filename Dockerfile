@@ -8,18 +8,17 @@ RUN npm install -g pnpm@latest
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
+# Build-only deps (no eslint, stylelint, prettier, husky, lint-staged)
+COPY package.build.json package.json
+COPY pnpm-lock.build.yaml pnpm-lock.yaml
 
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm fetch --frozen-lockfile --prefer-offline
-
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --unsafe-perm --prefer-offline
+    pnpm install --frozen-lockfile --unsafe-perm
 
 COPY . .
 
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm run build:ignore
+    pnpm run build
 
 FROM fholzer/nginx-brotli:latest
 
