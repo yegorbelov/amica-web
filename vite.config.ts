@@ -10,14 +10,15 @@ export default defineConfig({
     compression({
       algorithm: 'brotliCompress',
       ext: '.br',
-      filter: /\.(js|mjs|json|css|html|svg)$/i,
-      threshold: 10240,
+      filter: /\.(js|mjs|css|html)$/i,
+      threshold: 30720,
     }),
 
     compression({
       algorithm: 'gzip',
       ext: '.gz',
-      filter: /\.(js|mjs|json|css|html|svg)$/i,
+      filter: /\.(js|mjs|css|html)$/i,
+      threshold: 30720,
     }),
   ],
   resolve: {
