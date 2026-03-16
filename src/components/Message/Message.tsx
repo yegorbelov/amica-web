@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, type CSSProperties } from 'react';
 import type { Message as MessageType } from '@/types';
 import styles from './Message.module.scss';
 import { useMessageDimensions } from './useMessageDimensions';
@@ -22,6 +22,8 @@ export interface MessageProps {
   isFirstInGroup?: boolean;
   /** In a same-sender group: false when there is an older message from same sender (above in list) */
   isLastInGroup?: boolean;
+  /** Delay for initial appear animation (ms) */
+  appearDelayMs?: number;
 }
 
 const Message: React.FC<MessageProps> = ({
@@ -35,6 +37,7 @@ const Message: React.FC<MessageProps> = ({
   onSelectionGestureCandidateStart,
   isFirstInGroup = true,
   isLastInGroup = true,
+  appearDelayMs,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const suppressSelectionClickRef = useRef(false);
@@ -56,6 +59,11 @@ const Message: React.FC<MessageProps> = ({
       ),
     [message.files],
   );
+
+  const messageDivStyle: CSSProperties | undefined =
+    typeof appearDelayMs === 'number'
+      ? ({ '--message-appear-delay': `${appearDelayMs}ms` } as CSSProperties)
+      : undefined;
 
   return (
     <div
@@ -133,7 +141,8 @@ const Message: React.FC<MessageProps> = ({
       )}
       <div
         ref={containerRef}
-        className={`${styles.message_div} ${isOwn ? `${styles.darker} ${styles.right}` : ''} ${selectionMode ? styles.selected_prepare : ''} ${!isFirstInGroup ? styles.groupedWithNewer : ''} ${!isLastInGroup ? styles.groupedWithOlder : ''}`}
+        className={`${styles.message_div} ${isOwn ? `${styles.darker} ${styles.right}` : ''} ${selectionMode ? styles.selected_prepare : ''} ${!isFirstInGroup ? styles.groupedWithNewer : ''} ${!isLastInGroup ? styles.groupedWithOlder : ''} ${typeof appearDelayMs === 'number' ? styles.initialAppear : ''}`}
+        style={messageDivStyle}
       >
         <MessageContent
           message={message}

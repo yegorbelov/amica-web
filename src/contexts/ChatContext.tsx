@@ -54,7 +54,15 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   const [loadingNewerChatId, setLoadingNewerChatId] = useState<number | null>(
     null,
   );
+  const [chatStateReady, setChatStateReady] = useState(false);
+  const [initialWsChatLoadAnimation, setInitialWsChatLoadAnimation] = useState<{
+    chatId: number;
+    messageIds: number[];
+    token: number;
+  } | null>(null);
   const nextCursorByChatRef = useRef<Record<number, number | null>>({});
+  const wsGetChatRequestedOnceRef = useRef<Record<number, boolean>>({});
+  const wsInitialAnimationPendingRef = useRef<Record<number, boolean>>({});
   const initialFetchRef = useRef(true);
   const selectedChatIdRef = useRef(selectedChatId);
   const persistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -289,6 +297,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         if (isPrepend && data.messages?.length) {
           prependMessages(data.messages, chatId);
         } else {
+          if (wsInitialAnimationPendingRef.current[chatId]) {
+            delete wsInitialAnimationPendingRef.current[chatId];
+            const messageIds = (data.messages ?? [])
+              .map((m) => m.id)
+              .filter((id): id is number => typeof id === 'number');
+            if (messageIds.length > 0) {
+              setInitialWsChatLoadAnimation({
+                chatId,
+                messageIds,
+                token: Date.now(),
+              });
+            }
+          }
           updateMessages(data.messages || [], chatId);
         }
         if (data.next_cursor !== undefined) {
@@ -306,6 +327,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         setLoadingChatId((prev) => (prev === chatId ? null : prev));
 
       if (websocketManager.isConnected()) {
+        if (!wsGetChatRequestedOnceRef.current[chatId]) {
+          wsGetChatRequestedOnceRef.current[chatId] = true;
+          const cached = getCachedMessages(chatId);
+          const hasCache = !!(cached && cached.length > 0);
+          if (!hasCache) {
+            wsInitialAnimationPendingRef.current[chatId] = true;
+          }
+        }
         const timeoutId = window.setTimeout(() => {
           websocketManager.off('chat', handleChat);
           websocketManager.off('message', handleError);
@@ -314,6 +343,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
             .then((res) => (res.ok ? res.json() : Promise.reject(res)))
             .then(applyChatData)
             .catch(() => {
+              delete wsInitialAnimationPendingRef.current[chatId];
               setLoadingChatId((prev) => (prev === chatId ? null : prev));
               if (selectedChatIdRef.current === chatId) {
                 updateMessages([], chatId);
@@ -348,6 +378,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
             .then((res) => (res.ok ? res.json() : Promise.reject(res)))
             .then(applyChatData)
             .catch(() => {
+              delete wsInitialAnimationPendingRef.current[chatId];
               setLoadingChatId((prev) => (prev === chatId ? null : prev));
               if (selectedChatIdRef.current === chatId) {
                 updateMessages([], chatId);
@@ -368,6 +399,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         const data = await res.json();
         applyChatData(data);
       } catch (err) {
+        delete wsInitialAnimationPendingRef.current[chatId];
         console.error(err);
         setLoadingChatId((prev) => (prev === chatId ? null : prev));
         if (selectedChatIdRef.current === chatId) {
@@ -376,7 +408,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         }
       }
     },
-    [updateMessages, prependMessages],
+    [updateMessages, prependMessages, getCachedMessages],
   );
 
   const saveContact = useCallback(
@@ -554,15 +586,28 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   }, [setActiveProfileTab]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setChatStateReady(false);
+      return;
+    }
     const userId = user.id || getLastUserId();
-    if (!userId) return;
+    if (!userId) {
+      setChatStateReady(true);
+      return;
+    }
+    setChatStateReady(false);
     hasServerChatsRef.current = false;
     getChatState(userId)
       .then((state) => {
         if (!state) return;
         // Apply IDB only if server hasn't responded yet (so we don't overwrite fresh data)
         if (hasServerChatsRef.current) return;
+        if (
+          state.messagesCache &&
+          Object.keys(state.messagesCache).length > 0
+        ) {
+          setInitialMessagesCache(state.messagesCache);
+        }
         if (state.chats?.length) setChats(state.chats);
         if (state.selectedChatId != null) {
           setSelectedChatId(state.selectedChatId);
@@ -578,18 +623,15 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
             fetchChat(state.selectedChatId);
           }
         }
-        if (
-          state.messagesCache &&
-          Object.keys(state.messagesCache).length > 0
-        ) {
-          setInitialMessagesCache(state.messagesCache);
-        }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        setChatStateReady(true);
+      });
   }, [user, fetchChat, updateMessages]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !chatStateReady) return;
     const onConnected = () => {
       fetchChats();
     };
@@ -600,7 +642,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     return () => {
       websocketManager.off('connection_established', onConnected);
     };
-  }, [user, fetchChats]);
+  }, [user, chatStateReady, fetchChats]);
 
   useEffect(() => {
     const handleChatCreated = (
@@ -885,6 +927,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       updateChatLastMessage,
       updateChatUnreadCount,
       handleNewMessage,
+      initialWsChatLoadAnimation,
     }),
     [
       messages,
@@ -908,6 +951,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       updateChatLastMessage,
       updateChatUnreadCount,
       handleNewMessage,
+      initialWsChatLoadAnimation,
     ],
   );
 

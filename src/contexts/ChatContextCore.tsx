@@ -93,6 +93,11 @@ export interface ChatMessagesContextType {
   updateChatLastMessage: (chatId: number, lastMessage: Message | null) => void;
   updateChatUnreadCount: (chatId: number, unreadCount: number) => void;
   handleNewMessage: (data: WebSocketMessage) => void;
+  initialWsChatLoadAnimation: {
+    chatId: number;
+    messageIds: number[];
+    token: number;
+  } | null;
 }
 
 export type ChatContextType = ChatMetaContextType &

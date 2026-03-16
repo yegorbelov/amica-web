@@ -224,6 +224,22 @@
   }
 }
 
+.message_div.initialAppear {
+  opacity: 0;
+  animation: message_initial_appear 0.3s ease-out forwards;
+  animation-delay: var(--message-appear-delay, 0s);
+  transition: none;
+}
+
+@keyframes message_initial_appear {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 @keyframes message_loaded {
   0% {
     opacity: 0;
@@ -411,7 +427,7 @@
 }
 
 :global(.temp_full) {
-  // display: flex;
+  display: flex;
   // align-items: center;
   transition: background 1.5s;
   position: relative;

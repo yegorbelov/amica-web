@@ -78,6 +78,7 @@ const MessageList: React.FC<MessageListProps> = ({
     setEditingMessage,
     removeMessageFromChat,
     updateMessageInChat,
+    initialWsChatLoadAnimation,
   } = useChatMessages();
   const { selectedChatId } = useSelectedChat();
   const { containerRef: jumpContainerRef } = useJumpActions();
@@ -939,6 +940,27 @@ const MessageList: React.FC<MessageListProps> = ({
     [scrollToDate],
   );
 
+  const shouldAnimateInitialWsBatch =
+    selectedChatId != null &&
+    initialWsChatLoadAnimation?.chatId === selectedChatId &&
+    Array.isArray(initialWsChatLoadAnimation.messageIds);
+
+  const animatedMessageIds = useMemo(
+    () =>
+      shouldAnimateInitialWsBatch
+        ? initialWsChatLoadAnimation!.messageIds
+        : [],
+    [shouldAnimateInitialWsBatch, initialWsChatLoadAnimation],
+  );
+  const animatedOrder = useMemo(() => {
+    const map = new Map<number, number>();
+    animatedMessageIds.forEach((id, index) => {
+      map.set(id, index);
+    });
+    return map;
+  }, [animatedMessageIds]);
+  const animatedTotalCount = animatedMessageIds.length;
+
   return (
     <div
       className='room_div'
@@ -1013,35 +1035,55 @@ const MessageList: React.FC<MessageListProps> = ({
           {group.messages
             .slice()
             .reverse()
-            .map(({ message, isFirstInGroup, isLastInGroup }) => (
-            <Message
-              key={message.id}
-              message={message}
-              reelItems={reelItems}
-              onReactionClick={handleMessageReactionClick}
-              selectionMode={isSelectionMode}
-              isSelected={selectedMessageIds.has(message.id)}
-              onToggleSelect={() => onToggleMessageSelection(message.id)}
-              onPointerSelectStart={(pointerId) =>
-                handlePointerSelectionStart(
-                  message.id,
-                  selectedMessageIds.has(message.id),
-                  pointerId,
-                )
+            .map(({ message, isFirstInGroup, isLastInGroup }) => {
+              const shouldAnimate =
+                shouldAnimateInitialWsBatch && animatedOrder.has(message.id);
+              let appearDelayMs: number | undefined;
+              if (shouldAnimate) {
+                const order = animatedOrder.get(message.id);
+                if (order != null) {
+                  // Самое старое сообщение (order === animatedTotalCount - 1) показываем без анимации
+                  if (order !== animatedTotalCount - 1) {
+                    const reversedIndex = animatedTotalCount - 1 - order;
+                    appearDelayMs = reversedIndex * 20;
+                  }
+                }
               }
-              onSelectionGestureCandidateStart={(pointerId, clientX, clientY) =>
-                beginSelectionGestureCandidate(
-                  message.id,
-                  selectedMessageIds.has(message.id),
-                  pointerId,
-                  clientX,
-                  clientY,
-                )
-              }
-              isFirstInGroup={isFirstInGroup}
-              isLastInGroup={isLastInGroup}
-            />
-          ))}
+              return (
+                <Message
+                  key={message.id}
+                  message={message}
+                  reelItems={reelItems}
+                  onReactionClick={handleMessageReactionClick}
+                  selectionMode={isSelectionMode}
+                  isSelected={selectedMessageIds.has(message.id)}
+                  onToggleSelect={() => onToggleMessageSelection(message.id)}
+                  onPointerSelectStart={(pointerId) =>
+                    handlePointerSelectionStart(
+                      message.id,
+                      selectedMessageIds.has(message.id),
+                      pointerId,
+                    )
+                  }
+                  onSelectionGestureCandidateStart={(
+                    pointerId,
+                    clientX,
+                    clientY,
+                  ) =>
+                    beginSelectionGestureCandidate(
+                      message.id,
+                      selectedMessageIds.has(message.id),
+                      pointerId,
+                      clientX,
+                      clientY,
+                    )
+                  }
+                  isFirstInGroup={isFirstInGroup}
+                  isLastInGroup={isLastInGroup}
+                  appearDelayMs={appearDelayMs}
+                />
+              );
+            })}
         </div>
       ))}
     </div>
