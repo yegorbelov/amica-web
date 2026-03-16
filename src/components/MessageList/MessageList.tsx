@@ -947,9 +947,7 @@ const MessageList: React.FC<MessageListProps> = ({
 
   const animatedMessageIds = useMemo(
     () =>
-      shouldAnimateInitialWsBatch
-        ? initialWsChatLoadAnimation!.messageIds
-        : [],
+      shouldAnimateInitialWsBatch ? initialWsChatLoadAnimation!.messageIds : [],
     [shouldAnimateInitialWsBatch, initialWsChatLoadAnimation],
   );
   const animatedOrder = useMemo(() => {

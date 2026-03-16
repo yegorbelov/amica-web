@@ -427,7 +427,7 @@
 }
 
 :global(.temp_full) {
-  display: flex;
+  // display: flex;
   // align-items: center;
   transition: background 1.5s;
   position: relative;
@@ -474,6 +474,9 @@
   align-items: center;
   left: 0;
   pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
 
   svg {
     width: 22px;
@@ -484,17 +487,17 @@
 
 @keyframes message_select_check_animation {
   0% {
-    transform: scale(1);
+    transform: translateY(-50%) scale(1);
     margin-left: -22px;
     opacity: 0;
   }
   50% {
-    transform: scale(0.9);
+    transform: translateY(-50%) scale(0.9);
     margin-left: 12px;
     opacity: 1;
   }
   100% {
-    transform: scale(1);
+    transform: translateY(-50%) scale(1);
   }
 }
 
