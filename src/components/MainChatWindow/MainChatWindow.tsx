@@ -32,6 +32,12 @@ import { useToast } from '@/contexts/toast/ToastContextCore';
 const fullscreenExitIcon = <Icon name='FullscreenExit' />;
 const EMPTY_SELECTED_MESSAGE_IDS = new Set<number>();
 
+const SWIPE_DISTANCE_RATIO = 0.5;
+const SWIPE_VELOCITY_THRESHOLD = 0.3;
+const SLIDE_DURATION_MS = 200;
+const MOBILE_BREAKPOINT = 768;
+const HORIZONTAL_SWIPE_THRESHOLD = 10;
+
 const MainChatWindow: React.FC = () => {
   const {
     // settings,
@@ -56,7 +62,35 @@ const MainChatWindow: React.FC = () => {
     chatId: null,
     messageIds: new Set(),
   });
-  // const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isAnimatingClose, setIsAnimatingClose] = useState(false);
+  const [displayedChatState, setDisplayedChatState] = useState<
+    typeof selectedChat
+  >(null);
+  const [isMobile, setIsMobile] = useState(
+    () =>
+      typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT,
+  );
+
+  const swipeWrapperRef = useRef<HTMLDivElement>(null);
+  const swipeTrackRef = useRef<HTMLDivElement>(null);
+  const pointerIdRef = useRef<number | null>(null);
+  const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const startTimeRef = useRef(0);
+  const animateCloseFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const isSpringingBackRef = useRef(false);
+  const dragCommittedRef = useRef(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const handler = () => setIsMobile(mq.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const isSelectionMode =
     selectedChat != null &&
@@ -71,10 +105,153 @@ const MainChatWindow: React.FC = () => {
     setSideBarVisible(true);
   }, []);
 
-  const handleGoHome = useCallback(() => {
+  const finishAnimatingClose = useCallback(() => {
+    if (animateCloseFallbackRef.current) {
+      clearTimeout(animateCloseFallbackRef.current);
+      animateCloseFallbackRef.current = null;
+    }
     setSelectedChatId(null);
     location.hash = '';
+    setIsAnimatingClose(false);
   }, [setSelectedChatId]);
+
+  const triggerCloseAnimation = useCallback(() => {
+    if (!selectedChat) return;
+    setDisplayedChatState(selectedChat);
+    setIsAnimatingClose(true);
+    setDragOffset(0);
+    animateCloseFallbackRef.current = setTimeout(
+      finishAnimatingClose,
+      SLIDE_DURATION_MS + 50,
+    );
+  }, [selectedChat, finishAnimatingClose]);
+
+  const handleGoHome = useCallback(() => {
+    if (isMobile && selectedChat) {
+      triggerCloseAnimation();
+    } else {
+      setSelectedChatId(null);
+      location.hash = '';
+    }
+  }, [setSelectedChatId, isMobile, selectedChat, triggerCloseAnimation]);
+
+  const onSwipePointerDown: React.PointerEventHandler<HTMLDivElement> =
+    useCallback(
+      (e) => {
+        if (!selectedChat || !isMobile) return;
+        const target = e.target as HTMLElement;
+        if (target.closest('button, [role="button"], a')) return;
+        pointerIdRef.current = e.pointerId;
+        startTimeRef.current = performance.now();
+        startXRef.current = e.clientX;
+        startYRef.current = e.clientY;
+        dragCommittedRef.current = false;
+
+        if (
+          isSpringingBackRef.current &&
+          swipeTrackRef.current &&
+          swipeWrapperRef.current
+        ) {
+          isSpringingBackRef.current = false;
+          const matrix = new DOMMatrix(
+            getComputedStyle(swipeTrackRef.current).transform,
+          );
+          const currentTranslateX = matrix.m41;
+          const currentOffset = Math.max(0, currentTranslateX);
+          setDragOffset(currentOffset);
+          startXRef.current = e.clientX - currentOffset;
+          dragCommittedRef.current = true;
+          setIsDragging(true);
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }
+      },
+      [selectedChat, isMobile],
+    );
+
+  const onSwipePointerMove: React.PointerEventHandler<HTMLDivElement> =
+    useCallback(
+      (e) => {
+        if (pointerIdRef.current !== e.pointerId) return;
+        const dx = e.clientX - startXRef.current;
+        const dy = e.clientY - startYRef.current;
+
+        if (!dragCommittedRef.current) {
+          if (
+            Math.abs(dx) > HORIZONTAL_SWIPE_THRESHOLD &&
+            Math.abs(dx) >= Math.abs(dy)
+          ) {
+            dragCommittedRef.current = true;
+            setIsDragging(true);
+            e.currentTarget.setPointerCapture(e.pointerId);
+            setDragOffset(Math.max(0, dx));
+          }
+          return;
+        }
+        if (!isDragging) return;
+        setDragOffset(Math.max(0, dx));
+      },
+      [isDragging],
+    );
+
+  const onSwipePointerUp: React.PointerEventHandler<HTMLDivElement> =
+    useCallback(
+      (e) => {
+        if (pointerIdRef.current !== e.pointerId) return;
+        if (!dragCommittedRef.current) {
+          pointerIdRef.current = null;
+          return;
+        }
+        const dx = e.clientX - startXRef.current;
+        const dt = performance.now() - startTimeRef.current;
+        const velocity = dt > 0 ? dx / dt : 0;
+
+        const pageWidth = swipeWrapperRef.current?.offsetWidth ?? 300;
+        const distanceThreshold = pageWidth * SWIPE_DISTANCE_RATIO;
+        const shouldClose =
+          dx > distanceThreshold || velocity > SWIPE_VELOCITY_THRESHOLD;
+
+        if (shouldClose && dx > 0) {
+          triggerCloseAnimation();
+        } else {
+          setDragOffset(0);
+          isSpringingBackRef.current = true;
+        }
+        setIsDragging(false);
+        pointerIdRef.current = null;
+      },
+      [triggerCloseAnimation],
+    );
+
+  const onSwipePointerCancel: React.PointerEventHandler<HTMLDivElement> =
+    useCallback(() => {
+      if (dragCommittedRef.current) {
+        setDragOffset(0);
+        isSpringingBackRef.current = true;
+      }
+      setIsDragging(false);
+      pointerIdRef.current = null;
+    }, []);
+
+  const handleSwipeTransitionEnd = useCallback(
+    (e: React.TransitionEvent) => {
+      if (e.propertyName !== 'transform') return;
+      if (isAnimatingClose) {
+        finishAnimatingClose();
+      } else {
+        isSpringingBackRef.current = false;
+      }
+    },
+    [isAnimatingClose, finishAnimatingClose],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (animateCloseFallbackRef.current) {
+        clearTimeout(animateCloseFallbackRef.current);
+        animateCloseFallbackRef.current = null;
+      }
+    };
+  }, []);
 
   const handleSideBarClose = useCallback(() => {
     setSideBarVisible(false);
@@ -191,7 +368,8 @@ const MainChatWindow: React.FC = () => {
     return () => window.removeEventListener('keydown', handleEscape, true);
   }, [isSelectionMode, exitSelectionMode]);
 
-  const isSwiped = Boolean(selectedChat);
+  const isSwiped = Boolean(selectedChat) || isAnimatingClose;
+  const displayedChat = isAnimatingClose ? displayedChatState : selectedChat;
 
   useLayoutEffect(() => {
     const margin = isSwiped ? '0%' : '100%';
@@ -271,38 +449,100 @@ const MainChatWindow: React.FC = () => {
           <ActiveProfileTab />
         </div>
       )}
-      {selectedChat && (!settingsFullWindow || current === 'chats') && (
-        <>
-          <Wallpaper />
-
-          <ChatHeader
-            onChatInfoClick={handleHeaderClick}
-            onGoHome={handleGoHome}
-          />
+      {displayedChat &&
+        (!settingsFullWindow || current === 'chats') &&
+        (isMobile ? (
           <div
-            className={styles.roomWrapperContainer}
-            ref={scrollContainerCallbackRef}
+            ref={swipeWrapperRef}
+            className={styles.swipeWrapper}
+            onPointerDown={onSwipePointerDown}
+            onPointerMove={onSwipePointerMove}
+            onPointerUp={onSwipePointerUp}
+            onPointerCancel={onSwipePointerCancel}
           >
-            <div className={`room_wrapper ${sideBarVisible ? 'shifted' : ''}`}>
+            <div
+              ref={swipeTrackRef}
+              className={styles.swipeTrack}
+              style={{
+                transform: isAnimatingClose
+                  ? 'translateX(100%)'
+                  : `translateX(${dragOffset}px)`,
+                transition: isDragging
+                  ? 'none'
+                  : `transform ${SLIDE_DURATION_MS}ms ease-out`,
+              }}
+              onTransitionEnd={handleSwipeTransitionEnd}
+            >
               <Wallpaper />
-              <MessageList
+              <ChatHeader
+                onChatInfoClick={handleHeaderClick}
+                onGoHome={handleGoHome}
+              />
+              <div
+                className={styles.roomWrapperContainer}
+                ref={scrollContainerCallbackRef}
+              >
+                <div
+                  className={`room_wrapper ${sideBarVisible ? 'shifted' : ''}`}
+                >
+                  <Wallpaper />
+                  <MessageList
+                    isSelectionMode={isSelectionMode}
+                    selectedMessageIds={selectedMessageIds}
+                    onSelectMessage={enterSelectionMode}
+                    onToggleMessageSelection={toggleMessageSelection}
+                    onSetMessageSelection={setMessageSelection}
+                  />
+                </div>
+              </div>
+              <SendArea
                 isSelectionMode={isSelectionMode}
-                selectedMessageIds={selectedMessageIds}
-                onSelectMessage={enterSelectionMode}
-                onToggleMessageSelection={toggleMessageSelection}
-                onSetMessageSelection={setMessageSelection}
+                selectedMessagesCount={selectedMessagesCount}
+                onExitSelectionMode={exitSelectionMode}
+                onDeleteSelectedMessages={deleteSelectedMessages}
+              />
+              <SideBarMedia
+                visible={sideBarVisible}
+                onClose={handleSideBarClose}
               />
             </div>
           </div>
-          <SendArea
-            isSelectionMode={isSelectionMode}
-            selectedMessagesCount={selectedMessagesCount}
-            onExitSelectionMode={exitSelectionMode}
-            onDeleteSelectedMessages={deleteSelectedMessages}
-          />
-          <SideBarMedia visible={sideBarVisible} onClose={handleSideBarClose} />
-        </>
-      )}
+        ) : (
+          <>
+            <Wallpaper />
+            <ChatHeader
+              onChatInfoClick={handleHeaderClick}
+              onGoHome={handleGoHome}
+            />
+            <div
+              className={styles.roomWrapperContainer}
+              ref={scrollContainerCallbackRef}
+            >
+              <div
+                className={`room_wrapper ${sideBarVisible ? 'shifted' : ''}`}
+              >
+                <Wallpaper />
+                <MessageList
+                  isSelectionMode={isSelectionMode}
+                  selectedMessageIds={selectedMessageIds}
+                  onSelectMessage={enterSelectionMode}
+                  onToggleMessageSelection={toggleMessageSelection}
+                  onSetMessageSelection={setMessageSelection}
+                />
+              </div>
+            </div>
+            <SendArea
+              isSelectionMode={isSelectionMode}
+              selectedMessagesCount={selectedMessagesCount}
+              onExitSelectionMode={exitSelectionMode}
+              onDeleteSelectedMessages={deleteSelectedMessages}
+            />
+            <SideBarMedia
+              visible={sideBarVisible}
+              onClose={handleSideBarClose}
+            />
+          </>
+        ))}
       {!selectedChat &&
         (!settingsFullWindow || current === 'chats' || !activeProfileTab) && (
           <AppearanceMenu />

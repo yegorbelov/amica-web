@@ -42,7 +42,9 @@ type StoredSettings = Partial<
 >;
 
 function getSettingsStorageKey(userId: number | null | undefined): string {
-  return userId != null ? `${STORAGE_KEY_PREFIX}-${userId}` : STORAGE_KEY_PREFIX;
+  return userId != null
+    ? `${STORAGE_KEY_PREFIX}-${userId}`
+    : STORAGE_KEY_PREFIX;
 }
 
 function parseStoredSettings(storageKey: string): StoredSettings {
@@ -56,7 +58,6 @@ function parseStoredSettings(storageKey: string): StoredSettings {
   }
 }
 
-/** Объединяет дефолтные обои с кастомными (сохранёнными или с API). */
 function mergeWallpapers(
   defaults: WallpaperSetting[],
   custom: WallpaperSetting[] | undefined,
@@ -289,7 +290,29 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, [gradient, color]);
 
   const [loading, setLoading] = useState(true);
-  const [activeProfileTab, setActiveProfileTab] = useState<SubTab>(null);
+  const [profilePageStack, setProfilePageStack] = useState<SubTab[]>([]);
+  const activeProfileTab: SubTab =
+    profilePageStack.length > 0
+      ? profilePageStack[profilePageStack.length - 1]
+      : null;
+
+  const pushProfilePage = useCallback((tab: SubTab) => {
+    setProfilePageStack((prev) => [...prev, tab]);
+  }, []);
+
+  const popProfilePage = useCallback(() => {
+    setProfilePageStack((prev) => (prev.length > 0 ? prev.slice(0, -1) : prev));
+  }, []);
+
+  const setActiveProfileTab = useCallback((tab: SubTab) => {
+    if (tab === null) {
+      setProfilePageStack((prev) =>
+        prev.length > 0 ? prev.slice(0, -1) : prev,
+      );
+    } else {
+      setProfilePageStack([tab]);
+    }
+  }, []);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurPersistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -519,6 +542,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       settings,
       loading,
       activeProfileTab,
+      profilePageStack,
       autoplayVideos,
       settingsFullWindow,
       isResizingPermitted,
@@ -530,6 +554,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       settings,
       loading,
       activeProfileTab,
+      profilePageStack,
       autoplayVideos,
       settingsFullWindow,
       isResizingPermitted,
@@ -548,6 +573,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       removeWallpaper,
       fetchWallpapers,
       setActiveProfileTab,
+      pushProfilePage,
+      popProfilePage,
       setAutoplayVideos,
       setSettingsFullWindow,
       setIsResizingPermitted,
@@ -561,6 +588,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setActiveWallpaper,
       setBlur,
       setSetting,
+      setActiveProfileTab,
+      pushProfilePage,
+      popProfilePage,
     ],
   );
 

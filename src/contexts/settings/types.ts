@@ -45,6 +45,7 @@ export interface SettingsStateValue {
   settings: Settings;
   loading: boolean;
   activeProfileTab: SubTab;
+  profilePageStack: SubTab[];
   autoplayVideos: boolean;
   settingsFullWindow: boolean;
   isResizingPermitted: boolean;
@@ -58,6 +59,8 @@ export interface SettingsActionsValue {
   setActiveWallpaper: (wallpaper: WallpaperSetting | null) => void;
   addUserWallpaper: (file: File) => void;
   setActiveProfileTab: (tab: SubTab) => void;
+  pushProfilePage: (tab: SubTab) => void;
+  popProfilePage: () => void;
   setBlur: (value: number) => void;
   removeWallpaper: (id: string) => void;
   fetchWallpapers: () => Promise<void>;

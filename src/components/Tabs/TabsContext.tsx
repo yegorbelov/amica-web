@@ -1,4 +1,10 @@
-import { useState, useEffect, type ReactNode, startTransition } from 'react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  type ReactNode,
+  startTransition,
+} from 'react';
 import { usePageStack } from '@/contexts/useStackHistory';
 import { TabsContext, LOCAL_STORAGE_KEY, type TabValue } from './tabsShared';
 import { useUser } from '@/contexts/UserContextCore';
@@ -8,6 +14,8 @@ function getTabStorageKey(userId: number | null | undefined): string {
   return userId != null ? `${LOCAL_STORAGE_KEY}-${userId}` : LOCAL_STORAGE_KEY;
 }
 
+const TAB_TRANSITION_MS = 300;
+
 export function TabsProvider({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const storageKey = getTabStorageKey(user?.id ?? getLastUserId());
@@ -16,8 +24,16 @@ export function TabsProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem(storageKey) as TabValue | null;
     return saved ?? 'chats';
   });
+  const prevActiveTabRef = useRef<TabValue>(activeTab);
 
   useEffect(() => {
+    const prev = prevActiveTabRef.current;
+    prevActiveTabRef.current = activeTab;
+
+    if (prev === 'profile' && activeTab !== 'profile') {
+      const id = setTimeout(() => push(activeTab), TAB_TRANSITION_MS);
+      return () => clearTimeout(id);
+    }
     push(activeTab);
   }, [activeTab, push]);
 

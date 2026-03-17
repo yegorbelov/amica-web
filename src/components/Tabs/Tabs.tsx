@@ -64,6 +64,7 @@ export function Tabs() {
     useState<TabValue | null>(activeTab);
   const isDraggingRef = useRef(false);
   const snappingResetTimerRef = useRef<number | null>(null);
+  const settleFallbackTimerRef = useRef<number | null>(null);
   const pendingSettledTabRef = useRef<TabValue>(activeTab);
   const indicatorPointerIdRef = useRef<number | null>(null);
   const indicatorStartXRef = useRef(0);
@@ -113,14 +114,14 @@ export function Tabs() {
   }, [isSnapping]);
 
   useEffect(() => {
-    // When we're not snapping, the visual position equals state.
-    if (!isSnapping) setVisualIndicatorX(indicatorX);
-  }, [indicatorX, isSnapping]);
+    // When we're not snapping or armed, the visual position equals state.
+    if (!isSnapping && !isArmedMove) setVisualIndicatorX(indicatorX);
+  }, [indicatorX, isSnapping, isArmedMove]);
 
   useEffect(() => {
-    // While snapping, `indicatorX` is the target. Track the current visual
-    // position from DOM so the mask follows the moving indicator.
-    if (!isSnapping) return;
+    // While snapping or armed, `indicatorX` is the target. Track the current
+    // visual position from DOM so the mask follows the moving indicator.
+    if (!isSnapping && !isArmedMove) return;
 
     const container = mainNavRef.current;
     const indicator = indicatorRef.current;
@@ -141,7 +142,7 @@ export function Tabs() {
         rafRef.current = null;
       }
     };
-  }, [isSnapping]);
+  }, [isSnapping, isArmedMove]);
 
   useEffect(() => {
     // Disable initial "jump" animation on first load.
@@ -149,6 +150,9 @@ export function Tabs() {
     return () => {
       if (snappingResetTimerRef.current !== null) {
         window.clearTimeout(snappingResetTimerRef.current);
+      }
+      if (settleFallbackTimerRef.current !== null) {
+        window.clearTimeout(settleFallbackTimerRef.current);
       }
     };
   }, []);
@@ -159,6 +163,31 @@ export function Tabs() {
       window.clearTimeout(snappingResetTimerRef.current);
       snappingResetTimerRef.current = null;
     }
+    if (settleFallbackTimerRef.current !== null) {
+      window.clearTimeout(settleFallbackTimerRef.current);
+      settleFallbackTimerRef.current = null;
+    }
+  };
+
+  const scheduleSettleFallback = () => {
+    if (settleFallbackTimerRef.current !== null) {
+      window.clearTimeout(settleFallbackTimerRef.current);
+    }
+    const indicator = indicatorRef.current;
+    const durMs = indicator
+      ? Number.parseFloat(
+          window
+            .getComputedStyle(indicator)
+            .getPropertyValue('--transition-duration'),
+        ) * 1000
+      : NaN;
+    const timeoutMs =
+      Number.isFinite(durMs) && durMs > 0 ? Math.ceil(durMs + 80) : 420;
+    settleFallbackTimerRef.current = window.setTimeout(() => {
+      settleFallbackTimerRef.current = null;
+      stopSnapping();
+      setIndicatorSettledTab(pendingSettledTabRef.current);
+    }, timeoutMs);
   };
 
   const measureTabLayout = () => {
@@ -216,21 +245,27 @@ export function Tabs() {
     pendingSettledTabRef.current = tabId;
 
     if (opts?.animated) {
-      // If there's no actual movement, there will be no `left` transition,
-      // so never enter the "moving" (scale 1.1) state.
-      if (Math.abs(indicatorXRef.current - x) < 0.5) {
-        stopSnapping();
-        setIndicatorSettledTab(tabId);
-      } else {
+      // While animating to a new position, drop the settled state so the
+      // `.tab-inner` background doesn't switch early.
+      setIndicatorSettledTab(null);
+      // Decide whether we *visually* move based on current DOM position,
+      // not based on the last target `indicatorXRef`.
+      const currentRect = indicatorRef.current?.getBoundingClientRect();
+      const currentVisualX = currentRect
+        ? currentRect.left + currentRect.width / 2 - c.left
+        : indicatorXRef.current;
+      const didMove = Math.abs(currentVisualX - x) >= 0.5;
+
+      if (didMove) {
         if (snappingResetTimerRef.current !== null) {
           window.clearTimeout(snappingResetTimerRef.current);
         }
         setIsSnapping(true);
-        // Fallback should exceed the CSS `left` transition duration.
-        snappingResetTimerRef.current = window.setTimeout(() => {
-          stopSnapping();
-          setIndicatorSettledTab(pendingSettledTabRef.current);
-        }, 420);
+        scheduleSettleFallback();
+      } else {
+        // No visible movement: settle immediately.
+        stopSnapping();
+        setIndicatorSettledTab(tabId);
       }
     }
 
@@ -247,6 +282,7 @@ export function Tabs() {
   useLayoutEffect(() => {
     if (isDraggingRef.current) return;
     const shouldAnimate = indicatorInitializedRef.current;
+    if (shouldAnimate) setIndicatorSettledTab(null);
     snapIndicatorToTab(activeTab, { animated: shouldAnimate });
     indicatorInitializedRef.current = true;
     measureTabLayout();
@@ -391,7 +427,6 @@ export function Tabs() {
 
     setIndicatorX(currentX);
     indicatorXRef.current = currentX;
-    setVisualIndicatorX(currentX);
 
     // Arm a drag. We'll only start dragging after a small move threshold
     // so normal clicks on tab buttons still work.
@@ -644,10 +679,16 @@ export function Tabs() {
             const localCenterX = layout ? visualIndicatorX - layout.left : 0;
             const localCenterXInInner = localCenterX - TAB_INNER_INSET_PX;
 
-            const maskScale =
-              isDraggingIndicator || isSnapping || isArmedMove ? 1.1 : 1;
-            const maskWidth = indicatorSize.width * maskScale;
-            const maskBleed = 0.5 / getDevicePixelRatio();
+            const isMaskInMotion =
+              isDraggingIndicator || isSnapping || isArmedMove;
+            const baseMaskWidth = indicatorSize.width;
+            const motionMaskScale = 1.1;
+            const staticShrinkPx = 1;
+            const maskWidth = isMaskInMotion
+              ? baseMaskWidth * motionMaskScale
+              : Math.max(0, baseMaskWidth - staticShrinkPx);
+            const baseMaskBleed = 0.5 / getDevicePixelRatio();
+            const maskBleed = isMaskInMotion ? baseMaskBleed : 0;
 
             const maskLeft =
               layout && maskWidth

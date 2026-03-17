@@ -612,7 +612,6 @@ const MessageList: React.FC<MessageListProps> = ({
           const listEl = containerRef.current;
           const chatId = selectedChatIdRef.current;
           const scrollRange = el.scrollHeight - el.clientHeight;
-          // column-reverse: scrollTop=0 внизу (новые), при скролле вверх scrollTop уходит в минус
           const minScrollTop = scrollRange > 0 ? -scrollRange : 0;
           const nearTop =
             scrollRange > 0 &&
@@ -1040,7 +1039,6 @@ const MessageList: React.FC<MessageListProps> = ({
               if (shouldAnimate) {
                 const order = animatedOrder.get(message.id);
                 if (order != null) {
-                  // Самое старое сообщение (order === animatedTotalCount - 1) показываем без анимации
                   if (order !== animatedTotalCount - 1) {
                     const reversedIndex = animatedTotalCount - 1 - order;
                     appearDelayMs = reversedIndex * 20;

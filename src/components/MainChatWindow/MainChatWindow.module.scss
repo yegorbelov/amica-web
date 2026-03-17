@@ -28,6 +28,27 @@
   // }
 }
 
+.swipeWrapper {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  @media screen and (max-width: 768px) {
+    touch-action: pan-y;
+  }
+}
+
+.swipeTrack {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .roomWrapperContainer {
   height: 100%;
   width: 100%;
@@ -106,7 +127,7 @@
 
 @media screen and (max-width: 768px) {
   :global(.main_chat_window) {
-    background-color: #000;
+    // background-color: #000;
     margin: 0;
     width: 100%;
     position: fixed;
@@ -115,6 +136,18 @@
 
   :global(.main_chat_window.swiped) {
     display: flex;
+    animation: chatSlideIn 0.2s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+}
+
+@keyframes chatSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
