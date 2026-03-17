@@ -137,6 +137,8 @@ function ChatsLottieIcon({ isActive }: { isActive: boolean }) {
 
       item?.addEventListener?.('complete', onComplete);
 
+      // Make Chats animation a bit snappier than default.
+      api.setSpeed?.(1.5);
       api.setDirection?.(1);
       api.goToAndPlay(0, true);
 
@@ -150,6 +152,8 @@ function ChatsLottieIcon({ isActive }: { isActive: boolean }) {
       return;
     }
 
+    // Reset speed when not active to keep default timing elsewhere.
+    api.setSpeed?.(1);
     api.setDirection?.(1);
     api.play?.();
   }, [isActive]);
@@ -179,13 +183,21 @@ export function Tabs() {
 
   const [isDraggingIndicator, setIsDraggingIndicator] = useState(false);
   const [isSnapping, setIsSnapping] = useState(false);
+  const [indicatorSettledTab, setIndicatorSettledTab] =
+    useState<TabValue | null>(activeTab);
   const isDraggingRef = useRef(false);
   const snappingResetTimerRef = useRef<number | null>(null);
+  const pendingSettledTabRef = useRef<TabValue>(activeTab);
   const indicatorPointerIdRef = useRef<number | null>(null);
   const indicatorStartXRef = useRef(0);
   const pointerStartXRef = useRef(0);
+  const tabbarArmedPointerIdRef = useRef<number | null>(null);
+  const tabbarArmedStartXRef = useRef(0);
+  const tabbarArmedTabIdRef = useRef<TabValue | null>(null);
   const [indicatorX, setIndicatorX] = useState(0);
   const indicatorXRef = useRef(0);
+  const [visualIndicatorX, setVisualIndicatorX] = useState(0);
+  const rafRef = useRef<number | null>(null);
   const [disableIndicatorTransition, setDisableIndicatorTransition] =
     useState(true);
   const indicatorInitializedRef = useRef(false);
@@ -209,6 +221,37 @@ export function Tabs() {
   useEffect(() => {
     indicatorXRef.current = indicatorX;
   }, [indicatorX]);
+
+  useEffect(() => {
+    // When we're not snapping, the visual position equals state.
+    if (!isSnapping) setVisualIndicatorX(indicatorX);
+  }, [indicatorX, isSnapping]);
+
+  useEffect(() => {
+    // While snapping, `indicatorX` is the target. Track the current visual
+    // position from DOM so the mask follows the moving indicator.
+    if (!isSnapping) return;
+
+    const container = mainNavRef.current;
+    const indicator = indicatorRef.current;
+    if (!container || !indicator) return;
+
+    const tick = () => {
+      const c = container.getBoundingClientRect();
+      const r = indicator.getBoundingClientRect();
+      const currentCenterX = r.left + r.width / 2 - c.left;
+      setVisualIndicatorX(currentCenterX);
+      rafRef.current = window.requestAnimationFrame(tick);
+    };
+
+    rafRef.current = window.requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, [isSnapping]);
 
   useEffect(() => {
     // Disable initial "jump" animation on first load.
@@ -251,6 +294,22 @@ export function Tabs() {
     }
   };
 
+  const clampIndicatorXToBounds = (rawX: number) => {
+    const container = mainNavRef.current;
+    if (!container) return rawX;
+
+    const c = container.getBoundingClientRect();
+    const indicatorW =
+      indicatorSize.width ||
+      indicatorRef.current?.getBoundingClientRect().width ||
+      0;
+
+    // `indicatorX` is the center position (since we translateX(-50%)).
+    const min = indicatorW ? indicatorW / 2 : 0;
+    const max = indicatorW ? c.width - indicatorW / 2 : c.width;
+    return clamp(rawX, min, max);
+  };
+
   const snapIndicatorToTab = (
     tabId: TabValue,
     opts?: { animated?: boolean },
@@ -262,27 +321,36 @@ export function Tabs() {
     const c = container.getBoundingClientRect();
     const b = btn.getBoundingClientRect();
     const centerX = b.left + b.width / 2;
-    const x = centerX - c.left;
+    const x = clampIndicatorXToBounds(centerX - c.left);
+
+    pendingSettledTabRef.current = tabId;
 
     if (opts?.animated) {
       // If there's no actual movement, there will be no `left` transition,
       // so never enter the "moving" (scale 1.1) state.
       if (Math.abs(indicatorXRef.current - x) < 0.5) {
         stopSnapping();
+        setIndicatorSettledTab(tabId);
       } else {
         if (snappingResetTimerRef.current !== null) {
           window.clearTimeout(snappingResetTimerRef.current);
         }
         setIsSnapping(true);
-        // Fallback: if transitionend is missed for any reason, don't get stuck.
+        // Fallback should exceed the CSS `left` transition duration.
         snappingResetTimerRef.current = window.setTimeout(() => {
           stopSnapping();
-        }, 260);
+          setIndicatorSettledTab(pendingSettledTabRef.current);
+        }, 420);
       }
     }
 
     setIndicatorX(x);
     indicatorXRef.current = x;
+
+    // If we jump without animation (first paint / cancel), the indicator is settled immediately.
+    if (!opts?.animated) {
+      setIndicatorSettledTab(tabId);
+    }
   };
 
   // Keep indicator aligned when activeTab changes (click/programmatic).
@@ -361,15 +429,122 @@ export function Tabs() {
     if (!container) return;
 
     stopSnapping();
+
+    // If the indicator was mid-transition, `indicatorX` is the target value,
+    // but visually it's between. Snap our state to the *current* visual center
+    // to avoid a jump when starting a drag.
+    const c = container.getBoundingClientRect();
+    const r = e.currentTarget.getBoundingClientRect();
+    const currentCenterX = r.left + r.width / 2 - c.left;
+    const currentX = clampIndicatorXToBounds(currentCenterX);
+    setIndicatorX(currentX);
+    indicatorXRef.current = currentX;
+    setVisualIndicatorX(currentX);
+
     isDraggingRef.current = true;
     setIsDraggingIndicator(true);
+    setIndicatorSettledTab(null);
     indicatorPointerIdRef.current = e.pointerId;
 
     // Capture pointer so we continue to receive move/up events.
     e.currentTarget.setPointerCapture(e.pointerId);
 
     pointerStartXRef.current = e.clientX;
-    indicatorStartXRef.current = indicatorX;
+    indicatorStartXRef.current = currentX;
+  };
+
+  const onTabbarPointerDown: React.PointerEventHandler<HTMLDivElement> = (
+    e,
+  ) => {
+    // If starting on the indicator, use the indicator handler (it captures).
+    if (e.target === indicatorRef.current) return;
+    if (isDraggingRef.current) return;
+
+    const container = mainNavRef.current;
+    if (!container) return;
+    const c = container.getBoundingClientRect();
+
+    stopSnapping();
+    setIndicatorSettledTab(null);
+
+    // "Click to move, release to activate":
+    // - on pointerdown we snap the indicator to the nearest tab (or the pressed tab)
+    // - on pointerup (without dragging) we activate that snapped tab
+    const buttonEl = (e.target as HTMLElement | null)?.closest?.(
+      'button',
+    ) as HTMLButtonElement | null;
+    const pressedTabId =
+      (buttonEl?.dataset?.tabId as TabValue | undefined) ?? null;
+
+    const x = clampIndicatorXToBounds(e.clientX - c.left);
+    const nearest = getNearestTabToX(x);
+    const targetTabId = pressedTabId ?? nearest;
+    tabbarArmedTabIdRef.current = targetTabId;
+
+    const btn = tabButtonRefs.current[targetTabId];
+    const b = btn?.getBoundingClientRect();
+    const currentX =
+      b && b.width ? clampIndicatorXToBounds(b.left + b.width / 2 - c.left) : x;
+    setIndicatorX(currentX);
+    indicatorXRef.current = currentX;
+    setVisualIndicatorX(currentX);
+
+    // Arm a drag. We'll only start dragging after a small move threshold
+    // so normal clicks on tab buttons still work.
+    tabbarArmedPointerIdRef.current = e.pointerId;
+    tabbarArmedStartXRef.current = e.clientX;
+
+    pointerStartXRef.current = e.clientX;
+    indicatorStartXRef.current = currentX;
+  };
+
+  const onTabbarPointerMove: React.PointerEventHandler<HTMLDivElement> = (
+    e,
+  ) => {
+    if (tabbarArmedPointerIdRef.current === null) return;
+    if (e.pointerId !== tabbarArmedPointerIdRef.current) return;
+    if (isDraggingRef.current) return;
+
+    const dx = e.clientX - tabbarArmedStartXRef.current;
+    // Follow immediately; threshold is only for suppressing click / entering drag mode.
+    const nextX = clampIndicatorXToBounds(indicatorStartXRef.current + dx);
+    setIndicatorX(nextX);
+    indicatorXRef.current = nextX;
+    setVisualIndicatorX(nextX);
+
+    if (Math.abs(dx) < 6) return;
+
+    tabbarArmedPointerIdRef.current = null;
+
+    isDraggingRef.current = true;
+    setIsDraggingIndicator(true);
+    setIndicatorSettledTab(null);
+    indicatorPointerIdRef.current = e.pointerId;
+
+    // Capture pointer so we continue to receive move/up events.
+    e.currentTarget.setPointerCapture(e.pointerId);
+
+    // Keep the same delta math as indicator dragging.
+    pointerStartXRef.current = e.clientX;
+    indicatorStartXRef.current = indicatorXRef.current;
+  };
+
+  const onTabbarPointerUpOrCancel: React.PointerEventHandler<HTMLDivElement> = (
+    e,
+  ) => {
+    if (tabbarArmedPointerIdRef.current !== null) {
+      if (e.pointerId !== tabbarArmedPointerIdRef.current) return;
+      tabbarArmedPointerIdRef.current = null;
+      const tabId = tabbarArmedTabIdRef.current;
+      tabbarArmedTabIdRef.current = null;
+
+      // If user released without starting a drag, activate the snapped tab.
+      if (!isDraggingRef.current && tabId) {
+        snapIndicatorToTab(tabId, { animated: true });
+        setActiveTab(tabId);
+      }
+      return;
+    }
   };
 
   const onIndicatorPointerMove: React.PointerEventHandler<HTMLDivElement> = (
@@ -385,12 +560,12 @@ export function Tabs() {
     const container = mainNavRef.current;
     if (!container) return;
 
-    const c = container.getBoundingClientRect();
     const dx = e.clientX - pointerStartXRef.current;
 
     // Keep indicator within container bounds.
-    const nextX = clamp(indicatorStartXRef.current + dx, 0, c.width);
+    const nextX = clampIndicatorXToBounds(indicatorStartXRef.current + dx);
     setIndicatorX(nextX);
+    indicatorXRef.current = nextX;
   };
 
   const endIndicatorDrag = (clientX: number) => {
@@ -398,19 +573,23 @@ export function Tabs() {
     if (!container) return;
 
     const c = container.getBoundingClientRect();
-    const x = clamp(clientX - c.left, 0, c.width);
+    const x = clampIndicatorXToBounds(clientX - c.left);
     const nearest = getNearestTabToX(x);
 
     // Snap indicator visually and activate the nearest tab; keep scale 1.1 during snap.
     setIsSnapping(true);
-    snapIndicatorToTab(nearest);
+    setIndicatorSettledTab(null);
+    snapIndicatorToTab(nearest, { animated: true });
     setActiveTab(nearest);
   };
 
   const onIndicatorTransitionEnd: React.TransitionEventHandler<
     HTMLDivElement
   > = (e) => {
-    if (e.propertyName === 'left') stopSnapping();
+    if (e.propertyName === 'left') {
+      stopSnapping();
+      setIndicatorSettledTab(pendingSettledTabRef.current);
+    }
   };
 
   const onIndicatorPointerUp: React.PointerEventHandler<HTMLDivElement> = (
@@ -442,7 +621,8 @@ export function Tabs() {
     isDraggingRef.current = false;
     setIsDraggingIndicator(false);
     indicatorPointerIdRef.current = null;
-    snapIndicatorToTab(activeTab);
+    // Cancel should return to the current active tab without a long animation.
+    snapIndicatorToTab(activeTab, { animated: false });
   };
 
   return (
@@ -479,6 +659,27 @@ export function Tabs() {
             : ''
         }`}
         ref={mainNavRef}
+        onPointerDown={onTabbarPointerDown}
+        onPointerMove={(e) => {
+          onTabbarPointerMove(e);
+          // When we did start dragging from the tabbar, route movement to the
+          // same handler used by the indicator itself.
+          onIndicatorPointerMove(
+            e as unknown as React.PointerEvent<HTMLDivElement>,
+          );
+        }}
+        onPointerUp={(e) => {
+          onTabbarPointerUpOrCancel(e);
+          onIndicatorPointerUp(
+            e as unknown as React.PointerEvent<HTMLDivElement>,
+          );
+        }}
+        onPointerCancel={(e) => {
+          onTabbarPointerUpOrCancel(e);
+          onIndicatorPointerCancel(
+            e as unknown as React.PointerEvent<HTMLDivElement>,
+          );
+        }}
       >
         <div
           ref={indicatorRef}
@@ -502,17 +703,35 @@ export function Tabs() {
         />
         {tabs.map((tab) =>
           (() => {
-            const isActive = activeTab === tab.id;
+            const isTabVisuallyActive = indicatorSettledTab === tab.id;
             const layout = tabLayout[tab.id];
 
-            const localCenterX = layout ? indicatorX - layout.left : 0;
+            // `.tab-inner` is centered and inset by 4px on each side (see SCSS:
+            // width/height: calc(100% - 8px)). The mask is applied inside
+            // `.tab-inner`, so compute mask coordinates in that local space.
+            const TAB_INNER_INSET_PX = 4;
+            const innerWidth = layout
+              ? Math.max(0, layout.width - TAB_INNER_INSET_PX * 2)
+              : 0;
+
+            const localCenterX = layout ? visualIndicatorX - layout.left : 0;
+            const localCenterXInInner = localCenterX - TAB_INNER_INSET_PX;
+
             const maskLeft =
               layout && indicatorSize.width
-                ? clamp(localCenterX - indicatorSize.width / 2, 0, layout.width)
+                ? clamp(
+                    localCenterXInInner - indicatorSize.width / 2,
+                    0,
+                    innerWidth,
+                  )
                 : 0;
             const maskRight =
               layout && indicatorSize.width
-                ? clamp(localCenterX + indicatorSize.width / 2, 0, layout.width)
+                ? clamp(
+                    localCenterXInInner + indicatorSize.width / 2,
+                    0,
+                    innerWidth,
+                  )
                 : 0;
             const maskOpacity = layout && maskRight - maskLeft > 0 ? 1 : 0;
 
@@ -522,7 +741,9 @@ export function Tabs() {
                 ref={(el) => {
                   tabButtonRefs.current[tab.id] = el;
                 }}
-                className={`${styles.tab} ${isActive ? styles.active : ''}`}
+                className={styles.tab}
+                data-tab-id={tab.id}
+                data-settled={tab.id === indicatorSettledTab ? 'true' : 'false'}
                 style={
                   layout
                     ? ({
@@ -532,32 +753,14 @@ export function Tabs() {
                       } as React.CSSProperties)
                     : undefined
                 }
-                onClick={(e) => {
-                  const el = e.currentTarget;
-
-                  el.classList.remove(styles.active);
-                  void el.offsetWidth;
-                  el.classList.add(styles.active);
-
-                  // If user clicks the already-active tab, React may bail out from
-                  // state updates, so ensure we don't get stuck in "moving" state.
-                  if (activeTab === tab.id) {
-                    isDraggingRef.current = false;
-                    indicatorPointerIdRef.current = null;
-                    setIsDraggingIndicator(false);
-                    stopSnapping();
-                    snapIndicatorToTab(tab.id, { animated: false });
-                    return;
-                  }
-
-                  setActiveTab(tab.id);
-                }}
                 type='button'
               >
                 <div className={styles['tab-inner']}>
                   <div className={styles['tab-layer']}>
                     {tab.icon && !tab.avatar && (
-                      <div className={styles.icon}>{tab.icon(isActive)}</div>
+                      <div className={styles.icon}>
+                        {tab.icon(isTabVisuallyActive)}
+                      </div>
                     )}
 
                     {tab.avatar && (
@@ -578,7 +781,9 @@ export function Tabs() {
                     aria-hidden='true'
                   >
                     {tab.icon && !tab.avatar && (
-                      <div className={styles.icon}>{tab.icon(isActive)}</div>
+                      <div className={styles.icon}>
+                        {tab.icon(isTabVisuallyActive)}
+                      </div>
                     )}
 
                     {tab.avatar && (
