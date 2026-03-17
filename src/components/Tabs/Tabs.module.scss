@@ -135,9 +135,13 @@
   // }
 }
 
+.drag-indicator--active {
+  transform: translate(-50%, -50%) scale(1);
+}
+
 .drag-indicator--dragging {
   cursor: grabbing;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1.1);
   background: transparent;
 
   // &::before {
@@ -177,7 +181,7 @@
 }
 
 .drag-indicator--moving {
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1.1);
 
   // &::before {
   //   background: rgba(90, 90, 90, 0.18);
@@ -317,6 +321,27 @@
   width: 25px;
   height: 25px;
   transition: scale 0.2s ease;
+}
+
+.icon {
+  position: relative;
+}
+
+.unread-badge {
+  position: absolute;
+  top: 0px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--mainColor);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .contacts-lottie {

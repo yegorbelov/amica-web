@@ -6,10 +6,9 @@ import styles from './Tabs.module.scss';
 import { useTranslation } from '@/contexts/languageCore';
 import { useSettings } from '@/contexts/settings/context';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useChatMeta } from '@/contexts/ChatContextCore';
 import Button from '../ui/button/Button';
-import Lottie, { type LottieRefCurrentProps } from 'lottie-react';
-import contactsLottie from '@/icons/animated/Contacts.json';
-import chatsLottie from '@/icons/animated/Chats.json';
+import { ContactsLottieIcon, ChatsLottieIcon } from './TabsLottieIcons';
 
 const NEW_WALLPAPER_HEIGHT = '50px';
 
@@ -30,151 +29,12 @@ function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
-function ContactsLottieIcon({ isActive }: { isActive: boolean }) {
-  const lottieRef = useRef<LottieRefCurrentProps | null>(null);
-  const didInitRef = useRef(false);
-  const finishedRef = useRef(false);
-
-  useEffect(() => {
-    const api = lottieRef.current;
-    if (!api) return;
-
-    const getLastFrame = () => {
-      const durFrames = api.getDuration?.(true);
-      if (typeof durFrames === 'number' && Number.isFinite(durFrames)) {
-        return Math.max(0, Math.floor(durFrames) - 1);
-      }
-      const total = api.animationItem?.totalFrames;
-      if (typeof total === 'number' && Number.isFinite(total)) {
-        return Math.max(0, Math.floor(total) - 1);
-      }
-      return 0;
-    };
-
-    if (!didInitRef.current) {
-      // Ensure inactive state shows the last frame immediately.
-      api.goToAndStop(getLastFrame(), true);
-      didInitRef.current = true;
-    }
-
-    const item = api.animationItem;
-
-    if (isActive) {
-      finishedRef.current = false;
-
-      const onComplete = () => {
-        finishedRef.current = true;
-      };
-
-      item?.addEventListener?.('complete', onComplete);
-
-      // Play forward from start on activation.
-      api.setDirection?.(1);
-      api.goToAndPlay(0, true);
-
-      return () => {
-        item?.removeEventListener?.('complete', onComplete);
-      };
-    }
-
-    // If the forward animation already finished, don't animate on exit.
-    if (finishedRef.current) {
-      api.goToAndStop(getLastFrame(), true);
-      return;
-    }
-
-    // If user switches away mid-animation, play forward to the default (last) frame.
-    api.setDirection?.(1);
-    api.play?.();
-  }, [isActive]);
-
-  return (
-    <Lottie
-      lottieRef={lottieRef}
-      animationData={contactsLottie}
-      autoplay={false}
-      loop={false}
-      className={styles['contacts-lottie']}
-      style={{ width: '100%', height: '100%' }}
-    />
-  );
-}
-
-function ChatsLottieIcon({ isActive }: { isActive: boolean }) {
-  const lottieRef = useRef<LottieRefCurrentProps | null>(null);
-  const didInitRef = useRef(false);
-  const finishedRef = useRef(false);
-
-  useEffect(() => {
-    const api = lottieRef.current;
-    if (!api) return;
-
-    const getLastFrame = () => {
-      const durFrames = api.getDuration?.(true);
-      if (typeof durFrames === 'number' && Number.isFinite(durFrames)) {
-        return Math.max(0, Math.floor(durFrames) - 1);
-      }
-      const total = api.animationItem?.totalFrames;
-      if (typeof total === 'number' && Number.isFinite(total)) {
-        return Math.max(0, Math.floor(total) - 1);
-      }
-      return 0;
-    };
-
-    if (!didInitRef.current) {
-      api.goToAndStop(getLastFrame(), true);
-      didInitRef.current = true;
-    }
-
-    const item = api.animationItem;
-
-    if (isActive) {
-      finishedRef.current = false;
-
-      const onComplete = () => {
-        finishedRef.current = true;
-      };
-
-      item?.addEventListener?.('complete', onComplete);
-
-      // Make Chats animation a bit snappier than default.
-      api.setSpeed?.(1.5);
-      api.setDirection?.(1);
-      api.goToAndPlay(0, true);
-
-      return () => {
-        item?.removeEventListener?.('complete', onComplete);
-      };
-    }
-
-    if (finishedRef.current) {
-      api.goToAndStop(getLastFrame(), true);
-      return;
-    }
-
-    // Reset speed when not active to keep default timing elsewhere.
-    api.setSpeed?.(1);
-    api.setDirection?.(1);
-    api.play?.();
-  }, [isActive]);
-
-  return (
-    <Lottie
-      lottieRef={lottieRef}
-      animationData={chatsLottie}
-      autoplay={false}
-      loop={false}
-      className={styles['chats-lottie']}
-      style={{ width: '100%', height: '100%' }}
-    />
-  );
-}
-
 export function Tabs() {
   const { activeTab, setActiveTab } = useTabs();
   const { user } = useUser();
   const { t } = useTranslation();
   const { activeProfileTab, addUserWallpaper } = useSettings();
+  const { chats } = useChatMeta();
   const wallpaperInputRef = useRef<HTMLInputElement>(null);
 
   const mainNavRef = useRef<HTMLDivElement>(null);
@@ -183,6 +43,7 @@ export function Tabs() {
 
   const [isDraggingIndicator, setIsDraggingIndicator] = useState(false);
   const [isSnapping, setIsSnapping] = useState(false);
+  const [isArmedMove, setIsArmedMove] = useState(false);
   const [indicatorSettledTab, setIndicatorSettledTab] =
     useState<TabValue | null>(activeTab);
   const isDraggingRef = useRef(false);
@@ -194,6 +55,9 @@ export function Tabs() {
   const tabbarArmedPointerIdRef = useRef<number | null>(null);
   const tabbarArmedStartXRef = useRef(0);
   const tabbarArmedTabIdRef = useRef<TabValue | null>(null);
+  const tabbarArmedWillAnimateRef = useRef(false);
+  const tabbarArmedTransitionPendingRef = useRef(false);
+  const tabbarPressedRef = useRef(false);
   const [indicatorX, setIndicatorX] = useState(0);
   const indicatorXRef = useRef(0);
   const [visualIndicatorX, setVisualIndicatorX] = useState(0);
@@ -201,6 +65,7 @@ export function Tabs() {
   const [disableIndicatorTransition, setDisableIndicatorTransition] =
     useState(true);
   const indicatorInitializedRef = useRef(false);
+  const isSnappingRef = useRef(false);
 
   const [tabLayout, setTabLayout] = useState<
     Partial<Record<TabValue, { left: number; width: number }>>
@@ -215,12 +80,21 @@ export function Tabs() {
     [],
   );
 
+  const unreadChatsCount = useMemo(
+    () => chats.reduce((acc, chat) => acc + (chat.unread_count > 0 ? 1 : 0), 0),
+    [chats],
+  );
+
   const showNewWallpaper =
     activeProfileTab === 'appearance' && activeTab === 'profile';
 
   useEffect(() => {
     indicatorXRef.current = indicatorX;
   }, [indicatorX]);
+
+  useEffect(() => {
+    isSnappingRef.current = isSnapping;
+  }, [isSnapping]);
 
   useEffect(() => {
     // When we're not snapping, the visual position equals state.
@@ -465,7 +339,7 @@ export function Tabs() {
     const c = container.getBoundingClientRect();
 
     stopSnapping();
-    setIndicatorSettledTab(null);
+    tabbarPressedRef.current = true;
 
     // "Click to move, release to activate":
     // - on pointerdown we snap the indicator to the nearest tab (or the pressed tab)
@@ -485,6 +359,20 @@ export function Tabs() {
     const b = btn?.getBoundingClientRect();
     const currentX =
       b && b.width ? clampIndicatorXToBounds(b.left + b.width / 2 - c.left) : x;
+
+    const didMove = Math.abs(indicatorXRef.current - currentX) >= 0.5;
+    tabbarArmedWillAnimateRef.current = didMove;
+    tabbarArmedTransitionPendingRef.current = didMove;
+    const isSameActiveTab = targetTabId === activeTab;
+    // Keep settled state when pressing the already-active tab so Lottie `isActive`
+    // doesn't flip false→true and replay.
+    if (!isSameActiveTab) {
+      setIndicatorSettledTab(null);
+    }
+    // Keep scale 1.1 while pointer is held down on the tabbar,
+    // even before any movement happens.
+    setIsArmedMove(true);
+
     setIndicatorX(currentX);
     indicatorXRef.current = currentX;
     setVisualIndicatorX(currentX);
@@ -515,6 +403,10 @@ export function Tabs() {
     if (Math.abs(dx) < 6) return;
 
     tabbarArmedPointerIdRef.current = null;
+    tabbarArmedWillAnimateRef.current = false;
+    tabbarArmedTransitionPendingRef.current = false;
+    tabbarPressedRef.current = false;
+    setIsArmedMove(false);
 
     isDraggingRef.current = true;
     setIsDraggingIndicator(true);
@@ -535,11 +427,19 @@ export function Tabs() {
     if (tabbarArmedPointerIdRef.current !== null) {
       if (e.pointerId !== tabbarArmedPointerIdRef.current) return;
       tabbarArmedPointerIdRef.current = null;
+      tabbarPressedRef.current = false;
       const tabId = tabbarArmedTabIdRef.current;
       tabbarArmedTabIdRef.current = null;
+      const willAnimate = tabbarArmedWillAnimateRef.current;
+      tabbarArmedWillAnimateRef.current = false;
+      // If the indicator already finished its `left` transition while the pointer
+      // was held down, drop the scale immediately on release.
+      if (!willAnimate || !tabbarArmedTransitionPendingRef.current) {
+        setIsArmedMove(false);
+      }
 
       // If user released without starting a drag, activate the snapped tab.
-      if (!isDraggingRef.current && tabId) {
+      if (!isDraggingRef.current && tabId && tabId !== activeTab) {
         snapIndicatorToTab(tabId, { animated: true });
         setActiveTab(tabId);
       }
@@ -586,8 +486,15 @@ export function Tabs() {
   const onIndicatorTransitionEnd: React.TransitionEventHandler<
     HTMLDivElement
   > = (e) => {
-    if (e.propertyName === 'left') {
-      stopSnapping();
+    if (e.propertyName !== 'left') return;
+    // Pointer-down reposition also animates `left`, but `pendingSettledTabRef`
+    // still points at the previous snap — would wrongly restore gray on the old tab.
+    const wasSnapTransition = isSnappingRef.current;
+    stopSnapping();
+    tabbarArmedTransitionPendingRef.current = false;
+    // If pointer is still held down on the tabbar, keep the "lifted" scale.
+    if (!tabbarPressedRef.current) setIsArmedMove(false);
+    if (wasSnapTransition) {
       setIndicatorSettledTab(pendingSettledTabRef.current);
     }
   };
@@ -685,8 +592,12 @@ export function Tabs() {
           ref={indicatorRef}
           className={`${styles['drag-indicator']} ${
             disableIndicatorTransition ? styles['drag-indicator--no-anim'] : ''
+          } ${
+            !isDraggingIndicator && !isSnapping && indicatorSettledTab
+              ? styles['drag-indicator--active']
+              : ''
           } ${isDraggingIndicator ? styles['drag-indicator--dragging'] : ''} ${
-            isSnapping ? styles['drag-indicator--moving'] : ''
+            isSnapping || isArmedMove ? styles['drag-indicator--moving'] : ''
           }`}
           style={{ left: `${indicatorX}px` }}
           onPointerDown={onIndicatorPointerDown}
@@ -703,7 +614,7 @@ export function Tabs() {
         />
         {tabs.map((tab) =>
           (() => {
-            const isTabVisuallyActive = indicatorSettledTab === tab.id;
+            const isTabLogicallyActive = activeTab === tab.id;
             const layout = tabLayout[tab.id];
 
             // `.tab-inner` is centered and inset by 4px on each side (see SCSS:
@@ -759,7 +670,12 @@ export function Tabs() {
                   <div className={styles['tab-layer']}>
                     {tab.icon && !tab.avatar && (
                       <div className={styles.icon}>
-                        {tab.icon(isTabVisuallyActive)}
+                        {tab.icon(isTabLogicallyActive)}
+                        {tab.id === 'chats' && unreadChatsCount > 0 && (
+                          <span className={styles['unread-badge']}>
+                            {unreadChatsCount}
+                          </span>
+                        )}
                       </div>
                     )}
 
@@ -782,7 +698,12 @@ export function Tabs() {
                   >
                     {tab.icon && !tab.avatar && (
                       <div className={styles.icon}>
-                        {tab.icon(isTabVisuallyActive)}
+                        {tab.icon(isTabLogicallyActive)}
+                        {tab.id === 'chats' && unreadChatsCount > 0 && (
+                          <span className={styles['unread-badge']}>
+                            {unreadChatsCount}
+                          </span>
+                        )}
                       </div>
                     )}
 
