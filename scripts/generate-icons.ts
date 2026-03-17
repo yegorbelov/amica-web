@@ -6,6 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const iconsDir = path.join(__dirname, '../src/icons');
+const animatedDirName = 'animated';
 const outFile = path.join(__dirname, '../src/components/Icons/AutoIcons.tsx');
 
 function fixSvgAttributes(svg: string) {
@@ -17,15 +18,50 @@ function fixSvgAttributes(svg: string) {
   });
 }
 
-const files = fs.readdirSync(iconsDir).filter((f) => f.endsWith('.svg'));
+function listSvgFilesRecursive(dir: string): string[] {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const out: string[] = [];
+
+  for (const entry of entries) {
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...listSvgFilesRecursive(abs));
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith('.svg')) out.push(abs);
+  }
+
+  return out;
+}
+
+function toIconName(absPath: string) {
+  const relFromIcons = path.relative(iconsDir, absPath);
+  const extless = relFromIcons.replace(/\.svg$/i, '');
+  const parts = extless.split(path.sep);
+
+  // `src/icons/animated/Foo.svg` -> `FooAnimated`
+  if (parts[0] === animatedDirName && parts.length >= 2) {
+    return `${parts.slice(1).join('')}${'Animated'}`;
+  }
+
+  // `src/icons/Foo.svg` -> `Foo`
+  return parts.join('');
+}
+
+function isInAnimatedFolder(absPath: string) {
+  const relFromIcons = path.relative(iconsDir, absPath);
+  return relFromIcons.split(path.sep)[0] === animatedDirName;
+}
 
 const symbols: { name: string; inner: string; viewBox: string }[] = [];
 const animatedComponents: Record<string, { inner: string; viewBox: string }> =
   {};
 
-files.forEach((file) => {
-  const name = file.replace('.svg', '');
-  let svgContent = fs.readFileSync(path.join(iconsDir, file), 'utf8');
+const files = listSvgFilesRecursive(iconsDir);
+
+files.forEach((absFile) => {
+  const name = toIconName(absFile);
+  let svgContent = fs.readFileSync(absFile, 'utf8');
 
   svgContent = svgContent
     .replace(/<\?xml.*?\?>/g, '')
@@ -36,7 +72,8 @@ files.forEach((file) => {
   const inner =
     svgContent.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i)?.[1] || svgContent;
 
-  const isAnimated = /<animate|<animateTransform/.test(svgContent);
+  const isAnimated =
+    isInAnimatedFolder(absFile) || /<animate|<animateTransform/.test(svgContent);
 
   if (isAnimated) {
     animatedComponents[name] = { inner: fixSvgAttributes(inner), viewBox };
