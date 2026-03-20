@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Icon } from '../Icons/AutoIcons';
 import formatFileSize from '@/utils/formatFileSize';
+import { useTranslation } from '@/contexts/languageCore';
 import styles from './SendArea.module.scss';
 import Button from '../ui/button/Button';
 
@@ -10,11 +11,6 @@ interface FilesPreviewProps {
   onRemoveFile: (index: number) => void;
 }
 
-const formatPreviewTitle = (filesCount: number) => {
-  if (filesCount === 1) return `${filesCount} File`;
-  return `${filesCount} Files`;
-};
-
 const crossIcon = <Icon name='Cross' />;
 
 const FilesPreview: React.FC<FilesPreviewProps> = ({
@@ -22,7 +18,13 @@ const FilesPreview: React.FC<FilesPreviewProps> = ({
   onClearAll,
   onRemoveFile,
 }) => {
+  const { t } = useTranslation();
   if (files.length === 0) return null;
+
+  const formatPreviewTitle = (filesCount: number) =>
+    filesCount === 1
+      ? `1 ${t('sendArea.file')}`
+      : `${filesCount} ${t('sendArea.files')}`;
 
   const getFileType = (file: File) => {
     if (file.type.startsWith('image/')) return 'image';
@@ -41,10 +43,10 @@ const FilesPreview: React.FC<FilesPreviewProps> = ({
           key={'send-area-clear-all-button'}
           className={styles['clear-all-btn']}
           onClick={onClearAll}
-          aria-label='Clear all files'
+          aria-label={t('sendArea.clearAllFiles')}
           type='button'
         >
-          Clear All
+          {t('sendArea.clearAll')}
         </Button>
       </div>
       <div className={styles['files-preview-list']}>

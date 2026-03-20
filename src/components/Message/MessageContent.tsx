@@ -590,7 +590,11 @@ const MessageContent = memo(
                     ) : (
                       <span>{emoji}</span>
                     )}
-                    {reaction.count > 1 && <span>{reaction.count}</span>}
+                    {reaction.count > 1 && (
+                      <span className={styles.message_reaction__count}>
+                        {reaction.count}
+                      </span>
+                    )}
                   </button>
                 </div>
               );

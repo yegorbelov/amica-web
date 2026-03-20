@@ -37,6 +37,11 @@ export default function ProfileAppearance() {
   }, []);
 
   const is24Hour = settings.timeFormat === '24h';
+  const themeOptions: Array<'light' | 'dark' | 'system'> = [
+    'light',
+    'dark',
+    'system',
+  ];
 
   useEffect(() => {
     fetchWallpapers();
@@ -63,11 +68,29 @@ export default function ProfileAppearance() {
   return (
     <div className={styles.section}>
       <ProfileTabDescription
-        title='Appearance'
-        description='Customize your appearance and settings.'
+        title={t('profile.appearance')}
+        description={t('profile.appearanceDescription')}
         iconName='Appearance'
         backgroundColor='#0D2230'
       />
+      <div className={styles.optionRow}>
+        <div>{t('tipsMenu.theme')}</div>
+        <div className={styles.themeButtons}>
+          {themeOptions.map((theme) => (
+            <Button
+              key={theme}
+              className={`${styles.themeButton} ${
+                settings.theme === theme ? styles.themeButtonActive : ''
+              }`}
+              onClick={() => setSetting('theme', theme)}
+            >
+              {t(
+                `tipsMenu.theme${theme.charAt(0).toUpperCase() + theme.slice(1)}`,
+              )}
+            </Button>
+          ))}
+        </div>
+      </div>
       <div className={styles.optionRow}>
         <div>{t('language.time.timeFormat')}</div>
         <Toggle
@@ -78,7 +101,7 @@ export default function ProfileAppearance() {
         />
       </div>
       <div className={styles.optionRow}>
-        <div>Autoplay Videos</div>
+        <div>{t('profile.autoplayVideos')}</div>
         <Toggle
           checked={autoplayVideos}
           onChange={(checked) => setAutoplayVideos(checked)}
@@ -86,7 +109,7 @@ export default function ProfileAppearance() {
       </div>
       {windowWidth <= 768 && (
         <div className={styles.optionRow}>
-          <div>Use Wallpaper Throughout The App</div>
+          <div>{t('profile.useWallpaperThroughout')}</div>
           <Toggle
             checked={settings.useBackgroundThroughoutTheApp}
             onChange={setSetting.bind(null, 'useBackgroundThroughoutTheApp')}
@@ -95,7 +118,7 @@ export default function ProfileAppearance() {
       )}
       {windowWidth > 768 && settings.activeWallpaper && (
         <div className={styles.optionRow}>
-          <div>Wallpaper glow</div>
+          <div>{t('profile.wallpaperGlow')}</div>
           <Toggle
             checked={settings.wallpaperGlowEnabled}
             onChange={setSetting.bind(null, 'wallpaperGlowEnabled')}
@@ -108,7 +131,7 @@ export default function ProfileAppearance() {
           {settings.activeWallpaper && (
             <div className={styles.blurSlider}>
               <Slider
-                label='Blur'
+                label={t('profile.blur')}
                 value={blur}
                 min={0}
                 max={50}
@@ -123,12 +146,14 @@ export default function ProfileAppearance() {
               onClick={() => setColorPickerOpen(!colorPickerOpen)}
               className={styles.changeColorButton}
             >
-              {colorPickerOpen ? 'Close Color Picker' : 'Change Color'}
+              {colorPickerOpen
+                ? t('profile.closeColorPicker')
+                : t('profile.changeColor')}
             </Button>
             {colorPickerOpen && <ColorPicker />}
           </div>
           {loading ? (
-            <div>Loading wallpapers...</div>
+            <div>{t('profile.loadingWallpapers')}</div>
           ) : (
             <div className={styles.wallpaperList}>
               <div
@@ -138,7 +163,7 @@ export default function ProfileAppearance() {
                 onClick={() => setActiveWallpaper(null)}
               >
                 <div className={styles.wallpaperThumbnailEmpty}>
-                  No Background
+                  {t('profile.noBackground')}
                 </div>
               </div>
               {[...settings.wallpapers].reverse().map((wall) => (
@@ -153,12 +178,21 @@ export default function ProfileAppearance() {
                   {settings.activeWallpaper?.id === wall.id && (
                     <Dropdown
                       items={[
-                        { label: 'Natural', value: 'natural' },
-                        { label: 'Black and White', value: 'black-and-white' },
-                        { label: 'Colour Wash', value: 'colour-wash' },
+                        {
+                          label: t('profile.wallpaperEditMode.natural'),
+                          value: 'natural',
+                        },
+                        {
+                          label: t('profile.wallpaperEditMode.blackAndWhite'),
+                          value: 'black-and-white',
+                        },
+                        {
+                          label: t('profile.wallpaperEditMode.colourWash'),
+                          value: 'colour-wash',
+                        },
                       ]}
                       value={settings.activeWallpaperEditMode ?? 'natural'}
-                      placeholder='Edit'
+                      placeholder={t('buttons.edit')}
                       onChange={(value) =>
                         setSetting(
                           'activeWallpaperEditMode',

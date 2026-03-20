@@ -1,7 +1,8 @@
 import React, { useState, memo } from 'react';
 import { useSelectedChat } from '@/contexts/ChatContextCore';
+import { useTranslation } from '@/contexts/languageCore';
+import { useFormatLastSeen } from '@/hooks/useFormatLastSeen';
 import Avatar from '../Avatar/Avatar';
-import { formatLastSeen } from '../../utils/activityFormatter';
 import styles from './ChatHeader.module.scss';
 import { Icon } from '../Icons/AutoIcons';
 import { MediaHeader } from './MediaHeader';
@@ -18,12 +19,14 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   onGoHome,
   onChatInfoClick,
 }) => {
+  const { t } = useTranslation();
+  const { formatLastSeen } = useFormatLastSeen();
   const { selectedChat } = useSelectedChat();
   const [, setAvatarModalVisible] = useState(false);
 
   const subtitle =
     selectedChat?.type === 'G'
-      ? `${selectedChat?.info || ''} members`
+      ? `${selectedChat?.info || ''} ${t('sidebar.membersCount')}`
       : formatLastSeen(selectedChat?.info || '');
 
   if (!selectedChat) return;

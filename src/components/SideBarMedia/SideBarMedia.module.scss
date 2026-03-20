@@ -19,8 +19,7 @@
     }
   }
 
-  background: rgba(0, 0, 0, 0.6);
-  background: color-mix(in srgb, rgb(0, 0, 0) 50%, transparent);
+  background: var(--surface-bg);
 
   @media screen and (max-width: 768px) {
     width: 100%;
@@ -52,13 +51,13 @@
 
   flex-shrink: 0;
   overflow-x: hidden;
-  border-left: 0.5px solid rgba(127, 127, 127, 0.5);
+  border-left: 0.5px solid var(--surface-border);
 
   &__info-secondary {
     display: flex;
     margin: 10px 20px 0 20px;
     border-radius: 32px;
-    background-color: rgba(127, 127, 127, 0.3);
+    background-color: var(--surface-button-bg);
 
     &__item {
       padding: 10px;
@@ -127,7 +126,7 @@
   width: 100%;
   inset: 0;
   height: calc(120px + var(--sat));
-  background-color: rgba(0, 0, 0, 1);
+  background-color: var(--sidebar-mask-bg, rgba(0, 0, 0, 1));
   mask-image: var(--mask-image);
   pointer-events: none;
   z-index: 98;
@@ -142,6 +141,14 @@
 .button {
   min-width: 45px;
   width: fit-content;
+  background: var(--surface-button-bg) !important;
+  background-color: var(--surface-button-bg) !important;
+  color: var(--surface-button-text) !important;
+
+  &:hover {
+    background: var(--button-hover) !important;
+    background-color: var(--button-hover) !important;
+  }
 
   svg {
     width: 20px;
@@ -186,7 +193,7 @@
   margin: 0 auto;
   min-width: max-content;
   border-radius: 24px;
-  background-color: rgba(127, 127, 127, 0.3);
+  background-color: var(--surface-button-bg);
   // backdrop-filter: blur(5px);
   position: relative;
 }
@@ -199,7 +206,7 @@
   align-items: center;
   gap: 0.25rem;
   cursor: pointer;
-  color: #fff;
+  color: var(--surface-button-text);
   font-weight: 500;
   background: transparent;
   border: none;
@@ -213,7 +220,7 @@
 
 .emptyText {
   text-align: center;
-  color: #9ca3af;
+  color: var(--color-text-secondary);
   margin-top: 1rem;
 }
 
@@ -478,7 +485,7 @@
   border-radius: 20px;
 
   &:hover {
-    background-color: rgba(127, 127, 127, 0.3);
+    background-color: var(--surface-button-bg);
   }
 
   .memberInfo {

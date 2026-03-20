@@ -14,6 +14,7 @@ import styles from './MessageList.module.scss';
 import { useJumpActions } from '@/hooks/useJump';
 import { useLazyCanCopyToClipboard } from '@/hooks/useCanCopyToClipboard';
 import { useToast } from '@/contexts/toast/ToastContextCore';
+import { useTranslation } from '@/contexts/languageCore';
 import type { Message as MessageType, User } from '@/types';
 import ViewersList from './ViewersList';
 import { useMessageContextMenu } from './useMessageContextMenu';
@@ -34,22 +35,8 @@ function getDateKey(msg: MessageType): DateKey {
   return d.slice(0, 10) || new Date().toISOString().slice(0, 10);
 }
 
-function formatDateSeparatorLabel(dateKey: DateKey): string {
-  const d = new Date(dateKey + 'T12:00:00');
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const todayKey = today.toISOString().slice(0, 10);
-  const yesterdayKey = yesterday.toISOString().slice(0, 10);
-  if (dateKey === todayKey) return 'Today';
-  if (dateKey === yesterdayKey) return 'Yesterday';
-  return d.toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-    year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
-  });
-}
+/** Map app locale to BCP 47 for Intl (e.g. ua -> uk) */
+const LOCALE_MAP: Record<string, string> = { ua: 'uk' };
 
 interface MessageListProps {
   isSelectionMode: boolean;
@@ -85,6 +72,28 @@ const MessageList: React.FC<MessageListProps> = ({
   const { showToast } = useToast();
   const { canCopy: canCopyToClipboard, triggerCheck: triggerClipboardCheck } =
     useLazyCanCopyToClipboard();
+  const { t, locale } = useTranslation();
+  const intlLocale = LOCALE_MAP[locale] ?? locale;
+
+  const formatDateSeparatorLabel = useCallback(
+    (dateKey: DateKey): string => {
+      const d = new Date(dateKey + 'T12:00:00');
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const todayKey = today.toISOString().slice(0, 10);
+      const yesterdayKey = yesterday.toISOString().slice(0, 10);
+      if (dateKey === todayKey) return t('dateGroup.today');
+      if (dateKey === yesterdayKey) return t('dateGroup.yesterday');
+      return d.toLocaleDateString(intlLocale, {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
+      });
+    },
+    [t, intlLocale],
+  );
 
   const [viewersVisible, setViewersVisible] = useState(false);
   const [currentViewers, setCurrentViewers] = useState<User[]>([]);

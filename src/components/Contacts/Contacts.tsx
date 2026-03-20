@@ -3,7 +3,7 @@ import Avatar from '@/components/Avatar/Avatar';
 import styles from './Contacts.module.scss';
 import { useChatMeta } from '@/contexts/ChatContextCore';
 import { useContacts } from '@/contexts/contacts/useContacts';
-import { formatLastSeen } from '@/utils/activityFormatter';
+import { useFormatLastSeen } from '@/hooks/useFormatLastSeen';
 import type { Contact } from '@/types';
 
 const Contacts = ({
@@ -12,12 +12,13 @@ const Contacts = ({
   contactsToShow?: Contact[];
 } = {}) => {
   const { t } = useTranslation();
+  const { formatLastSeen } = useFormatLastSeen();
   const { handleChatClick } = useChatMeta();
-  const { contacts: contactsFromHook, loading, error } = useContacts();
+  const { contacts: contactsFromHook } = useContacts();
   const contacts = contactsToShow ?? contactsFromHook;
 
-  if (loading) return <div>{t('contacts.loading') ?? 'Loading...'}</div>;
-  if (error) return <div>{t('contacts.error') ?? `Error: ${error}`}</div>;
+  // if (loading) return <div>{t('contacts.loading') ?? 'Loading...'}</div>;
+  // if (error) return <div>{t('contacts.error') ?? `Error: ${error}`}</div>;
 
   return (
     <div className={styles.contacts}>

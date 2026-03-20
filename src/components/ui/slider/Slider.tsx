@@ -104,6 +104,8 @@ const Slider: React.FC<SliderProps> = ({
 
   const handlePointerMove = useCallback(
     (e: PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
       pendingClientXRef.current = e.clientX;
       if (rafIdRef.current !== 0) return;
       rafIdRef.current = requestAnimationFrame(() => {
@@ -116,6 +118,8 @@ const Slider: React.FC<SliderProps> = ({
 
   const handlePointerUp = useCallback(
     (e: PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
       const el = trackRef.current;
       if (el) {
         el.removeEventListener('pointermove', addedMoveRef.current);
@@ -149,6 +153,7 @@ const Slider: React.FC<SliderProps> = ({
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       e.preventDefault();
+      e.stopPropagation();
       const el = trackRef.current;
       if (!el) return;
       setDragging(true);

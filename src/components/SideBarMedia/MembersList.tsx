@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import Avatar from '@/components/Avatar/Avatar';
-import { formatLastSeen } from '@/utils/activityFormatter';
+import { useFormatLastSeen } from '@/hooks/useFormatLastSeen';
 import type { User } from '@/types';
 import styles from './SideBarMedia.module.scss';
 
@@ -8,7 +8,9 @@ interface MembersListProps {
   members: User[];
 }
 
-const MembersList: React.FC<MembersListProps> = ({ members }) => (
+const MembersList: React.FC<MembersListProps> = ({ members }) => {
+  const { formatLastSeen } = useFormatLastSeen();
+  return (
   <div className={styles.membersList}>
     {members.map((member) => (
       <div key={member.id} className={styles.memberItem}>
@@ -26,6 +28,7 @@ const MembersList: React.FC<MembersListProps> = ({ members }) => (
       </div>
     ))}
   </div>
-);
+  );
+};
 
 export default memo(MembersList);

@@ -192,9 +192,7 @@ export default function Profile() {
   const handleTransitionEnd = useCallback(
     (e: React.TransitionEvent) => {
       if (e.propertyName !== 'transform') return;
-      if (isAnimatingBack) {
-        // Размонтирование только через setTimeout, не через transitionend
-      } else {
+      if (!isAnimatingBack) {
         isSpringingBackRef.current = false;
       }
     },
@@ -269,7 +267,7 @@ export default function Profile() {
           <span
             className={`${styles.pageHeaderTitle} ${styles.pageHeaderTitleSettings}`}
           >
-            Settings
+            {t('profile.settings')}
           </span>
         </div>
       );
@@ -311,7 +309,7 @@ export default function Profile() {
             </div>
           )}
           {!activeProfileTab ? (
-            <>Settings</>
+            <>{t('profile.settings')}</>
           ) : (
             <Button
               key={'profile-header-button'}

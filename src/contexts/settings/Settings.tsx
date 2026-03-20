@@ -289,6 +289,29 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [gradient, color]);
 
+  useEffect(() => {
+    const theme = settings.theme;
+    const resolveTheme = (): 'light' | 'dark' => {
+      if (theme === 'system') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light';
+      }
+      return theme;
+    };
+    const applyTheme = () => {
+      const resolved = resolveTheme();
+      document.documentElement.setAttribute('data-theme', resolved);
+      document.documentElement.style.colorScheme = resolved;
+    };
+    applyTheme();
+    if (theme === 'system') {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      mq.addEventListener('change', applyTheme);
+      return () => mq.removeEventListener('change', applyTheme);
+    }
+  }, [settings.theme]);
+
   const [loading, setLoading] = useState(true);
   const [profilePageStack, setProfilePageStack] = useState<SubTab[]>([]);
   const activeProfileTab: SubTab =

@@ -15,6 +15,7 @@ import {
 } from '../../contexts/ChatContextCore';
 import styles from './SendArea.module.scss';
 import { useUser } from '../../contexts/UserContextCore';
+import { useTranslation } from '@/contexts/languageCore';
 import { useSearchContext } from '@/contexts/search/SearchContextCore';
 import { apiUpload } from '../../utils/apiFetch';
 import { Icon } from '../Icons/AutoIcons';
@@ -36,6 +37,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
   onExitSelectionMode,
   onDeleteSelectedMessages,
 }) => {
+  const { t } = useTranslation();
   const [message, setMessage] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -499,18 +501,18 @@ const MessageInput: React.FC<SendAreaProps> = ({
               <Button
                 className={styles['selection-bar-cancel']}
                 onClick={onExitSelectionMode}
-                aria-label='Cancel selection'
+                aria-label={t('sendArea.cancelSelection')}
               >
-                Cancel
+                {t('buttons.cancel')}
               </Button>
               <span className={styles['selection-bar-count']}>
-                Selected {selectedMessagesCount}
+                {t('sendArea.selected')} {selectedMessagesCount}
               </span>
               <Button
                 className={styles['selection-bar-delete']}
                 onClick={onDeleteSelectedMessages}
                 disabled={selectedMessagesCount === 0}
-                aria-label='Delete selected'
+                aria-label={t('sendArea.deleteSelected')}
               >
                 {deleteIcon}
               </Button>
@@ -542,12 +544,12 @@ const MessageInput: React.FC<SendAreaProps> = ({
                   {editingMessage && (
                     <div className={styles['edit-bar']}>
                       <span className={styles['edit-bar-label']}>
-                        {editIcon} Editing message
+                        {editIcon} {t('sendArea.editingMessage')}
                       </span>
                       <Button
                         key={'send-area-cancel-edit-button'}
                         onClick={cancelEdit}
-                        aria-label='Cancel edit'
+                        aria-label={t('sendArea.cancelEdit')}
                         className={styles['edit-bar-cancel']}
                       >
                         {crossIcon}
@@ -569,7 +571,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
                     <span
                       className={`${styles['textarea_placeholder']} ${message ? styles.hidden : ''}`}
                     >
-                      Message
+                      {t('sendArea.messagePlaceholder')}
                     </span>
                   </div>
                 </div>
@@ -583,7 +585,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
                   disabled={
                     (!message.trim() && files.length === 0) || isUploading
                   }
-                  aria-label='Send Message'
+                  aria-label={t('aria.sendMessage')}
                 >
                   {sendIcon}
                 </Button>

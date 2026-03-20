@@ -11,6 +11,11 @@
 .search-list {
   display: flex;
   flex-direction: column;
+  padding-top: calc(var(--sat) + 50px);
+  overscroll-behavior: contain;
+  overflow-y: scroll;
+  height: 100%;
+  padding-bottom: calc(var(--sab) + var(--main-navigation-height));
 
   .search-section {
     list-style: none;

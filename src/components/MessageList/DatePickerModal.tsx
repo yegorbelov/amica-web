@@ -12,6 +12,7 @@ import styles from './DatePickerModal.module.scss';
 import type { DateKey } from './DateSeparator';
 import { Icon } from '../Icons/AutoIcons';
 import Button from '../ui/button/Button';
+import { useTranslation } from '@/contexts/languageCore';
 
 interface DatePickerModalProps {
   isOpen: boolean;
@@ -22,10 +23,13 @@ interface DatePickerModalProps {
 }
 
 const WEEKDAY_KEYS = [1, 2, 3, 4, 5, 6, 0] as const;
-const WEEKDAY_LABELS = WEEKDAY_KEYS.map((d) => {
-  const date = new Date(2024, 0, d);
-  return date.toLocaleDateString(undefined, { weekday: 'short' });
-});
+
+function getWeekdayLabels(locale: string): string[] {
+  return WEEKDAY_KEYS.map((d) => {
+    const date = new Date(2024, 0, d);
+    return date.toLocaleDateString(locale, { weekday: 'short' });
+  });
+}
 
 const toDateKey = (d: Date): DateKey =>
   d.getFullYear() +
@@ -72,6 +76,8 @@ const findNearestDate = (
   return best;
 };
 
+const LOCALE_MAP: Record<string, string> = { ua: 'uk' };
+
 const DatePickerModal: React.FC<DatePickerModalProps> = ({
   isOpen,
   onClose,
@@ -79,6 +85,12 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
   initialDateKey,
   onSelectDate,
 }) => {
+  const { t, locale } = useTranslation();
+  const intlLocale = LOCALE_MAP[locale] ?? locale;
+  const weekdayLabels = useMemo(
+    () => getWeekdayLabels(intlLocale),
+    [intlLocale],
+  );
   const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
 
   const monthList = useMemo(() => {
@@ -176,11 +188,11 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
     );
     const item = monthList[safeIndex];
     if (!item) return '';
-    return new Date(item.year, item.month).toLocaleDateString(undefined, {
+    return new Date(item.year, item.month).toLocaleDateString(intlLocale, {
       month: 'long',
       year: 'numeric',
     });
-  }, [monthList, currentMonthIndex]);
+  }, [monthList, currentMonthIndex, intlLocale]);
 
   const handleSelect = useCallback(
     (dateKey: DateKey) => {
@@ -221,11 +233,11 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         role='dialog'
         aria-modal='true'
-        aria-label='Choose date'
+        aria-label={t('datePicker.chooseDate')}
       >
         <div className={styles.header}>
-          <h3 className={styles.title}>Jump to date</h3>
-          <Button className={styles.close} onClick={onClose} aria-label='Close'>
+          <h3 className={styles.title}>{t('datePicker.jumpToDate')}</h3>
+          <Button className={styles.close} onClick={onClose} aria-label={t('buttons.close')}>
             <Icon name='Cross' />
           </Button>
         </div>
@@ -235,7 +247,7 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
               type='button'
               className={styles.navBtn}
               onClick={goPrevMonth}
-              aria-label='Previous month'
+              aria-label={t('datePicker.previousMonth')}
             >
               <Icon
                 name='Arrow'
@@ -248,7 +260,7 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
               type='button'
               className={styles.navBtn}
               onClick={goNextMonth}
-              aria-label='Next month'
+              aria-label={t('datePicker.nextMonth')}
             >
               <Icon name='Arrow' className={styles.navBtnIconNext} />
             </button>
@@ -259,7 +271,7 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
                 const monthKey = toMonthKey(year, month);
                 const calendarDays = getCalendarDays(year, month);
                 const monthLabel = new Date(year, month).toLocaleDateString(
-                  undefined,
+                  intlLocale,
                   {
                     month: 'long',
                     year: 'numeric',
@@ -274,7 +286,7 @@ const DatePickerModal: React.FC<DatePickerModalProps> = ({
                   >
                     <div className={styles.monthBlockTitle}>{monthLabel}</div>
                     <div className={styles.weekdays}>
-                      {WEEKDAY_LABELS.map((label, i) => (
+                      {weekdayLabels.map((label, i) => (
                         <span key={i} className={styles.weekday}>
                           {label}
                         </span>

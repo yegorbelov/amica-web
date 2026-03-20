@@ -1,6 +1,8 @@
 import React, { memo } from 'react';
 import { createPortal } from 'react-dom';
 import Avatar from '../Avatar/Avatar';
+import { useTranslation } from '@/contexts/languageCore';
+import { useFormatLastSeen } from '@/hooks/useFormatLastSeen';
 import type { User } from '@/types';
 import styles from './MessageList.module.scss';
 
@@ -10,13 +12,16 @@ interface ViewersListProps {
 }
 
 const ViewersList: React.FC<ViewersListProps> = ({ viewers, onClose }) => {
+  const { t } = useTranslation();
+  const { formatLastSeen } = useFormatLastSeen();
+
   return createPortal(
     <div className={styles['viewers-list-overlay']} onClick={onClose}>
       <div
         className={styles['viewers-list']}
         onClick={(e) => e.stopPropagation()}
       >
-        <h4>Seen by:</h4>
+        <h4>{t('messageContextMenu.seenBy')}</h4>
         {viewers.map((v) => (
           <div key={v.id} className={styles['viewer-item']}>
             <Avatar
@@ -27,10 +32,7 @@ const ViewersList: React.FC<ViewersListProps> = ({ viewers, onClose }) => {
             <div className={styles['viewer-info']}>
               <span className={styles['viewer-name']}>{v.username}</span>
               <span className={styles['viewer-time']}>
-                {new Date(v.last_seen || '').toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                {formatLastSeen(v.last_seen)}
               </span>
             </div>
           </div>

@@ -8,8 +8,8 @@ export default function ProfileLanguage() {
   return (
     <div className={styles.section}>
       <ProfileTabDescription
-        title='Language'
-        description='Select your preferred language.'
+        title={t('profileTabs.language')}
+        description={t('profile.languageDescription')}
         iconName='Language'
         backgroundColor='#4d8ddb'
       />

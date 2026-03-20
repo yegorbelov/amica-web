@@ -72,7 +72,10 @@ const SideBarMediaHeader: React.FC<SideBarMediaHeaderProps> = ({
             }
             onChange={(value) => {
               const selected = filterItems.find((item) => item.value === value);
-              if (selected) onFilterChange(selected.label);
+              if (selected) {
+                const key = (selected as { filterKey?: string }).filterKey;
+                onFilterChange(key ?? selected.label);
+              }
             }}
           />
         </>

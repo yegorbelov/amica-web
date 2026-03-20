@@ -14,9 +14,9 @@
   width: 120px;
   padding: 6px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--surface-bg-muted, rgba(255, 255, 255, 0.08));
   backdrop-filter: blur(6px);
-  color: #fff;
+  color: var(--surface-text, #fff);
 }
 
 .file-preview-image {
@@ -32,7 +32,7 @@
   align-items: center;
   justify-content: center;
   font-size: 32px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--separator-label-bg, rgba(0, 0, 0, 0.2));
   border-radius: 6px;
 }
 
@@ -60,8 +60,8 @@
   height: 20px;
   border-radius: 50%;
   border: none;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
+  background: var(--surface-bg, rgba(0, 0, 0, 0.6));
+  color: var(--surface-text, #fff);
   cursor: pointer;
   padding: 3px;
 }
@@ -70,13 +70,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  color: var(--surface-text, #fff);
 }
 
 .clear-all-btn {
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.2));
   padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--separator-label-bg, rgba(0, 0, 0, 0.2));
+  color: var(--surface-text, #fff);
   height: 30px;
 }
 
@@ -102,7 +104,8 @@
   justify-content: space-between;
   gap: 8px;
   padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--surface-bg-muted, rgba(255, 255, 255, 0.06));
+  color: var(--surface-text, #fff);
   font-size: 0.875rem;
   border-radius: 32px;
 }
@@ -112,6 +115,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  color: var(--surface-text, #fff);
   // padding: 6px 8px;
 }
 
@@ -244,6 +248,7 @@
   fill: var(--input_submit_color);
   stroke: none;
   background: transparent;
+  box-shadow: none;
 
   transform: scale(1);
   transition: 0.2s ease;
@@ -295,10 +300,10 @@
 .send_div_container {
   padding: 0px 15px 0px 15px;
   padding: 2px;
-  background: rgba(30, 30, 30, 0.4);
+  background: var(--send-area-bg);
   backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border-radius: 24px;
+  -webkit-backdrop-filter: blur(2px);
+  border-radius: 20px;
   transition:
     background 1s,
     width 1s;
@@ -307,7 +312,7 @@
 .send_svg {
   height: 40px;
   width: 100%;
-  stroke: url('#strokeGradient');
+  stroke: url('#strokeGradientSend');
   transform: rotate(-45deg);
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
@@ -323,6 +328,7 @@
   background: color-mix(in srgb, var(--mainColor) 70%, transparent) !important;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: none;
 }
 
 .input_attach {

@@ -15,7 +15,7 @@
   width: 100%;
   padding-right: 10px;
   border-radius: 16px;
-  color: #959595;
+  color: var(--chat-list-item-color, #959595);
   transition:
     background 0.3s,
     border-bottom 0.3s,
@@ -41,7 +41,7 @@
   }
 
   &__message-text {
-    color: inherit;
+    color: var(--chat-list-message-color, inherit);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
@@ -133,7 +133,7 @@
     font-weight: 600;
     flex: 1 1 auto;
     min-width: 0;
-    color: #fff;
+    color: var(--chat-list-name-color, #fff);
   }
 
   &__date {
@@ -165,7 +165,7 @@
     grid-area: count;
     align-self: end;
     justify-self: end;
-    color: var(--secondaryColor);
+    color: var(--chat-list-item-unread-text);
     float: right;
 
     box-shadow:
@@ -238,10 +238,10 @@
   &--active:hover {
     border: none;
     background: var(--mainColor);
-    color: var(--secondaryColor);
+    color: #d5eaff;
 
     .chat-list-item__read {
-      fill: var(--secondaryColor);
+      fill: #d5eaff;
     }
   }
 }

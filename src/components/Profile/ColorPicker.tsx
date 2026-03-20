@@ -1,6 +1,7 @@
 import { useRef, useCallback, useMemo, useState, useEffect } from 'react';
 import styles from './Profile.module.scss';
 import { useSettings } from '@/contexts/settings/context';
+import { useTranslation } from '@/contexts/languageCore';
 import Input from '../SideBarMedia/Input';
 import ColorPreview from './ColorPreview';
 import type { GradientSuggested as GradientSuggestedType } from '@/contexts/settings/types';
@@ -272,6 +273,7 @@ const parseGradientForEditor = (
 };
 
 const ColorPicker = () => {
+  const { t } = useTranslation();
   const { setColor, color, gradient, setGradient } = useSettings();
 
   const hueRef = useRef<HTMLDivElement>(null);
@@ -411,7 +413,7 @@ const ColorPicker = () => {
             />
           ))}
         </div>
-        <div className={styles.suggestedColorsSubtitle}>Message Background</div>
+        <div className={styles.suggestedColorsSubtitle}>{t('colorPicker.messageBackground')}</div>
 
         <div className={styles.suggestedColorsContainer}>
           {suggestedGradients.map((g) => (
@@ -427,7 +429,7 @@ const ColorPicker = () => {
           className={styles.setSameAsAccentButton}
           onClick={() =>
             setGradient({
-              name: 'Accent',
+              name: t('colorPicker.accent'),
               degree: '168deg',
               colors: [
                 { color, stop: '0%' },
@@ -436,13 +438,13 @@ const ColorPicker = () => {
             })
           }
         >
-          Set the Same as Accent
+          {t('colorPicker.setSameAsAccent')}
         </Button>
       </div>
 
       <div className={styles.customGradientSection}>
         <div className={styles.suggestedColorsTitle}>
-          Custom message background gradient
+          {t('colorPicker.customGradient')}
         </div>
         <div className={styles.customGradientPreviewWrapper}>
           <button
@@ -452,10 +454,10 @@ const ColorPicker = () => {
               background: `linear-gradient(${customGradientPreview.degree}, ${customGradientPreview.colors.map((item) => `${item.color} ${item.stop}`).join(', ')})`,
             }}
             onClick={handleApplyCustomGradient}
-            aria-label='Use custom gradient'
+            aria-label={t('colorPicker.useCustomGradientAria')}
           />
           <div className={styles.customGradientPreviewInfo}>
-            <div>{customGradientColors.length} color(s)</div>
+            <div>{customGradientColors.length} {t('colorPicker.colorCount')}</div>
             <div>{customGradientDegree}deg</div>
           </div>
         </div>
@@ -480,7 +482,7 @@ const ColorPicker = () => {
               className={styles.customGradientColorCard}
             >
               <span className={styles.customGradientColorLabel}>
-                Color {index + 1}
+                {t('colorPicker.gradientColor')} {index + 1}
               </span>
               <input
                 className={styles.customGradientColorInput}
@@ -489,7 +491,7 @@ const ColorPicker = () => {
                 onChange={(e) =>
                   handleCustomGradientColorChange(index, e.target.value)
                 }
-                aria-label={`Gradient color ${index + 1}`}
+                aria-label={`${t('colorPicker.gradientColor')} ${index + 1}`}
               />
               <span className={styles.customGradientColorValue}>
                 {customColor.toUpperCase()}
@@ -499,7 +501,7 @@ const ColorPicker = () => {
         </div>
         <div className={styles.customGradientAngleSection}>
           <div className={styles.customGradientAngleHeader}>
-            <span>Angle</span>
+            <span>{t('colorPicker.angle')}</span>
             <span>{customGradientDegree}deg</span>
           </div>
           <div
@@ -523,7 +525,7 @@ const ColorPicker = () => {
             max='359'
             value={customGradientDegree}
             onChange={(e) => setCustomGradientDegree(Number(e.target.value))}
-            aria-label='Gradient angle'
+            aria-label={t('colorPicker.gradientAngle')}
           />
         </div>
         <Button
@@ -531,14 +533,14 @@ const ColorPicker = () => {
           className={styles.setSameAsAccentButton}
           onClick={handleApplyCustomGradient}
         >
-          Use Custom Gradient
+          {t('colorPicker.useCustomGradient')}
         </Button>
       </div>
 
       <div className={styles.colorInfo}>
         <div className={styles.colorPickerPreview} />
         <Input
-          placeholder='Color'
+          placeholder={t('colorPicker.color')}
           value={color}
           onChange={(value) => setColor(value)}
         />

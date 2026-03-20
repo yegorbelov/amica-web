@@ -168,7 +168,8 @@
     }
   }
 
-  background-color: rgb(from var(--message_color) r g b / 50%);
+  background-color: var(--message_color);
+  color: var(--message-other-text, var(--messageMainColor));
   backdrop-filter: blur(7px);
   outline: 1px solid rgba(127, 127, 127, 0.3);
   border-radius: 20px;
@@ -195,6 +196,12 @@
 
   &.darker {
     clip-path: inset(0 round 20px);
+    color: #fff;
+
+    .message_div_temp_separator,
+    .message_reaction {
+      color: #fff;
+    }
 
     background: none;
     border-radius: 0;
@@ -308,6 +315,10 @@
   .message_reactions {
     margin-top: 0;
     padding-left: 0;
+  }
+
+  .message_reaction__count {
+    color: var(--reaction-count-text);
   }
 }
 
@@ -513,6 +524,20 @@
   gap: 3px;
   align-items: center;
   align-self: flex-end;
+  color: #d5eaff;
+
+  :global(.time-left),
+  .edited {
+    color: inherit;
+  }
+
+  .viewed-status__icon {
+    fill: currentColor;
+  }
+}
+
+:global(.temp_full.other-message) :global(.message_div_temp_time_view) {
+  color: #333;
 }
 
 @keyframes message_div_recieve {

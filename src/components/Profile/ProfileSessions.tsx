@@ -1,5 +1,5 @@
 import styles from './Profile.module.scss';
-// import { useTranslation } from '@/contexts/LanguageContext';
+import { useTranslation } from '@/contexts/languageCore';
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/utils/apiFetch';
 import { useUser } from '@/contexts/UserContextCore';
@@ -10,28 +10,38 @@ import {
 } from '@/utils/websocket-manager';
 import type { Session } from '@/types';
 import ProfileTabDescription from './ProfileTabDescription';
+import Button from '../ui/button/Button';
 
-const SESSION_LIFETIME_OPTIONS = [
-  // { value: 500, label: '5s' },
-  // { value: 1000, label: '10s' },
-  // { value: 3000, label: '30s' },
-  // { value: 6000, label: '1m' },
-  { value: 7, label: '1 week' },
-  { value: 14, label: '2 weeks' },
-  { value: 30, label: '1 month' },
-  { value: 60, label: '2 months' },
-  { value: 90, label: '3 months' },
-  { value: 180, label: '6 months' },
-];
-
-const formatDate = (value: string) =>
-  new Date(value).toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+const SESSION_LIFETIME_KEYS: Record<number, string> = {
+  7: 'sessions.week',
+  14: 'sessions.weeks2',
+  30: 'sessions.month',
+  60: 'sessions.months2',
+  90: 'sessions.months3',
+  180: 'sessions.months6',
+};
 
 export default function ProfileSessions() {
-  // const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const intlLocale = locale === 'ua' ? 'uk' : locale;
+
+  const formatDate = useCallback(
+    (value: string) =>
+      new Date(value).toLocaleString(intlLocale, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }),
+    [intlLocale],
+  );
+
+  const sessionLifetimeOptions = [
+    { value: 7 },
+    { value: 14 },
+    { value: 30 },
+    { value: 60 },
+    { value: 90 },
+    { value: 180 },
+  ];
   const { user, setUser } = useUser();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,12 +61,12 @@ export default function ProfileSessions() {
       setError(null);
     } catch (err) {
       console.error(err);
-      setError('Failed to load active sessions');
+      setError(t('sessions.loadError'));
       setSessions([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const handleWSMessage = useCallback(
     (data: WebSocketMessage) => {
@@ -135,8 +145,8 @@ export default function ProfileSessions() {
   if (loading) {
     return (
       <div className={styles.section}>
-        <h3>Active sessions</h3>
-        <p>Loading…</p>
+        <h3>{t('sessions.title')}</h3>
+        <p>{t('sessions.loading')}</p>
       </div>
     );
   }
@@ -144,38 +154,40 @@ export default function ProfileSessions() {
   return (
     <div className={styles.section}>
       <ProfileTabDescription
-        title='Active sessions'
-        description='Manage your active sessions and their lifetimes.'
+        title={t('sessions.title')}
+        description={t('sessions.description')}
         iconName='Sessions'
         backgroundColor='#ff6600'
       />
       {error && <div className={styles.error}>⚠️ {error}</div>}
       <div className={styles.sessionLifetime}>
-        <label>Session lifetime: </label>
+        <label>{t('sessions.sessionLifetime')} </label>
         {user && (
           <Dropdown
-            items={SESSION_LIFETIME_OPTIONS.map((opt) => ({
-              label: opt.label,
+            items={sessionLifetimeOptions.map((opt) => ({
+              label: t(SESSION_LIFETIME_KEYS[opt.value] ?? 'sessions.week'),
               value: opt.value,
             }))}
             value={sessionLifetime}
             onChange={updateSessionLifetime}
-            placeholder='Select session lifetime'
+            placeholder={t('sessions.selectLifetime')}
             buttonStyles={styles.sessionLifetimeDropdown}
           />
         )}
-        {savingLifetime && <span>Saving…</span>}
+        {savingLifetime && <span>{t('sessions.saving')}</span>}
       </div>
 
       {sessions.length === 0 ? (
-        <p>No active sessions</p>
+        <p>{t('sessions.noSessions')}</p>
       ) : (
         <div className={styles.sessionsList}>
           {sessions.map((session) => (
             <div key={session.jti} className={styles.sessionItem}>
               <span>
                 {session.is_current && (
-                  <span className={styles.currentLabel}>This device</span>
+                  <span className={styles.currentLabel}>
+                    {t('sessions.thisDevice')}
+                  </span>
                 )}
               </span>
 
@@ -187,7 +199,7 @@ export default function ProfileSessions() {
                 <span className={styles.device}>{session.device}</span>
 
                 <span className={styles.subInfo}>
-                  IP address {session.ip_address}
+                  {t('sessions.ipAddress')} {session.ip_address}
                 </span>
 
                 <span className={styles.subInfo}>
@@ -196,33 +208,33 @@ export default function ProfileSessions() {
                 </span>
 
                 <span className={styles.subInfo}>
-                  Created {formatDate(session.created_at)}
+                  {t('sessions.created')} {formatDate(session.created_at)}
                 </span>
 
                 <span className={styles.subInfo}>
-                  Expires {formatDate(session.expires_at)}
+                  {t('sessions.expires')} {formatDate(session.expires_at)}
                 </span>
 
                 <span className={styles.subInfo}>
-                  Last active {formatDate(session.last_active)}
+                  {t('sessions.lastActive')} {formatDate(session.last_active)}
                 </span>
               </div>
 
               {!session.is_current && (
-                <button
+                <Button
                   className={styles.revokeBtn}
                   onClick={() => revokeSession(session.jti)}
                 >
-                  Terminate
-                </button>
+                  {t('sessions.terminate')}
+                </Button>
               )}
               {session.is_current && sessions.length > 1 && (
-                <button
-                  className={styles.revokeAllBtn}
+                <Button
+                  className={`${styles.revokeBtn} ${styles.revokeAllBtn}`}
                   onClick={revokeOtherSessions}
                 >
-                  Terminate other sessions
-                </button>
+                  {t('sessions.terminateOthers')}
+                </Button>
               )}
             </div>
           ))}

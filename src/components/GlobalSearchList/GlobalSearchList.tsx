@@ -9,8 +9,7 @@ import { useTranslation } from '@/contexts/languageCore';
 import { Icon } from '../Icons/AutoIcons';
 
 const GlobalSearchList: React.FC = () => {
-  const { results, loading, error, clear } =
-    useSearchContext<GlobalSearchItem>();
+  const { results, clear } = useSearchContext<GlobalSearchItem>();
   const { handleCreateTemporaryChat, handleChatClick } = useChatMeta();
   const { setActiveProfileTab } = useSettings();
   const { setActiveTab } = useTabs();
@@ -28,12 +27,18 @@ const GlobalSearchList: React.FC = () => {
     clear();
   };
 
-  if (loading) return <div className={styles.loading}>Loading...</div>;
-  if (error) return <div className={styles.error}>{error}</div>;
+  // if (loading) return <div className={styles.loading}>Loading...</div>;
+  // if (error) return <div className={styles.error}>{error}</div>;
 
-  const users = results.filter((r): r is GlobalSearchItem & { type: 'user' } => r.type === 'user');
-  const contacts = results.filter((r): r is GlobalSearchItem & { type: 'contact' } => r.type === 'contact');
-  const settings = results.filter((r): r is GlobalSearchItem & { type: 'setting' } => r.type === 'setting');
+  const users = results.filter(
+    (r): r is GlobalSearchItem & { type: 'user' } => r.type === 'user',
+  );
+  const contacts = results.filter(
+    (r): r is GlobalSearchItem & { type: 'contact' } => r.type === 'contact',
+  );
+  const settings = results.filter(
+    (r): r is GlobalSearchItem & { type: 'setting' } => r.type === 'setting',
+  );
 
   if (results.length === 0) return null;
 
@@ -51,7 +56,7 @@ const GlobalSearchList: React.FC = () => {
           handleSelect(item);
         }
       }}
-      role="button"
+      role='button'
       tabIndex={0}
     >
       {item.type === 'user' && (
@@ -84,7 +89,7 @@ const GlobalSearchList: React.FC = () => {
       )}
       {item.type === 'setting' && item.data.id && (
         <>
-          <Icon name="Appearance" className={styles['setting-icon']} />
+          <Icon name='Appearance' className={styles['setting-icon']} />
           <div className={styles.info}>
             <span className={styles.name}>
               {t(`profileTabs.${item.data.id}`)}
@@ -99,17 +104,19 @@ const GlobalSearchList: React.FC = () => {
     <ul className={styles['search-list']}>
       {users.length > 0 && (
         <>
-          <li className={styles['search-section']}>
-            {t('search.users') ?? 'Users'}
-          </li>
-          {users.map((item, i) => renderItem(item, `user-${item.data.id}-${i}`))}
+          {/* <li className={styles['search-section']}> */}
+          {/* {t('search.users') ?? 'Users'} */}
+          {/* </li> */}
+          {users.map((item, i) =>
+            renderItem(item, `user-${item.data.id}-${i}`),
+          )}
         </>
       )}
       {contacts.length > 0 && (
         <>
-          <li className={styles['search-section']}>
+          {/* <li className={styles['search-section']}>
             {t('search.contacts') ?? 'Contacts'}
-          </li>
+          </li> */}
           {contacts.map((item, i) =>
             renderItem(item, `contact-${item.data.id}-${i}`),
           )}

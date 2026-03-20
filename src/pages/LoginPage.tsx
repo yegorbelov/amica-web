@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import GoogleLoginButton from '../components/GoogleLoginButton/GoogleLoginButton';
 import { PasskeyLoginButton } from '../components/PasskeyButton/PasskeyLoginButton';
 import { useUser } from '../contexts/UserContextCore';
+import { useTranslation } from '@/contexts/languageCore';
 import styles from './LoginPage.module.scss';
 
 interface LoginFormData {
@@ -14,6 +15,7 @@ interface LoginPageProps {
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<LoginFormData>({
     username: '',
     password: '',
@@ -72,7 +74,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
     <div className={styles['login-wrapper']}>
       <div className={styles['login-top-fill']} />
       <form className={styles['login-form']} onSubmit={handleSubmit} noValidate>
-        <h4 className={styles['login-title']}>Sign in</h4>
+        <img
+          src='Images/512-transparent.png'
+          alt='Amica'
+          className={styles['login-logo']}
+        />
+        <h4 className={styles['login-title']}>{t('login.signIn')}</h4>
+
         <fieldset className={styles['form']}>
           {/* <legend className={styles['form-label']}>Email</legend> */}
           <input
@@ -84,7 +92,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
             disabled={loading}
             autoComplete='email'
             required
-            placeholder='Email'
+            placeholder={t('login.email')}
           />
         </fieldset>
         <fieldset className={styles['form']}>
@@ -99,7 +107,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
             disabled={loading}
             autoComplete='current-password'
             required
-            placeholder='Password'
+            placeholder={t('login.password')}
           />
         </fieldset>
         {error && <div style={{ color: 'red', margin: '8px 0' }}>{error}</div>}
@@ -108,13 +116,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
           className={styles['next-button']}
           disabled={loading || !formData.username || !formData.password}
         >
-          {loading ? 'Logging in...' : 'Next'}
+          {loading ? t('login.loggingIn') : t('buttons.next')}
         </button>
         <GoogleLoginButton className={styles['google-login-button']} />
         <PasskeyLoginButton styles={styles} />
         <div className={styles['need-account']}>
-          <span>Need an account?</span>
-          <a onClick={handleSignUp}>Sign Up</a>
+          <span>{t('login.needAccount')}</span>
+          <a onClick={handleSignUp}>{t('login.signUp')}</a>
         </div>
       </form>
       <div className={styles['login-bottom-fill']} />

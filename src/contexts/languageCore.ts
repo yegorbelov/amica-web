@@ -48,7 +48,7 @@ export const availableLanguages: {
 }[] = [
   { code: 'en', country: 'gb', name: 'English' },
   { code: 'ru', country: 'ru', name: 'Русский' },
-  { code: 'ar', country: 'sa', name: 'العربية' },
+  // { code: 'ar', country: 'sa', name: 'العربية' },
   { code: 'es', country: 'es', name: 'Español' },
   { code: 'fr', country: 'fr', name: 'Français' },
   { code: 'de', country: 'de', name: 'Deutsch' },

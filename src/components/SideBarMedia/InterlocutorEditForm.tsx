@@ -33,7 +33,7 @@ const InterlocutorEditForm: React.FC<InterlocutorEditFormProps> = ({
     chatType === 'D' &&
     originalUsername != null &&
     originalUsername !== displayName
-      ? `Original username: ${originalUsername}`
+      ? `${t('sidebar.originalUsername')}: ${originalUsername}`
       : null;
 
   return (
@@ -41,7 +41,7 @@ const InterlocutorEditForm: React.FC<InterlocutorEditFormProps> = ({
       <div className={styles.form}>
         {chatType === 'D' && (
           <Input
-            placeholder='Contact Name'
+            placeholder={t('sidebar.contactName')}
             isRequired
             value={editValue}
             onChange={onValueChange}
@@ -50,7 +50,7 @@ const InterlocutorEditForm: React.FC<InterlocutorEditFormProps> = ({
         )}
         {chatType === 'G' && (
           <Input
-            placeholder='Group Name'
+            placeholder={t('sidebar.groupName')}
             isRequired
             value={editValue}
             onChange={onValueChange}
@@ -75,7 +75,7 @@ const InterlocutorEditForm: React.FC<InterlocutorEditFormProps> = ({
           type='button'
           onClick={() => onDelete(contactId)}
         >
-          Delete from Contacts
+          {t('sidebar.deleteFromContacts')}
         </Button>
       </div>
     </div>

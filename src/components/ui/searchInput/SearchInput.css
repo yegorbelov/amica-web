@@ -41,7 +41,7 @@
   height: 100%;
   font-size: 1rem;
   background: transparent;
-  color: #fff;
+  color: var(--surface-text, #fff);
   transition:
     background 1s,
     width 0.2s ease-in-out;
@@ -116,7 +116,7 @@
   justify-content: center;
   width: 100%;
   margin-right: 7px;
-  background: rgba(30, 30, 30, 0.7);
+  background: var(--search-field-bg, rgba(30, 30, 30, 0.7));
   border-radius: 20px;
   gap: 9px;
   cursor: text;
@@ -164,7 +164,7 @@
     margin-right: -5px;
     pointer-events: none;
 
-    color: rgba(127, 127, 127);
+    color: var(--color-text-secondary, rgba(127, 127, 127));
     cursor: pointer;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
@@ -204,7 +204,7 @@
     position: absolute;
     inset: 0;
     border-radius: 99rem;
-    background-color: rgba(35, 35, 35, 0.7) !important;
+    background-color: var(--search-glass-tint, rgba(35, 35, 35, 0.7)) !important;
   }
 
   .liquidGlass-shine {
@@ -277,7 +277,7 @@
   .search_div:focus-within {
     /* transform: scale(1); */
     /* animation: search_div_focus 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); */
-    background-color: black;
+    background-color: var(--search-focus-bg, black);
     bottom: max(20px, var(--search_div_height_focus));
   }
   .search_div:active {
@@ -391,7 +391,7 @@
     text-align: left;
     font-size: 1rem;
     background: transparent !important;
-    color: #fff;
+    color: var(--surface-text, #fff);
     transition: background 1s;
     z-index: 3;
     -webkit-touch-callout: none;

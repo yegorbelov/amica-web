@@ -50,12 +50,13 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+    color: #fff;
   }
 
   &__title-sub {
     font-weight: 400;
     font-size: 0.875rem;
-    color: var(--secondaryColor);
+    color: #d5eaff;
     max-width: 100%;
   }
 

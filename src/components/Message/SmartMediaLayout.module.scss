@@ -287,6 +287,8 @@
   height: 100%;
   position: relative;
   background: #000;
+  color: #fff;
+  fill: #fff;
 }
 
 .progress-bar {
@@ -352,7 +354,7 @@
 
 .documentLayoutContentSize {
   font-size: 0.875rem;
-  color: var(--secondaryColor);
+  color: var(--document-layout-text);
 }
 
 .documentLayoutContentTitleFilename {

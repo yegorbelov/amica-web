@@ -1,7 +1,8 @@
-import React, { useCallback, useRef, memo } from 'react';
+import React, { useCallback, useRef, useMemo, memo } from 'react';
 import { useChatMeta, useSelectedChat, useChatMessages } from '@/contexts/ChatContextCore';
 import { useToast } from '@/contexts/toast/ToastContextCore';
-import { formatLastSeen } from '@/utils/activityFormatter';
+import { useTranslation } from '@/contexts/languageCore';
+import { useFormatLastSeen } from '@/hooks/useFormatLastSeen';
 import SideBarMediaHeader from './SideBarMediaHeader';
 import SideBarAvatarSection from './SideBarAvatarSection';
 import SideBarInfoSection from './SideBarInfoSection';
@@ -25,7 +26,15 @@ interface SideBarMediaProps {
   onClose?: () => void;
 }
 
+const FILTER_LABEL_KEYS: Record<string, string> = {
+  All: 'sidebar.filterAll',
+  Videos: 'sidebar.filterVideos',
+  Photos: 'sidebar.filterPhotos',
+};
+
 const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
+  const { t } = useTranslation();
+  const { formatLastSeen } = useFormatLastSeen();
   const { addContact, deleteContact, saveContact } = useChatMeta();
   const { selectedChat } = useSelectedChat();
   const { messages } = useChatMessages();
@@ -90,12 +99,31 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
   useTabSwipe(gridRef, activeTab, availableTabs, setActiveTab);
   const rowScale = useGridPinchZoom(gridRef, sidebarInnerRef);
 
-  const subtitle = React.useMemo(() => {
+  const filterItemsTranslated = useMemo(
+    () =>
+      filterItems.map((item) => ({
+        ...item,
+        label: t(FILTER_LABEL_KEYS[item.label] ?? 'sidebar.filterAll'),
+        filterKey: item.label,
+      })),
+    [filterItems, t],
+  );
+
+  const effectiveFilterTypeTranslated = t(
+    FILTER_LABEL_KEYS[effectiveFilterType] ?? 'sidebar.filterAll',
+  );
+
+  const handleFilterChange = useCallback(
+    (filterKey: string) => setFilterType(filterKey),
+    [setFilterType],
+  );
+
+  const subtitle = useMemo(() => {
     if (selectedChat?.type === 'G') {
-      return `${selectedChat?.info ?? ''} members`;
+      return `${selectedChat?.info ?? ''} ${t('sidebar.membersCount')}`;
     }
     return formatLastSeen(selectedChat?.info ?? '');
-  }, [selectedChat?.type, selectedChat?.info]);
+  }, [selectedChat?.type, selectedChat?.info, t, formatLastSeen]);
 
   const interlocutor = selectedChat?.members?.[0];
 
@@ -103,11 +131,11 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
     if (!interlocutor?.email) return;
     try {
       await navigator.clipboard.writeText(interlocutor.email);
-      showToast('Email copied');
+      showToast(t('toast.emailCopied'));
     } catch (err) {
       console.error('Copy failed', err);
     }
-  }, [interlocutor, showToast]);
+  }, [interlocutor, showToast, t]);
 
   const handleBackOrClose = useCallback(() => {
     if (interlocutorEditVisible) {
@@ -147,8 +175,8 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
     selectedChat.members != null &&
     selectedChat.members.length > 0;
   const editLabel = selectedChat.members?.[0]?.is_contact
-    ? 'Edit'
-    : 'Add to Contacts';
+    ? t('sidebar.edit')
+    : t('sidebar.addToContacts');
 
   return (
     <div
@@ -175,9 +203,9 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
             attachmentsActive={attachmentsActive}
             showFilterDropdown={activeTab === 'media'}
             interlocutorEditVisible={interlocutorEditVisible}
-            filterItems={filterItems}
-            effectiveFilterType={effectiveFilterType}
-            onFilterChange={setFilterType}
+            filterItems={filterItemsTranslated}
+            effectiveFilterType={effectiveFilterTypeTranslated}
+            onFilterChange={handleFilterChange}
           />
 
           <SideBarAvatarSection

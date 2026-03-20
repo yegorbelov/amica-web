@@ -3,6 +3,7 @@ import styles from './ContextMenu.module.scss';
 import { createPortal } from 'react-dom';
 import { Icon } from '../Icons/AutoIcons';
 import type { IconName } from '../Icons/AutoIcons';
+import { useTranslation } from '@/contexts/languageCore';
 
 export interface MenuItem {
   label: string;
@@ -41,6 +42,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   onAnimationEnd,
   isHiding,
 }) => {
+  const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
   const reactionsRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
@@ -158,7 +160,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
               }`}
               style={{ animationDelay: `${index * 55}ms` }}
               onClick={() => onReactionSelect?.(reaction.type)}
-              aria-label={`React with ${reaction.emoji}`}
+              aria-label={`${t('aria.reactWith')} ${reaction.emoji}`}
             >
               {reaction.iconUrl ? (
                 <img

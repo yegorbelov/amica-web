@@ -22,6 +22,10 @@ const StrokeGradientSvg = React.memo(() => (
         <stop offset='0%' stopColor='#ffffff' />
         <stop offset='100%' stopColor='#ccc' />
       </linearGradient>
+      <linearGradient id='strokeGradientSend'>
+        <stop offset='0%' stopColor='#ffffff' />
+        <stop offset='100%' stopColor='#ccc' />
+      </linearGradient>
     </defs>
   </svg>
 ));

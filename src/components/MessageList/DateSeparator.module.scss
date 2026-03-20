@@ -10,7 +10,7 @@
   background: transparent;
   text-align: center;
   transition: opacity 0.2s;
-  color: var(--secondaryColor, rgba(255, 255, 255, 0.7));
+  color: var(--color-text-secondary, var(--secondaryColor, rgba(255, 255, 255, 0.7)));
   font-size: 0.8125rem;
   font-weight: 500;
 }
@@ -19,7 +19,8 @@
   display: inline-block;
   padding: 4px 12px;
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--separator-label-bg, rgba(255, 255, 255, 0.2));
+  color: var(--separator-label-text, #1c1c1e);
   backdrop-filter: blur(7px);
   cursor: pointer;
 }

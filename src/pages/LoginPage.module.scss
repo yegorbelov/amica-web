@@ -111,9 +111,9 @@
 
 .login-title {
   font-family: 'SFProRounded', sans-serif;
-  font-size: 2rem;
+  font-size: 2.5rem;
   text-align: center;
-  padding: 30px;
+  padding: 0px 20px 20px 20px;
 }
 
 .form-label {
@@ -177,4 +177,11 @@
 
 .login-bottom-fill {
   flex: 1 1 0;
+}
+
+.login-logo {
+  width: 100%;
+  height: 160px;
+  padding: 50px 50px 0 50px;
+  object-fit: cover;
 }

@@ -18,10 +18,9 @@
   bottom: 0;
   z-index: 1000;
   border-radius: 32px 32px 0 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid var(--surface-border);
   backdrop-filter: blur(4px);
-  background-color: rgba(0, 0, 0, 0.3);
-  background: color-mix(in srgb, rgb(0, 0, 0) 30%, transparent);
+  background: var(--surface-bg-muted);
   padding-bottom: var(--sab);
 }
 
@@ -33,6 +32,7 @@
 
   &__button {
     background-color: var(--mainColor) !important;
+    color: #fff !important;
     border-radius: 20px;
     height: calc(100% - 16px);
     flex: 1;
@@ -239,8 +239,8 @@
   background: none;
   border: none;
   cursor: pointer;
-  fill: #ffffff;
-  color: #ffffff;
+  fill: var(--surface-text);
+  color: var(--surface-text);
   z-index: 1;
   position: relative;
 
@@ -284,7 +284,7 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: rgba(90, 90, 90, 0.5);
+    background: var(--tab-inner-overlay-bg);
     opacity: 0;
     pointer-events: none;
     z-index: 0;
@@ -315,7 +315,7 @@
     left: var(--mask-left);
     right: var(--mask-inset-right);
     border-radius: 999px;
-    background: rgba(90, 90, 90, 0.5);
+    background: var(--tab-inner-overlay-bg);
     opacity: 0;
     pointer-events: none;
     transition: opacity 280ms ease;
@@ -396,7 +396,7 @@
   :global(svg ellipse),
   :global(svg polyline),
   :global(svg polygon) {
-    stroke: #fff !important;
+    stroke: var(--surface-text) !important;
     fill: none !important;
   }
 }
@@ -412,7 +412,7 @@
   :global(svg ellipse),
   :global(svg polyline),
   :global(svg polygon) {
-    stroke: #fff !important;
+    stroke: var(--surface-text) !important;
     fill: none !important;
   }
 }

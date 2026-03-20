@@ -657,7 +657,7 @@ export function Tabs() {
           onPointerCancel={onIndicatorPointerCancel}
           onTransitionEnd={onIndicatorTransitionEnd}
           role='slider'
-          aria-label='Tab selector'
+          aria-label={t('aria.tabSelector')}
           aria-valuemin={0}
           aria-valuemax={tabOrder.length - 1}
           aria-valuenow={tabOrder.indexOf(activeTab)}

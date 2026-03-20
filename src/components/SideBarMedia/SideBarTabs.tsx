@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useState, memo } from 'react';
 import type { SideBarTab } from './hooks/useSideBarMediaData';
+import { useTranslation } from '@/contexts/languageCore';
 import styles from './SideBarMedia.module.scss';
 
 interface SideBarTabsProps {
@@ -27,6 +28,7 @@ const SideBarTabs: React.FC<SideBarTabsProps> = ({
   mediaFilesCount,
   audioFilesCount,
 }) => {
+  const { t } = useTranslation();
   const [indicatorPosition, setIndicatorPosition] = useState(0);
   const [indicatorWidth, setIndicatorWidth] = useState(0);
 
@@ -64,7 +66,7 @@ const SideBarTabs: React.FC<SideBarTabsProps> = ({
             }`}
             onClick={() => onTabChange('members')}
           >
-            Members
+            {t('sidebar.members')}
           </button>
         )}
         {mediaFilesCount > 0 && (
@@ -76,7 +78,7 @@ const SideBarTabs: React.FC<SideBarTabsProps> = ({
             }`}
             onClick={() => onTabChange('media')}
           >
-            Media
+            {t('sidebar.media')}
           </button>
         )}
         {audioFilesCount > 0 && (
@@ -88,7 +90,7 @@ const SideBarTabs: React.FC<SideBarTabsProps> = ({
             }`}
             onClick={() => onTabChange('audio')}
           >
-            Audio
+            {t('sidebar.audio')}
           </button>
         )}
       </div>

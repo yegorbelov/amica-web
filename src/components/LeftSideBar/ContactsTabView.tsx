@@ -5,6 +5,7 @@ import styles from './LeftSideBar.module.scss';
 import { SearchProvider } from '@/contexts/search/SearchContext';
 import { useSearchContext } from '@/contexts/search/SearchContextCore';
 import { useContacts } from '@/contexts/contacts/useContacts';
+import { useTranslation } from '@/contexts/languageCore';
 import type { Contact } from '@/types';
 
 function ContactsListWithSearch() {
@@ -15,6 +16,7 @@ function ContactsListWithSearch() {
 }
 
 const ContactsTabView: React.FC = () => {
+  const { t } = useTranslation();
   const { searchContacts } = useContacts();
   const searchFn = useCallback(
     (query: string) => Promise.resolve(searchContacts(query)),
@@ -23,7 +25,7 @@ const ContactsTabView: React.FC = () => {
 
   return (
     <SearchProvider searchFn={searchFn} minLength={1}>
-      <SearchInput placeholder='Search' />
+      <SearchInput placeholder={t('search.default')} />
       <div
         className={`${styles['tab-content']} ${styles['tab-content--contacts']}`}
       >

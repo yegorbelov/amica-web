@@ -7,6 +7,7 @@ import { websocketManager } from '@/utils/websocket-manager';
 import { fallbackCopy } from './clipboardUtils';
 import { MESSAGE_REACTION_OPTIONS } from '@/constants/messageReactions';
 import { buildOptimisticReactionUpdate } from './reactionOptimistic';
+import { useTranslation } from '@/contexts/languageCore';
 
 export interface UseMessageContextMenuParams {
   selectedChat: { id: number } | null;
@@ -68,6 +69,7 @@ export function useMessageContextMenu({
   triggerClipboardCheck,
   onSelectMessage,
 }: UseMessageContextMenuParams): UseMessageContextMenuResult {
+  const { t } = useTranslation();
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);
   const [isMenuHiding, setIsMenuHiding] = useState(false);
@@ -100,7 +102,7 @@ export function useMessageContextMenu({
           const imageBlob = new Blob([blob], { type: 'image/png' });
           const clipboardItem = new ClipboardItem({ 'image/png': imageBlob });
           await navigator.clipboard.write([clipboardItem]);
-          showToast('Media copied');
+          showToast(t('toast.mediaCopied'));
         } catch {
           const img = new Image();
           img.crossOrigin = 'anonymous';
@@ -121,13 +123,13 @@ export function useMessageContextMenu({
           await navigator.clipboard.write([
             new ClipboardItem({ 'image/png': pngBlob }),
           ]);
-          showToast('Media copied');
+          showToast(t('toast.mediaCopied'));
         }
       } catch (err) {
         console.error('Clipboard error:', err);
       }
     },
-    [showToast],
+    [showToast, t],
   );
 
   const handleSaveFile = useCallback(
@@ -148,15 +150,15 @@ export function useMessageContextMenu({
         link.download = filename;
         document.body.appendChild(link);
         link.click();
-        showToast('File downloaded');
+        showToast(t('toast.fileDownloaded'));
         document.body.removeChild(link);
         URL.revokeObjectURL(blobUrl);
       } catch (err) {
         console.error('Failed to download file', err);
-        showToast('Failed to download file');
+        showToast(t('toast.fileDownloadFailed'));
       }
     },
-    [showToast],
+    [showToast, t],
   );
 
   const handleEditMessage = useCallback(
@@ -191,7 +193,7 @@ export function useMessageContextMenu({
       if (navigator.clipboard?.writeText) {
         navigator.clipboard
           .writeText(text)
-          .then(() => showToast('Message copied'))
+          .then(() => showToast(t('toast.messageCopied')))
           .catch((err) => {
             console.error('Clipboard error:', err);
             fallbackCopy(text);
@@ -200,7 +202,7 @@ export function useMessageContextMenu({
         fallbackCopy(text);
       }
     },
-    [showToast],
+    [showToast, t],
   );
 
   const handleReactionSelect = useCallback(
@@ -233,7 +235,7 @@ export function useMessageContextMenu({
       ...(menuMessage?.value
         ? [
             {
-              label: 'Copy Text',
+              label: t('messageContextMenu.copyText'),
               icon: 'CopyText' as IconName,
               onClick: () => handleCopyMessage(menuMessage),
             },
@@ -244,7 +246,7 @@ export function useMessageContextMenu({
       ) && canCopyToClipboard
         ? [
             {
-              label: 'Copy Media',
+              label: t('messageContextMenu.copyMedia'),
               icon: 'Photo' as IconName,
               onClick: () => handleCopyMedia(menuMessage),
             },
@@ -253,7 +255,7 @@ export function useMessageContextMenu({
       ...(menuMessage?.files?.length > 0
         ? [
             {
-              label: 'Save As...',
+              label: t('messageContextMenu.saveAs'),
               icon: 'SaveAs' as IconName,
               onClick: () => handleSaveFile(menuMessage),
             },
@@ -263,7 +265,7 @@ export function useMessageContextMenu({
       ...(menuMessage?.is_own
         ? [
             {
-              label: 'Edit',
+              label: t('messageContextMenu.edit'),
               icon: 'Edit' as IconName,
               onClick: () => handleEditMessage(menuMessage),
             },
@@ -271,7 +273,7 @@ export function useMessageContextMenu({
         : []),
       // { label: 'Forward', icon: 'Forward' as IconName, onClick: () => {} },
       {
-        label: 'Select',
+        label: t('messageContextMenu.select'),
         icon: 'Select' as IconName,
         onClick: () => {
           if (menuMessage && onSelectMessage) {
@@ -286,7 +288,7 @@ export function useMessageContextMenu({
         ? [
             { separator: true, label: '', onClick: () => {} },
             {
-              label: 'Delete',
+              label: t('messageContextMenu.delete'),
               icon: 'Delete' as IconName,
               onClick: () => menuMessage && handleDeleteMessage(menuMessage),
               danger: true,
@@ -297,7 +299,7 @@ export function useMessageContextMenu({
         ? [
             { separator: true, label: '', onClick: () => {} },
             {
-              label: `${menuMessage.viewers.length} Seen`,
+              label: `${menuMessage.viewers.length} ${t('messageContextMenu.seen')}`,
               icon: 'Read' as IconName,
               onClick: () => onShowViewers(menuMessage),
             },
@@ -314,6 +316,7 @@ export function useMessageContextMenu({
       handleDeleteMessage,
       onShowViewers,
       onSelectMessage,
+      t,
     ],
   );
 

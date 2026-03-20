@@ -2,6 +2,7 @@ import React from 'react';
 import LeftSideBar from '../components/LeftSideBar/LeftSideBar';
 import MainChatWindow from '../components/MainChatWindow/MainChatWindow';
 import Wallpaper from './Wallpaper';
+import { TabsProvider } from '../components/Tabs/TabsContext';
 import styles from './RoomPage.module.scss';
 // import { useSettings } from '@/contexts/settings/context';
 
@@ -24,11 +25,13 @@ const RoomPage: React.FC = () => {
 
   return (
     <>
-      <div className={styles.roomPageContainer}>
-        <Wallpaper isChatWindow={false} />
-        <LeftSideBar />
-        <MainChatWindow />
-      </div>
+      <TabsProvider>
+        <div className={styles.roomPageContainer}>
+          <Wallpaper isChatWindow={false} />
+          <LeftSideBar />
+          <MainChatWindow />
+        </div>
+      </TabsProvider>
     </>
   );
 };

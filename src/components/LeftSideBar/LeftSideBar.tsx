@@ -1,4 +1,3 @@
-import { TabsProvider } from '../Tabs/TabsContext';
 import { Tabs } from '../Tabs/Tabs';
 import { Tab } from '../Tabs/Tab';
 import Profile from '@/components/Profile/Profile';
@@ -22,8 +21,7 @@ const LeftSideBar: React.FC<ChooseListProps> = () => {
 
   return (
     <div className='choose_list'>
-      <TabsProvider>
-        <div className='left-menu'>
+      <div className='left-menu'>
           <div className={styles['tab-panels']}>
             <Tab id='contacts'>
               <div
@@ -51,7 +49,6 @@ const LeftSideBar: React.FC<ChooseListProps> = () => {
           </div>
         </div>
         <Tabs />
-      </TabsProvider>
     </div>
   );
 };

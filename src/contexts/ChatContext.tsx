@@ -17,6 +17,7 @@ import {
   getLastUserId,
 } from '@/utils/chatStateStorage';
 import { useSnackbar } from '@/contexts/snackbar/SnackbarContextCore';
+import { useTranslation } from '@/contexts/languageCore';
 import {
   ChatMetaContext,
   ChatMessagesContext,
@@ -80,6 +81,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   selectedChatIdRef.current = selectedChatId;
   const { setActiveProfileTab } = useSettingsActions();
   const { showSnackbar, dismissSnackbar } = useSnackbar();
+  const { t } = useTranslation();
 
   const {
     messagesCache,
@@ -827,9 +829,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         timeoutId,
       };
 
-      showSnackbar('Chat deleted', {
+      showSnackbar(t('chat.chatDeleted'), {
         duration: 5000,
-        actionLabel: 'Undo',
+        actionLabel: t('buttons.undo'),
         onAction: restorePendingChatDeletion,
       });
     },
@@ -841,6 +843,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       removeMessagesForChat,
       restorePendingChatDeletion,
       showSnackbar,
+      t,
       temporaryChat,
     ],
   );

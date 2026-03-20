@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useUser } from '../contexts/UserContextCore';
+import { useTranslation } from '@/contexts/languageCore';
 import { Icon } from '@/components/Icons/AutoIcons';
 import styles from './LoginPage.module.scss';
 import Button from '@/components/ui/button/Button';
@@ -9,6 +10,7 @@ interface SignUpPageProps {
 }
 
 const SignUpPage: React.FC<SignUpPageProps> = ({ onShowLogin }) => {
+  const { t } = useTranslation();
   const { signupWithCredentials } = useUser();
   const usernameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -85,7 +87,7 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onShowLogin }) => {
         autoComplete='off'
       >
         <Button
-          aria-label='Back to login'
+          aria-label={t('login.backToLogin')}
           onClick={handleLoginClick}
           className={styles['form-back']}
         >
@@ -94,7 +96,7 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onShowLogin }) => {
             style={{ transform: 'rotate(180deg)', height: 24, width: 24 }}
           />
         </Button>
-        <h4 className={styles['login-title']}>Sign Up</h4>
+        <h4 className={styles['login-title']}>{t('signUp.title')}</h4>
         <fieldset className={styles['form']}>
           {/* <legend className={styles['form-label']}>Username</legend> */}
           {/* <legend className={styles['form-label-placeholder']}>Username</legend> */}
@@ -113,7 +115,7 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onShowLogin }) => {
             aria-autocomplete='none'
             role='textbox'
             required
-            placeholder='Username'
+            placeholder={t('signUp.username')}
           />
         </fieldset>
         <fieldset className={styles['form']}>
@@ -135,7 +137,7 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onShowLogin }) => {
             aria-autocomplete='none'
             role='textbox'
             required
-            placeholder='Email'
+            placeholder={t('signUp.email')}
           />
         </fieldset>
         <fieldset className={styles['form']}>
@@ -155,7 +157,7 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onShowLogin }) => {
             aria-autocomplete='none'
             role='textbox'
             required
-            placeholder='Password'
+            placeholder={t('signUp.password')}
           />
         </fieldset>
         {error && <div style={{ color: 'red', margin: '8px 0' }}>{error}</div>}
@@ -164,11 +166,11 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onShowLogin }) => {
           className={styles['next-button']}
           disabled={loading || !form.username || !form.email || !form.password}
         >
-          {loading ? 'Creating account…' : 'Sign Up'}
+          {loading ? t('signUp.creatingAccount') : t('signUp.title')}
         </button>
         <div className={styles['need-account']}>
-          <span>Already have an account?</span>
-          <a onClick={handleLoginClick}>Log in</a>
+          <span>{t('signUp.alreadyHaveAccount')}</span>
+          <a onClick={handleLoginClick}>{t('signUp.logIn')}</a>
         </div>
       </form>
       <div className={styles['login-bottom-fill']} />
