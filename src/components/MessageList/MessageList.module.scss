@@ -41,8 +41,12 @@
   font-weight: 500;
   padding: 3px 20px;
   border-radius: 24px;
-  background-color: rgba(0, 0, 0, 0.2);
   white-space: nowrap;
+  background: var(--separator-label-bg, rgba(255, 255, 255, 0.2));
+  color: var(--separator-label-text, #1c1c1e);
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .selectionBar {

@@ -1,5 +1,5 @@
 // components/Search/UserSearch.tsx
-import React, { memo, useCallback, useState } from 'react';
+import React, { memo, useCallback, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import SearchInput from '@/components/ui/searchInput/SearchInput';
 import GlobalSearchList from '@/components/GlobalSearchList/GlobalSearchList';
@@ -66,7 +66,12 @@ const ChatsTabView: React.FC = () => {
           onClick={() => setCreateOpen(true)}
           aria-label={t('sidebar.newGroupTitle')}
         >
-          <Icon name='AddPlus' className={styles['add-plus-icon']} />
+          {useMemo(
+            () => (
+              <Icon name='AddPlus' className={styles['add-plus-icon']} />
+            ),
+            [],
+          )}
         </Button>
       </div>
       <div className={styles['tab-content']}>

@@ -315,7 +315,7 @@
 .send_svg {
   height: 40px;
   width: 100%;
-  stroke: url('#strokeGradientSend');
+  stroke: #fff;
   transform: rotate(-45deg);
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
@@ -337,7 +337,7 @@
 .input_attach {
   height: 100%;
   width: 100%;
-  stroke: url(#strokeGradient);
+  stroke: var(--surface-text);
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
 }

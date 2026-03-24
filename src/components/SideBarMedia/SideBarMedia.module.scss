@@ -552,10 +552,15 @@
   }
 }
 
+.membersPickerRow {
+  overflow: hidden;
+}
+
 .membersPickerInfoContainer {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow: hidden;
 }
 
 .membersPickerInfo {
