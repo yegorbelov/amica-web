@@ -1,14 +1,14 @@
 .overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  background: rgba(92, 143, 204, 0.7);
-  border: 3px dashed rgb(38, 120, 221);
+  background: color-mix(in srgb, var(--mainColor) 20%, transparent);
+  border: 3px dashed var(--mainColor);
 
   backdrop-filter: blur(3px);
-  margin: 40px;
-  border-radius: 20px;
+  margin: 10px;
+  border-radius: 32px;
 
-  z-index: 9999;
+  z-index: 99999;
   pointer-events: none;
 
   display: flex;

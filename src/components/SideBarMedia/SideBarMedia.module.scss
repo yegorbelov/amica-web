@@ -575,6 +575,7 @@
   width: 100%;
   max-width: 360px;
   max-height: 70vh;
+  height: 70vh;
   display: flex;
   position: relative;
   flex-direction: column;
@@ -603,14 +604,20 @@
 
 .membersPickerHeader {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 12px;
   padding: 10px 10px 0;
   flex-shrink: 0;
   position: absolute;
   width: 100%;
   z-index: 9999;
+}
+
+.membersPickerHeaderTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .membersPickerTitle {
@@ -624,10 +631,6 @@
 }
 
 .membersPickerClose {
-  min-width: 40px !important;
-  width: 40px !important;
-  height: 40px !important;
-  font-size: 1.5rem;
   line-height: 1;
 }
 
@@ -637,12 +640,12 @@
   padding: 8px 0;
   overflow-y: auto;
   overscroll-behavior-y: contain;
-  padding: 60px 0 10px 0;
+  padding: 110px 0 10px 0;
   flex: 1;
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(0, 0, 0, 1) 60px,
+    rgba(0, 0, 0, 1) 110px,
     rgba(0, 0, 0, 1) calc(100% - 10px),
     rgba(0, 0, 0, 0) 100%
   );
@@ -665,6 +668,7 @@
 }
 
 .membersPickerRow {
+  transition: background 0.2s ease;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -692,4 +696,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.membersPickerRowCheckbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.membersPickerRowSelected {
+  background: color-mix(in srgb, var(--mainColor) 20%, transparent);
 }

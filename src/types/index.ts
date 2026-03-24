@@ -46,6 +46,10 @@ export interface Chat {
   id: number;
   name: string | null;
   members: User[];
+  /** DM: other participant's user id (from server list); use when members not loaded */
+  peer_user_id?: number | null;
+  /** Group global search: whether current user is already in the group */
+  is_member?: boolean;
   type: 'D' | 'G' | 'C';
   primary_media: DisplayMedia;
   last_message: Message | null;
@@ -99,6 +103,8 @@ export interface User {
   last_seen?: string | null;
   is_contact?: boolean;
   contact_id?: number;
+  /** Existing 1:1 chat id with current user (global user search) */
+  dm_chat_id?: number | null;
 }
 
 export interface Contact {

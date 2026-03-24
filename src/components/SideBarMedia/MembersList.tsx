@@ -24,6 +24,7 @@ import { Menu } from '../ui/menu/Menu';
 import { Icon } from '../Icons/AutoIcons';
 import type { MenuItem } from '../ui/menu/Menu';
 import { formatLastSeenShort } from '@/utils/activityFormatter';
+import SearchInput from '../ui/searchInput/SearchInput';
 
 interface MembersListProps {
   chatId: number;
@@ -48,6 +49,7 @@ const MembersList: React.FC<MembersListProps> = ({ chatId, members }) => {
     null,
   );
   const leaveGroupSnackPendingRef = useRef(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     return () => {
@@ -69,6 +71,14 @@ const MembersList: React.FC<MembersListProps> = ({ chatId, members }) => {
     });
   }, [contacts, memberIds, me]);
 
+  const filteredContacts = useMemo(() => {
+    return addableContacts.filter(
+      (c: Contact) =>
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.email?.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [addableContacts, searchQuery]);
+
   const clearPendingWs = useCallback(() => {
     if (pendingWsListenerRef.current) {
       websocketManager.off('message', pendingWsListenerRef.current);
@@ -85,34 +95,44 @@ const MembersList: React.FC<MembersListProps> = ({ chatId, members }) => {
     setPickerOpen(true);
   }, []);
 
-  const pickContact = useCallback(
-    (contact: Contact) => {
+  const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
+
+  const handleSelectContact = useCallback((contact: Contact) => {
+    setSelectedContacts((prev) => [...prev, contact]);
+  }, []);
+
+  const handleUnselectContact = useCallback((contact: Contact) => {
+    setSelectedContacts((prev) => prev.filter((c) => c.id !== contact.id));
+  }, []);
+
+  const handleSaveContacts = useCallback(() => {
+    for (const contact of selectedContacts) {
       const uid = contact.user_id;
-      if (uid == null) return;
-
-      clearPendingWs();
-
-      const onMessage = (data: WebSocketMessage) => {
-        if (data.type === 'error' && typeof data.message === 'string') {
-          showToast(data.message);
-          clearPendingWs();
-          return;
-        }
-        if (data.type === 'group_members_updated' && data.chat_id === chatId) {
-          clearPendingWs();
-          setPickerOpen(false);
-        }
-      };
-
-      pendingWsListenerRef.current = onMessage;
-      websocketManager.on('message', onMessage);
+      if (uid == null) continue;
       const sent = websocketManager.sendAddGroupMember(chatId, uid);
       if (!sent) {
-        clearPendingWs();
         showToast(t('toast.wsSendFailed'));
+        return;
+      }
+    }
+    setSelectedContacts([]);
+    closePicker();
+  }, [chatId, closePicker, selectedContacts, showToast, t]);
+
+  const handleCancelContacts = useCallback(() => {
+    setSelectedContacts([]);
+    closePicker();
+  }, [closePicker]);
+
+  const pickContact = useCallback(
+    (contact: Contact) => {
+      if (selectedContacts.some((c) => c.id === contact.id)) {
+        handleUnselectContact(contact);
+      } else {
+        handleSelectContact(contact);
       }
     },
-    [chatId, clearPendingWs, showToast, t],
+    [handleSelectContact, handleUnselectContact, selectedContacts],
   );
 
   const removeMember = useCallback(
@@ -267,34 +287,57 @@ const MembersList: React.FC<MembersListProps> = ({ chatId, members }) => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className={styles.membersPickerHeader}>
-              <h2
-                id='members-picker-title'
-                className={styles.membersPickerTitle}
-              >
-                {t('sidebar.addMemberTitle')}
-              </h2>
-              <Button
-                type='button'
-                className={styles.membersPickerClose}
-                onClick={closePicker}
-                aria-label={t('buttons.close')}
-              >
-                <Icon name='Cross' className={styles.membersPickerCloseIcon} />
-              </Button>
+              <div className={styles.membersPickerHeaderTitle}>
+                <h2
+                  id='members-picker-title'
+                  className={styles.membersPickerTitle}
+                >
+                  {t('sidebar.addMemberTitle')}
+                </h2>
+                <Button
+                  className={styles.membersPickerClose}
+                  onClick={handleCancelContacts}
+                  aria-label={t('buttons.close')}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className={styles.membersPickerClose}
+                  onClick={handleSaveContacts}
+                  aria-label={t('buttons.close')}
+                >
+                  Save
+                </Button>
+              </div>
+              <SearchInput
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder='Search for usernames'
+              />
             </div>
             <ul className={styles.membersPickerList}>
-              {addableContacts.length === 0 && (
+              {filteredContacts.length === 0 && (
                 <li className={styles.membersPickerEmpty}>
                   {t('sidebar.addMemberNoContacts')}
                 </li>
               )}
-              {addableContacts.map((contact) => (
+              {filteredContacts.map((contact: Contact) => (
                 <li key={contact.id}>
                   <button
                     type='button'
-                    className={styles.membersPickerRow}
+                    className={`${styles.membersPickerRow} ${selectedContacts.some((c) => c.id === contact.id) ? styles.membersPickerRowSelected : ''}`}
                     onClick={() => pickContact(contact)}
                   >
+                    <div className={styles.membersPickerRowCheckbox}>
+                      <Icon
+                        name={
+                          selectedContacts.some((c) => c.id === contact.id)
+                            ? 'Select'
+                            : 'Circle'
+                        }
+                        className={styles.membersPickerRowCheckboxIcon}
+                      />
+                    </div>
                     <Avatar
                       className={styles.membersPickerAvatar}
                       displayName={contact.name}

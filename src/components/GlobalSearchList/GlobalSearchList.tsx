@@ -21,7 +21,13 @@ const GlobalSearchList: React.FC = () => {
 
   const handleSelect = (item: GlobalSearchItem) => {
     if (item.type === 'user') {
-      handleCreateTemporaryChat(item.data);
+      const dmId = item.data.dm_chat_id;
+      if (dmId != null) {
+        window.history.pushState({}, '', `#${dmId}`);
+        handleChatClick(dmId);
+      } else {
+        handleCreateTemporaryChat(item.data);
+      }
       clear();
       return;
     }
@@ -32,6 +38,12 @@ const GlobalSearchList: React.FC = () => {
     }
     if (item.type === 'group') {
       const chatId = item.data.id;
+      if (item.data.is_member) {
+        window.history.pushState({}, '', `#${chatId}`);
+        handleChatClick(chatId);
+        clear();
+        return;
+      }
       void (async () => {
         const ok = await joinGroup(chatId);
         if (!ok) {
@@ -40,6 +52,7 @@ const GlobalSearchList: React.FC = () => {
           return;
         }
         await fetchChats();
+        window.history.pushState({}, '', `#${chatId}`);
         handleChatClick(chatId);
         clear();
       })();
@@ -54,7 +67,7 @@ const GlobalSearchList: React.FC = () => {
 
   // if (loading) return <div className={styles.loading}>Loading...</div>;
   // if (error) return <div className={styles.error}>{error}</div>;
-
+  console.log('results', results);
   const users = results.filter(
     (r): r is GlobalSearchItem & { type: 'user' } => r.type === 'user',
   );
@@ -69,8 +82,6 @@ const GlobalSearchList: React.FC = () => {
   );
 
   if (results.length === 0) return null;
-
-  console.log(users);
 
   const renderItem = (item: GlobalSearchItem, key: string) => (
     <li

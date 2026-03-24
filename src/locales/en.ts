@@ -217,7 +217,7 @@ export default {
     filterAll: 'All',
     filterVideos: 'Videos',
     filterPhotos: 'Photos',
-    addMember: 'Add member',
+    addMember: 'Add members',
     addMemberTitle: 'Add to group',
     addMemberNoContacts: 'No contacts to add',
     removeMember: 'Remove member',

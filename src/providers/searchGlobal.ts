@@ -18,6 +18,8 @@ type GroupSearchRow = {
   last_message?: Message | null;
   unread_count?: number;
   info?: string | number | null;
+  /** From global group search: current user already in this chat */
+  is_member?: boolean;
 };
 
 export function groupSearchRowToChat(row: GroupSearchRow): Chat {
@@ -31,6 +33,7 @@ export function groupSearchRowToChat(row: GroupSearchRow): Chat {
     unread_count: row.unread_count ?? 0,
     info: row.info != null ? String(row.info) : '',
     media: [],
+    is_member: row.is_member,
   };
 }
 

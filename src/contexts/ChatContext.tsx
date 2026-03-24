@@ -745,8 +745,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
             ? {
                 ...c,
                 members,
-                info:
-                  usersCount != null ? String(usersCount) : c.info,
+                info: usersCount != null ? String(usersCount) : c.info,
               }
             : c,
         );
@@ -782,21 +781,37 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
 
   const handleCreateTemporaryChat = useCallback(
     (user: User) => {
-      const chatHasUser = (chat: Chat) =>
-        Array.isArray(chat.members) &&
-        chat.members.some((member) => member.id === user.id);
+      const dmChatMatchesUser = (chat: Chat) => {
+        if (chat.type !== 'D') return false;
+        if (
+          chat.peer_user_id != null &&
+          chat.peer_user_id === user.id
+        ) {
+          return true;
+        }
+        return (
+          Array.isArray(chat.members) &&
+          chat.members.some((member) => member.id === user.id)
+        );
+      };
 
-      const existingChat = chats.find(
-        (chat) => chat.type === 'D' && chatHasUser(chat),
-      );
+      const existingChat = chats.find((chat) => dmChatMatchesUser(chat));
       if (existingChat) {
         setTemporaryChat(null);
         window.history.pushState({}, '', `#${existingChat.id}`);
         selectChat(existingChat.id);
+        const cached = getCachedMessages(existingChat.id);
+        if (
+          existingChat.last_message &&
+          (!cached || cached.length === 0)
+        ) {
+          updateMessages([existingChat.last_message], existingChat.id);
+        }
+        void fetchChat(existingChat.id);
         return;
       }
 
-      if (temporaryChat && chatHasUser(temporaryChat)) {
+      if (temporaryChat && dmChatMatchesUser(temporaryChat)) {
         window.history.pushState({}, '', `#${temporaryChat.id}`);
         selectChat(temporaryChat.id);
         return;
@@ -812,14 +827,22 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         last_message: null,
         unread_count: 0,
         type: 'D',
-        primary_media: user.profile.primary_media,
+        primary_media: user.profile?.primary_media,
+        peer_user_id: user.id,
       };
 
       setTemporaryChat(tempChat);
       window.history.pushState({}, '', `#${tempId}`);
       selectChat(tempId);
     },
-    [chats, selectChat, temporaryChat],
+    [
+      chats,
+      fetchChat,
+      getCachedMessages,
+      selectChat,
+      temporaryChat,
+      updateMessages,
+    ],
   );
 
   const deleteChat = useCallback(
