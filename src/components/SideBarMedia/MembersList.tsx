@@ -23,6 +23,7 @@ import Button from '../ui/button/Button';
 import { Menu } from '../ui/menu/Menu';
 import { Icon } from '../Icons/AutoIcons';
 import type { MenuItem } from '../ui/menu/Menu';
+import { formatLastSeenShort } from '@/utils/activityFormatter';
 
 interface MembersListProps {
   chatId: number;
@@ -299,9 +300,14 @@ const MembersList: React.FC<MembersListProps> = ({ chatId, members }) => {
                       displayName={contact.name}
                       displayMedia={contact.primary_media}
                     />
-                    <span className={styles.membersPickerName}>
-                      {contact.name}
-                    </span>
+                    <div className={styles.membersPickerInfoContainer}>
+                      <span className={styles.membersPickerName}>
+                        {contact.name}
+                      </span>
+                      <span className={styles.membersPickerInfo}>
+                        {formatLastSeenShort(contact.last_seen)}
+                      </span>
+                    </div>
                   </button>
                 </li>
               ))}

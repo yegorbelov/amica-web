@@ -13,12 +13,14 @@ const ContactsTabContent: React.FC = () => {
 
   return (
     <>
-      <SearchInput
-        placeholder={t('search.contactsPlaceholder')}
-        value={term}
-        onChange={setTerm}
-        onClear={() => setTerm('')}
-      />
+      <div className={styles['global-search-input-container']}>
+        <SearchInput
+          placeholder={t('search.contactsPlaceholder')}
+          value={term}
+          onChange={setTerm}
+          onClear={() => setTerm('')}
+        />
+      </div>
       <div className={styles['tab-content']}>
         <Contacts contactsToShow={filtered} />
       </div>

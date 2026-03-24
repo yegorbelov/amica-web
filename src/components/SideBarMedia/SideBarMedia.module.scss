@@ -1,3 +1,5 @@
+@use '@/scss/variables' as *;
+
 .container {
   --sidebar-width: 420px;
   --ttd: var(--side-bar-show-up-duration);
@@ -540,10 +542,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 10px;
   background: rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+
+  @media screen and (max-width: 768px) {
+    align-items: end;
+  }
+}
+
+.membersPickerInfoContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.membersPickerInfo {
+  font-size: 0.875rem;
+  color: var(--secondaryColor);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .membersPickerModal {
@@ -555,9 +575,25 @@
   flex-direction: column;
   background: var(--surface-bg);
   border: 1px solid var(--surface-border);
-  border-radius: 24px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  border-radius: 32px;
+  box-shadow: $glass-shadow;
   overflow: hidden;
+  flex-shrink: 0;
+  animation: slideUp 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  @media screen and (max-width: 768px) {
+    max-height: 90vh;
+    height: 90vh;
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
 }
 
 .membersPickerHeader {
@@ -565,7 +601,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 10px 10px 0;
   flex-shrink: 0;
   position: absolute;
   width: 100%;
@@ -574,9 +610,12 @@
 
 .membersPickerTitle {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--messageMainColor, #fff);
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .membersPickerClose {
@@ -592,13 +631,14 @@
   margin: 0;
   padding: 8px 0;
   overflow-y: auto;
-  padding-top: 70px;
+  overscroll-behavior-y: contain;
+  padding: 60px 0 10px 0;
   flex: 1;
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(0, 0, 0, 1) 70px,
-    rgba(0, 0, 0, 1) calc(100% - 70px),
+    rgba(0, 0, 0, 1) 60px,
+    rgba(0, 0, 0, 1) calc(100% - 10px),
     rgba(0, 0, 0, 0) 100%
   );
 
@@ -624,7 +664,7 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 10px 16px;
+  padding: 10px;
   border: none;
   background: transparent;
   color: inherit;
