@@ -26,9 +26,6 @@
   padding-bottom: var(--sab);
   scale: 1;
   transition: scale 0.3s ease;
-  &:active {
-    scale: 1.03;
-  }
 }
 
 .new-wallpaper {

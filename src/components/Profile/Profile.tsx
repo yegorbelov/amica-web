@@ -183,9 +183,7 @@ export default function Profile() {
         velocityPxPerMs !== undefined &&
         velocityPxPerMs > SWIPE_VELOCITY_THRESHOLD;
       const shouldGoBack =
-        dx > distanceThreshold ||
-        velocityOk ||
-        fullyOnPreviousByTranslate;
+        dx > distanceThreshold || velocityOk || fullyOnPreviousByTranslate;
 
       if (
         shouldGoBack &&
@@ -206,8 +204,7 @@ export default function Profile() {
           );
         };
 
-        const offsetAlreadyShown =
-          Math.abs(clampedOffset - dx) < 0.5;
+        const offsetAlreadyShown = Math.abs(clampedOffset - dx) < 0.5;
         if (offsetAlreadyShown) {
           requestAnimationFrame(startSlideOut);
         } else {
@@ -601,9 +598,7 @@ export default function Profile() {
               transition: isDragging
                 ? 'none'
                 : `transform ${
-                    isAnimatingBack
-                      ? SLIDE_OUT_COMMIT_MS
-                      : SLIDE_DURATION_MS
+                    isAnimatingBack ? SLIDE_OUT_COMMIT_MS : SLIDE_DURATION_MS
                   }ms ease-out`,
             }}
             onTransitionEnd={handleTransitionEnd}
@@ -622,7 +617,7 @@ export default function Profile() {
                   >
                     <div className={styles['tab__content']}>
                       {tab.icon}
-                      <span>{tab.label}</span>
+                      <span className={styles['tab__label']}>{tab.label}</span>
                     </div>
                     {arrowNavIcon}
                   </button>
