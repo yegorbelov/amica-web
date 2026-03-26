@@ -39,9 +39,8 @@ RUN git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli.git
 RUN wget -O nginx.tar.gz https://nginx.org/download/nginx-1.28.3.tar.gz && \
     tar -xzf nginx.tar.gz
 
-RUN CONFARGS="$(nginx -V 2>&1 | sed -n 's/^.*arguments: //p')" && \
-    cd /tmp/nginx-1.28.3 && \
-    sh -c "./configure --with-compat $CONFARGS --add-dynamic-module=/tmp/ngx_brotli" && \
+RUN cd /tmp/nginx-1.28.3 && \
+    ./configure --with-compat --add-dynamic-module=/tmp/ngx_brotli && \
     make modules
 
 FROM nginx:1.28.3-alpine
