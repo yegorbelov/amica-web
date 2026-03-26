@@ -28,10 +28,10 @@ COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
 
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chown -R nginx:nginx /var/cache/nginx && \
+    chown -R nginx:nginx /var/lib/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
-    touch /var/run/nginx.pid && \
-    chown nginx:nginx /var/run/nginx.pid
+    touch /run/nginx/nginx.pid && \
+    chown nginx:nginx /run/nginx/nginx.pid
 
 USER nginx
 
