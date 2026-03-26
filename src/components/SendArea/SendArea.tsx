@@ -261,11 +261,9 @@ const MessageInput: React.FC<SendAreaProps> = ({
     setMessage(draft);
     if (editableRef.current) {
       editableRef.current.innerText = draft;
-      placeCaretAtEnd(editableRef.current);
     }
-  }, [setEditingMessage, chatId, placeCaretAtEnd]);
+  }, [setEditingMessage, chatId]);
 
-  // Escape cancels edit even when input is not focused (global listener)
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || !editingMessageRef.current) return;
@@ -561,6 +559,9 @@ const MessageInput: React.FC<SendAreaProps> = ({
                         onClick={cancelEdit}
                         aria-label={t('sendArea.cancelEdit')}
                         className={styles['edit-bar-cancel']}
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                        }}
                       >
                         {crossIcon}
                       </Button>
@@ -591,7 +592,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
                     e.preventDefault();
                   }}
                   onClick={handleSubmit}
-                  className={styles['input_submit']}
+                  className={`${styles['input_submit']} ${!message.trim() && files.length === 0 ? styles['input_submit--hidden'] : ''}`}
                   disabled={
                     (!message.trim() && files.length === 0) || isUploading
                   }

@@ -76,6 +76,7 @@
   --color-text-tertiary: #ccc;
   --chat-list-item-unread-text: #d5eaff;
   --time-left-text: #d5eaff;
+  --toggle-bg: #5a595f;
 
   @media screen and (max-width: 768px) {
     --bodyBackground: #000;
@@ -128,10 +129,9 @@
     --color-text-tertiary: #000;
     --time-left-text: #1c1c1e;
     --chat-list-item-unread-text: #fff;
-    // --message-reaction-bg: rgba(127, 127, 127, 0.15);
+    --toggle-bg: #c5c5c7; // --message-reaction-bg: rgba(127, 127, 127, 0.15);
     // --message-reaction-hover-bg: rgba(127, 127, 127, 0.16);
-    // --message-reaction-own-bg: rgba(127, 127, 127, 0.15);
-    // --message-reaction-own-border: rgba(127, 127, 127, 0.45);
+    // --message-reaction-own-bg: rgba(127, 127, 127, 0.15); // --message-reaction-own-border: rgba(127, 127, 127, 0.45);
   }
 
   &[data-theme='dark'] {
@@ -168,7 +168,7 @@
     --sidebar-mask-bg: rgba(0, 0, 0, 1);
     --color-text-tertiary: #ccc;
     --chat-list-item-unread-text: #d5eaff;
-
+    --toggle-bg: #424245;
     @media screen and (max-width: 768px) {
       --bodyBackground: #000;
     }
@@ -361,7 +361,12 @@ svg {
   padding-right: var(--sar);
   padding-left: var(--sal);
   // background: #000;
+  transition: max-width 0.4s;
   transform: translateZ(0);
+}
+
+.chat-container.wide-screen-mode {
+  max-width: 100%;
 }
 
 .liquidGlass-wrapper {

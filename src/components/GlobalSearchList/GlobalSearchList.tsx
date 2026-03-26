@@ -67,7 +67,6 @@ const GlobalSearchList: React.FC = () => {
 
   // if (loading) return <div className={styles.loading}>Loading...</div>;
   // if (error) return <div className={styles.error}>{error}</div>;
-  console.log('results', results);
   const users = results.filter(
     (r): r is GlobalSearchItem & { type: 'user' } => r.type === 'user',
   );

@@ -38,6 +38,7 @@ type StoredSettings = Partial<
     settingsFullWindow?: boolean;
     color?: string;
     gradient?: GradientSuggested;
+    wideScreenModeEnabled?: boolean;
   }
 >;
 
@@ -71,47 +72,43 @@ function mergeWallpapers(
   ];
 }
 
+const photos = [
+  'abdelhamid-azoui-Zhl3nrozkG0-unsplash.jpg.webp',
+  'anders-jilden-cYrMQA7a3Wc-unsplash.webp',
+  'anders-jilden-GjwsHRIcQjU-unsplash.webp',
+  'andreas-gucklhorn-mawU2PoJWfU-unsplash.webp',
+  'ashim-d-silva-WeYamle9fDM-unsplash.webp',
+  'clay-banks-u27Rrbs9Dwc-unsplash.webp',
+  'cristina-gottardi-CSpjU6hYo_0-unsplash.webp',
+  'dave-hoefler-PEkfSAxeplg-unsplash.jpg.webp',
+  'garrett-parker-DlkF4-dbCOU-unsplash.webp',
+  'ian-dooley-DuBNA1QMpPA-unsplash.webp',
+  'jms-kFHz9Xh3PPU-unsplash.webp',
+  'syuhei-inoue-fvgv3i4_uvI-unsplash.jpg.webp',
+  'tobias-rademacher-NuBvAE6VfSM-unsplash.webp',
+  'urban-vintage-78A265wPiO4-unsplash.webp',
+  'wil-stewart-pHANr-CpbYM-unsplash.webp',
+  'aloe-vera-succulent-macos-big-sur-night-plant-stock-5k-6016x6016-4000.webp',
+];
+
+const videos = [
+  'blue-sky-seen-directly-with-some-clouds_480p_infinity.webm',
+  'ocean.webm',
+  'dusk_sunset.webm',
+  'deep_blue_sky.webm',
+];
+
 const defaultWallpapers: WallpaperSetting[] = [
-  {
-    id: 'default-0',
-    url: '../DefaultWallpapers/abdelhamid-azoui-Zhl3nrozkG0-unsplash.jpg.webp',
+  ...photos.map((file, i) => ({
+    id: `default-${i}`,
+    url: `../DefaultWallpapers/${file}`,
     type: 'photo',
-  },
-  {
-    id: 'default-1',
-    url: '../DefaultWallpapers/syuhei-inoue-fvgv3i4_uvI-unsplash.jpg.webp',
-    type: 'photo',
-  },
-  {
-    id: 'default-2',
-    url: '../DefaultWallpapers/dave-hoefler-PEkfSAxeplg-unsplash.jpg.webp',
-    type: 'photo',
-  },
-  {
-    id: 'default-3',
-    url: '../DefaultWallpapers/video/blue-sky-seen-directly-with-some-clouds_480p_infinity.webm',
+  })),
+  ...videos.map((file, i) => ({
+    id: `default-${i + photos.length}`,
+    url: `../DefaultWallpapers/video/${file}`,
     type: 'video',
-  },
-  {
-    id: 'default-4',
-    url: '../DefaultWallpapers/video/ocean.webm',
-    type: 'video',
-  },
-  {
-    id: 'default-5',
-    url: '../DefaultWallpapers/video/dusk_sunset.webm',
-    type: 'video',
-  },
-  {
-    id: 'default-6',
-    url: '../DefaultWallpapers/video/deep_blue_sky.webm',
-    type: 'video',
-  },
-  // {
-  //   id: 'default-7',
-  //   url: '../DefaultWallpapers/video/waterfall.webm',
-  //   type: 'video',
-  // },
+  })),
 ];
 
 const defaultSettings: Settings = {
@@ -154,6 +151,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const [isResizingPermitted, setIsResizingPermitted] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  const [wideScreenModeEnabled, setWideScreenModeEnabled] = useState(
+    initialParsed.wideScreenModeEnabled ?? false,
+  );
 
   useEffect(() => {
     if (!window.visualViewport) return;
@@ -367,6 +368,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         JSON.stringify({
           ...rest,
           autoplayVideos,
+          wideScreenModeEnabled,
           color,
           gradient,
         }),
@@ -383,12 +385,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         JSON.stringify({
           ...rest,
           autoplayVideos,
+          wideScreenModeEnabled,
           color,
           gradient,
         }),
       );
     };
-  }, [settings, autoplayVideos, color, gradient, storageKey]);
+  }, [
+    settings,
+    autoplayVideos,
+    wideScreenModeEnabled,
+    color,
+    gradient,
+    storageKey,
+  ]);
 
   const setSetting = useCallback(
     <K extends keyof Settings>(key: K, value: Settings[K]) =>
@@ -572,6 +582,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       color,
       gradient,
       keyboardHeight,
+      wideScreenModeEnabled,
     }),
     [
       settings,
@@ -584,6 +595,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       color,
       gradient,
       keyboardHeight,
+      wideScreenModeEnabled,
     ],
   );
 
@@ -603,6 +615,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setIsResizingPermitted,
       setColor,
       setGradient,
+      setWideScreenModeEnabled,
     }),
     [
       addUserWallpaper,
@@ -614,6 +627,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setActiveProfileTab,
       pushProfilePage,
       popProfilePage,
+      setWideScreenModeEnabled,
     ],
   );
 

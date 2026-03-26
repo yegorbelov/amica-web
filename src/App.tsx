@@ -5,6 +5,7 @@ import RoomPage from './pages/RoomPage';
 import getDeviceCornerRadius from './utils/getDeviceCornerRadius';
 import { IconsSprite } from './components/Icons/AutoIcons';
 import { useUser } from './contexts/UserContextCore';
+import { useSettings } from './contexts/settings/context';
 
 type AppView = 'login' | 'signup';
 
@@ -33,7 +34,7 @@ StrokeGradientSvg.displayName = 'StrokeGradientSvg';
 const App: React.FC = () => {
   const { isAuthenticated, loading } = useUser();
   const [currentView, setCurrentView] = useState<AppView>('login');
-
+  const { wideScreenModeEnabled } = useSettings();
   const showSignup = useCallback(() => setCurrentView('signup'), []);
   const showLogin = useCallback(() => setCurrentView('login'), []);
 
@@ -61,7 +62,11 @@ const App: React.FC = () => {
     <>
       <StrokeGradientSvg />
       <IconsSprite />
-      <div className='chat-container'>{content}</div>
+      <div
+        className={`chat-container ${wideScreenModeEnabled ? 'wide-screen-mode' : ''}`}
+      >
+        {content}
+      </div>
     </>
   );
 };

@@ -22,28 +22,59 @@ const arrowNavIcon = <Icon name='Arrow' className={styles.arrow} />;
 
 const SWIPE_DISTANCE_RATIO = 0.5; // >50% of page width
 const SWIPE_VELOCITY_THRESHOLD = 0.3; // px/ms — fast swipe
-/** Отпружинивание, если свайп не дошёл до «назад». */
+
 const SLIDE_DURATION_MS = 200;
-/** Закрытие вкладки после успешного жеста — короче: палец уже отпущен. */
+
 const SLIDE_OUT_COMMIT_MS = 100;
 const SLIDE_OUT_FALLBACK_PAD_MS = 50;
-const HORIZONTAL_SWIPE_THRESHOLD = 10;
-/** Допуск по px: m41 ≥ -(n−1)·W − eps ⇒ визуально уже полностью на предыдущей «странице». */
+const HORIZONTAL_SWIPE_THRESHOLD = 4;
 const SWIPE_TRANSLATE_TOLERANCE_PX = 4;
-/** Если браузер не отдаёт phase (Chrome и др.) — «отпускание» по паузе между tick’ами wheel. */
 const WHEEL_FALLBACK_RELEASE_MS = 180;
+const WHEEL_CLAMP_SATURATION_EPS_PX = 1;
+const WHEEL_INERTIA_WINDOW_SIZE = 6;
+const WHEEL_INERTIA_MIN_SAMPLES = 5;
+const WHEEL_INERTIA_DECAY_RATIO = 0.92;
+const WHEEL_INERTIA_TOTAL_DROP_RATIO = 0.7;
+const WHEEL_INERTIA_MAX_MEDIAN_DT_MS = 40;
+
+type WheelSample = {
+  absDx: number;
+  ts: number;
+  sign: -1 | 1;
+};
+
+function median(values: number[]) {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) return (sorted[mid - 1] + sorted[mid]) / 2;
+  return sorted[mid];
+}
 
 /**
- * Safari/WebKit на macOS (и часть встроенных WebView) отдаёт SPI `phase` на WheelEvent:
- * жест трекпада закончился — аналог отпускания пальцев. В Chromium в JS это обычно не видно.
- * @see https://bugs.webkit.org/show_bug.cgi?id=129184
+ * Эвристика инерции: одинаковый знак, плотный поток событий и плавное затухание амплитуды.
  */
-function wheelDirectGestureEnded(e: WheelEvent): boolean {
-  const phase = (e as WheelEvent & { phase?: string | number }).phase;
-  if (phase === undefined || phase === null) return false;
-  if (typeof phase === 'string') return phase.toLowerCase() === 'ended';
-  // WebKit: None=0, Began=1, Changed=2, Ended=3, …
-  return phase === 3;
+function wheelInertiaLikely(samples: WheelSample[]) {
+  if (samples.length < WHEEL_INERTIA_MIN_SAMPLES) return false;
+  const signsSame = samples.every((s) => s.sign === samples[0].sign);
+  if (!signsSame) return false;
+
+  const dts: number[] = [];
+  let decays = 0;
+  for (let i = 1; i < samples.length; i += 1) {
+    dts.push(samples[i].ts - samples[i - 1].ts);
+    if (samples[i].absDx <= samples[i - 1].absDx * WHEEL_INERTIA_DECAY_RATIO) {
+      decays += 1;
+    }
+  }
+
+  const dtMedian = median(dts);
+  if (dtMedian <= 0 || dtMedian > WHEEL_INERTIA_MAX_MEDIAN_DT_MS) return false;
+
+  const totalDrop =
+    samples[samples.length - 1].absDx <=
+    samples[0].absDx * WHEEL_INERTIA_TOTAL_DROP_RATIO;
+  return decays >= WHEEL_INERTIA_MIN_SAMPLES - 2 && totalDrop;
 }
 
 function wheelEventToPixelDelta(
@@ -126,6 +157,8 @@ export default function Profile() {
   const wheelCommittedRef = useRef(false);
   const wheelIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wheelGestureStartTimeRef = useRef(0);
+  const wheelSamplesRef = useRef<WheelSample[]>([]);
+  const wheelIgnoreUntilRef = useRef(0);
 
   useEffect(() => {
     profilePageStackRef.current = profilePageStack;
@@ -228,6 +261,8 @@ export default function Profile() {
         wheelIdleTimerRef.current = null;
       }
       wheelCommittedRef.current = false;
+      wheelSamplesRef.current = [];
+      wheelIgnoreUntilRef.current = 0;
 
       if (profilePageStack.length < 1) return;
       const target = e.target as HTMLElement;
@@ -350,7 +385,6 @@ export default function Profile() {
     };
   }, []);
 
-  /** WebKit/Android: без passive:false скролл контейнера может съедать жест до pointermove. */
   useEffect(() => {
     if (current !== 'profile' || settingsFullWindow) return;
     const el = wrapperRef.current;
@@ -369,11 +403,16 @@ export default function Profile() {
     const el = wrapperRef.current;
     if (!el) return;
 
-    const endWheelGesture = () => {
+    const endWheelGesture = (endedByInertia = false) => {
       if (wheelIdleTimerRef.current) {
         clearTimeout(wheelIdleTimerRef.current);
         wheelIdleTimerRef.current = null;
       }
+      if (endedByInertia) {
+        wheelIgnoreUntilRef.current =
+          performance.now() + WHEEL_FALLBACK_RELEASE_MS;
+      }
+      wheelSamplesRef.current = [];
       if (!wheelCommittedRef.current) return;
       wheelCommittedRef.current = false;
       setIsDragging(false);
@@ -387,43 +426,71 @@ export default function Profile() {
       if (isAnimatingBack) return;
       if (profilePageStackRef.current.length < 1) return;
       if (pointerIdRef.current !== null) return;
-
-      const target = e.target as HTMLElement;
-      if (target.closest('button, [role="button"], a')) return;
+      if (performance.now() < wheelIgnoreUntilRef.current) return;
 
       const w = el.offsetWidth || 300;
       const h = el.offsetHeight || 300;
       const { dx: wdx, dy: wdy } = wheelEventToPixelDelta(e, w, h);
       // Opposite sign vs touch/trackpad default so «назад» совпадает с ожиданием.
       const pullDx = -wdx;
-      const gestureEndedByPhase = wheelDirectGestureEnded(e);
 
       if (!wheelCommittedRef.current) {
-        if (gestureEndedByPhase) return;
         if (
+          wdy === 0 &&
           Math.abs(wdx) > HORIZONTAL_SWIPE_THRESHOLD &&
           Math.abs(wdx) >= Math.abs(wdy)
         ) {
           wheelCommittedRef.current = true;
           wheelGestureStartTimeRef.current = performance.now();
+          wheelSamplesRef.current = [];
           setIsDragging(true);
         } else {
           return;
         }
       }
 
+      const sign = Math.sign(pullDx);
+      if (sign !== 0) {
+        wheelSamplesRef.current.push({
+          absDx: Math.abs(pullDx),
+          ts: performance.now(),
+          sign: sign > 0 ? 1 : -1,
+        });
+        if (wheelSamplesRef.current.length > WHEEL_INERTIA_WINDOW_SIZE) {
+          wheelSamplesRef.current.shift();
+        }
+      }
+
+      if (wheelInertiaLikely(wheelSamplesRef.current)) {
+        endWheelGesture(true);
+        return;
+      }
+
       e.preventDefault();
 
-      const next = clampDragOffset(dragOffsetRef.current + pullDx, w);
+      const prev = dragOffsetRef.current;
+      const next = clampDragOffset(prev + pullDx, w);
       dragOffsetRef.current = next;
       setDragOffset(next);
 
-      if (gestureEndedByPhase) {
+      const maxOff = maxDragOffsetPx(w);
+      const significantPull = Math.abs(pullDx) > 0.5;
+      const saturatedAtMax =
+        significantPull &&
+        pullDx > 0 &&
+        prev >= maxOff - WHEEL_CLAMP_SATURATION_EPS_PX &&
+        next === prev;
+      const saturatedAtMin =
+        significantPull &&
+        pullDx < 0 &&
+        prev <= WHEEL_CLAMP_SATURATION_EPS_PX &&
+        next === prev;
+      if (saturatedAtMax || saturatedAtMin) {
         if (wheelIdleTimerRef.current) {
           clearTimeout(wheelIdleTimerRef.current);
           wheelIdleTimerRef.current = null;
         }
-        endWheelGesture();
+        endWheelGesture(false);
         return;
       }
 
@@ -431,7 +498,7 @@ export default function Profile() {
         clearTimeout(wheelIdleTimerRef.current);
       }
       wheelIdleTimerRef.current = setTimeout(
-        endWheelGesture,
+        () => endWheelGesture(false),
         WHEEL_FALLBACK_RELEASE_MS,
       );
     };

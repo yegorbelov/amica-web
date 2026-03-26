@@ -70,7 +70,7 @@ export default {
     appearanceDescription: 'Customize your appearance and settings.',
     autoplayVideos: 'Autoplay Videos',
     useWallpaperThroughout: 'Use Wallpaper Throughout The App',
-    wallpaperGlow: 'Wallpaper glow',
+    wallpaperGlow: 'Wallpaper Glow',
     blur: 'Blur',
     changeColor: 'Change Color',
     closeColorPicker: 'Close Color Picker',

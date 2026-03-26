@@ -24,6 +24,8 @@ export default function ProfileAppearance() {
     loading,
     autoplayVideos,
     setAutoplayVideos,
+    setWideScreenModeEnabled,
+    wideScreenModeEnabled,
   } = useSettings();
   const { blur, setBlur } = useBlur();
 
@@ -117,13 +119,22 @@ export default function ProfileAppearance() {
         </div>
       )}
       {windowWidth > 768 && settings.activeWallpaper && (
-        <div className={styles.optionRow}>
-          <div>{t('profile.wallpaperGlow')}</div>
-          <Toggle
-            checked={settings.wallpaperGlowEnabled}
-            onChange={setSetting.bind(null, 'wallpaperGlowEnabled')}
-          />
-        </div>
+        <>
+          <div className={styles.optionRow}>
+            <div>{t('profile.wallpaperGlow')}</div>
+            <Toggle
+              checked={settings.wallpaperGlowEnabled}
+              onChange={setSetting.bind(null, 'wallpaperGlowEnabled')}
+            />
+          </div>
+          <div className={styles.optionRow}>
+            <div>Wide Screen Mode</div>
+            <Toggle
+              checked={wideScreenModeEnabled}
+              onChange={setWideScreenModeEnabled}
+            />
+          </div>
+        </>
       )}
 
       <div className={styles.optionRow}>
@@ -215,6 +226,7 @@ export default function ProfileAppearance() {
                       muted
                       loop
                       playsInline
+                      preload='none'
                     />
                   ) : (
                     <img
@@ -222,6 +234,9 @@ export default function ProfileAppearance() {
                       alt={`Wallpaper ${wall.id}`}
                       className={`${styles.wallpaperThumbnail}`}
                       onClick={() => handleSelectWallpaper(wall)}
+                      fetchPriority='low'
+                      loading='lazy'
+                      decoding='async'
                     />
                   )}
                   <div

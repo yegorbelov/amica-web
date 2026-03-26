@@ -3,6 +3,7 @@
   inset: 0;
   overflow: hidden;
   pointer-events: none;
+  contain: strict;
 
   &::after {
     content: '';
@@ -47,6 +48,7 @@
   transition: scale var(--side-bar-show-up-duration)
     var(--side-bar-show-up-timing-function);
   pointer-events: none;
+  contain: strict;
   // opacity: 0.8;
 }
 

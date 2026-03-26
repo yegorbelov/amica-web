@@ -18,8 +18,6 @@ export default function ProfileLanguage() {
           key={lang.code}
           onClick={() => changeLanguage(lang.code)}
           className={styles.languageItem}
-          role='button'
-          tabIndex={0}
         >
           <span
             className={

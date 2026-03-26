@@ -65,9 +65,8 @@ const MainChatWindow: React.FC = () => {
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isAnimatingClose, setIsAnimatingClose] = useState(false);
-  const [displayedChatState, setDisplayedChatState] = useState<
-    typeof selectedChat
-  >(null);
+  const [displayedChatState, setDisplayedChatState] =
+    useState<typeof selectedChat>(null);
   const [isMobile, setIsMobile] = useState(
     () =>
       typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT,
@@ -76,6 +75,8 @@ const MainChatWindow: React.FC = () => {
   const swipeWrapperRef = useRef<HTMLDivElement>(null);
   const swipeTrackRef = useRef<HTMLDivElement>(null);
   const pointerIdRef = useRef<number | null>(null);
+  const activeTouchPointerIdsRef = useRef<Set<number>>(new Set());
+  const hadMultiTouchRef = useRef(false);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
   const startTimeRef = useRef(0);
@@ -139,8 +140,26 @@ const MainChatWindow: React.FC = () => {
     useCallback(
       (e) => {
         if (!selectedChat || !isMobile) return;
-        const target = e.target as HTMLElement;
-        if (target.closest('button, [role="button"], a')) return;
+
+        if (e.pointerType === 'touch') {
+          activeTouchPointerIdsRef.current.add(e.pointerId);
+          if (activeTouchPointerIdsRef.current.size > 1) {
+            hadMultiTouchRef.current = true;
+            if (dragCommittedRef.current) {
+              setDragOffset(0);
+              isSpringingBackRef.current = true;
+            }
+            setIsDragging(false);
+            dragCommittedRef.current = false;
+            pointerIdRef.current = null;
+            return;
+          }
+        }
+        if (!e.isPrimary) return;
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+        if (pointerIdRef.current !== null) return;
+
         pointerIdRef.current = e.pointerId;
         startTimeRef.current = performance.now();
         startXRef.current = e.clientX;
@@ -196,8 +215,21 @@ const MainChatWindow: React.FC = () => {
   const onSwipePointerUp: React.PointerEventHandler<HTMLDivElement> =
     useCallback(
       (e) => {
+        if (e.pointerType === 'touch') {
+          activeTouchPointerIdsRef.current.delete(e.pointerId);
+          if (activeTouchPointerIdsRef.current.size === 0) {
+            hadMultiTouchRef.current = false;
+          }
+        }
         if (pointerIdRef.current !== e.pointerId) return;
         if (!dragCommittedRef.current) {
+          pointerIdRef.current = null;
+          return;
+        }
+        if (hadMultiTouchRef.current) {
+          setDragOffset(0);
+          isSpringingBackRef.current = true;
+          setIsDragging(false);
           pointerIdRef.current = null;
           return;
         }
@@ -223,7 +255,14 @@ const MainChatWindow: React.FC = () => {
     );
 
   const onSwipePointerCancel: React.PointerEventHandler<HTMLDivElement> =
-    useCallback(() => {
+    useCallback((e) => {
+      if (e.pointerType === 'touch') {
+        activeTouchPointerIdsRef.current.delete(e.pointerId);
+        if (activeTouchPointerIdsRef.current.size === 0) {
+          hadMultiTouchRef.current = false;
+        }
+      }
+      if (pointerIdRef.current !== e.pointerId) return;
       if (dragCommittedRef.current) {
         setDragOffset(0);
         isSpringingBackRef.current = true;

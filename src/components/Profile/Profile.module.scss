@@ -218,6 +218,8 @@
   width: 100%;
   aspect-ratio: 4 / 5;
   object-fit: cover;
+  contain: strict;
+  content-visibility: auto;
 }
 
 .wallpaperThumbnailEmpty {
@@ -440,6 +442,7 @@
 
   &__icon {
     color: #fff;
+    fill: #fff;
     width: 56px;
     height: 56px;
     border-radius: 18px;

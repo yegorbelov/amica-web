@@ -52,6 +52,7 @@ export interface SettingsStateValue {
   color: string;
   gradient: GradientSuggested | null;
   keyboardHeight: number;
+  wideScreenModeEnabled: boolean;
 }
 
 export interface SettingsActionsValue {
@@ -69,6 +70,7 @@ export interface SettingsActionsValue {
   setIsResizingPermitted: (value: boolean) => void;
   setColor: (color: string) => void;
   setGradient: (gradient: GradientSuggested | null) => void;
+  setWideScreenModeEnabled: (value: boolean) => void;
 }
 
 export interface SettingsContextValue

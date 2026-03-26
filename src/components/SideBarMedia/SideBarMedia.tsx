@@ -20,7 +20,7 @@ import {
   useSideBarMediaData,
   useStickyTabs,
   useAvatarRoller,
-  useTabSwipe,
+  // useTabSwipe,
   useGridPinchZoom,
   useInterlocutorEdit,
 } from './hooks';
@@ -100,7 +100,7 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
     interlocutorEditVisible,
   );
 
-  useTabSwipe(gridRef, activeTab, availableTabs, setActiveTab);
+  // useTabSwipe(gridRef, activeTab, availableTabs, setActiveTab);
   const rowScale = useGridPinchZoom(gridRef, sidebarInnerRef);
 
   const filterItemsTranslated = useMemo(

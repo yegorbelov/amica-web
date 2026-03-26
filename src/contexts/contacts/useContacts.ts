@@ -1,63 +1,85 @@
 // contexts/contacts/useContacts.ts
-import { useEffect, useState } from 'react';
-import { apiFetch } from '@/utils/apiFetch';
+import { useCallback, useEffect, useState, startTransition } from 'react';
 import { websocketManager } from '@/utils/websocket-manager';
+import { useUser } from '@/contexts/UserContextCore';
 import type { Contact } from '@/types';
 
 export function useContacts() {
+  const { user } = useUser();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchContacts = async () => {
+  const fetchContacts = useCallback(() => {
+    try {
       setLoading(true);
       setError(null);
 
-      if (websocketManager.isConnected()) {
-        const timeoutId = window.setTimeout(() => {
-          setLoading(false);
-        }, 15000);
-
-        const handleContacts = (data: { type?: string; contacts?: unknown[] }) => {
-          if (data.type !== 'contacts') return;
-          window.clearTimeout(timeoutId);
-          setContacts(Array.isArray(data.contacts) ? (data.contacts as Contact[]) : []);
-          setLoading(false);
-          websocketManager.off('contacts', handleContacts);
-          websocketManager.off('message', handleError);
-        };
-
-        const handleError = (msg: { type?: string; message?: string }) => {
-          if (msg.type === 'error') {
-            window.clearTimeout(timeoutId);
-            setError(msg.message ?? 'Failed to load contacts');
-            setLoading(false);
-            websocketManager.off('contacts', handleContacts);
-            websocketManager.off('message', handleError);
-          }
-        };
-
-        websocketManager.on('contacts', handleContacts);
-        websocketManager.on('message', handleError);
-        websocketManager.sendMessage({ type: 'get_contacts' });
+      if (!websocketManager.isConnected()) {
+        setLoading(false);
         return;
       }
 
-      try {
-        const res = await apiFetch('/api/get_contacts/');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        setContacts(data.contacts ?? []);
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
+      const timeoutId = window.setTimeout(() => {
         setLoading(false);
-      }
-    };
+      }, 15000);
 
-    fetchContacts();
+      const handleContacts = (data: {
+        type?: string;
+        contacts?: unknown[];
+      }) => {
+        if (data.type !== 'contacts') return;
+        window.clearTimeout(timeoutId);
+        setContacts(
+          Array.isArray(data.contacts) ? (data.contacts as Contact[]) : [],
+        );
+        setLoading(false);
+        websocketManager.off('contacts', handleContacts);
+        websocketManager.off('message', handleError);
+      };
+
+      const handleError = (msg: { type?: string; message?: string }) => {
+        if (msg.type === 'error') {
+          window.clearTimeout(timeoutId);
+          setError(msg.message ?? 'Failed to load contacts');
+          setLoading(false);
+          websocketManager.off('contacts', handleContacts);
+          websocketManager.off('message', handleError);
+        }
+      };
+
+      websocketManager.on('contacts', handleContacts);
+      websocketManager.on('message', handleError);
+      websocketManager.sendMessage({ type: 'get_contacts' });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      startTransition(() => {
+        setContacts([]);
+        setLoading(false);
+        setError(null);
+      });
+      return;
+    }
+
+    const onConnected = () => {
+      fetchContacts();
+    };
+    websocketManager.on('connection_established', onConnected);
+    if (websocketManager.isConnected()) {
+      startTransition(() => {
+        fetchContacts();
+      });
+    }
+    return () => {
+      websocketManager.off('connection_established', onConnected);
+    };
+  }, [user, fetchContacts]);
 
   const searchContacts = (query: string) => {
     if (!query) return contacts;
@@ -70,5 +92,5 @@ export function useContacts() {
     );
   };
 
-  return { contacts, loading, error, searchContacts };
+  return { contacts, loading, error, searchContacts, fetchContacts };
 }
