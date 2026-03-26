@@ -33,7 +33,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
-      setFormData((prev) => ({ ...prev, [name]: value }));
+
+      const normalizedValue = value.toLowerCase();
+
+      setFormData((prev) => ({
+        ...prev,
+        [name]: normalizedValue,
+      }));
+
       if (error) setError('');
     },
     [error],

@@ -21,9 +21,7 @@ const ContactsTabContent: React.FC = () => {
           onClear={() => setTerm('')}
         />
       </div>
-      <div className={styles['tab-content']}>
-        <Contacts contactsToShow={filtered} />
-      </div>
+      <Contacts contactsToShow={filtered} />
     </>
   );
 };

@@ -33,10 +33,10 @@ const fullscreenExitIcon = <Icon name='FullscreenExit' />;
 const EMPTY_SELECTED_MESSAGE_IDS = new Set<number>();
 
 const SWIPE_DISTANCE_RATIO = 0.5;
-const SWIPE_VELOCITY_THRESHOLD = 0.3;
+const SWIPE_VELOCITY_THRESHOLD = 40.3;
 const SLIDE_DURATION_MS = 200;
 const MOBILE_BREAKPOINT = 768;
-const HORIZONTAL_SWIPE_THRESHOLD = 10;
+// const HORIZONTAL_SWIPE_THRESHOLD = 50;
 
 const MainChatWindow: React.FC = () => {
   const {
@@ -187,30 +187,30 @@ const MainChatWindow: React.FC = () => {
       [selectedChat, isMobile],
     );
 
-  const onSwipePointerMove: React.PointerEventHandler<HTMLDivElement> =
-    useCallback(
-      (e) => {
-        if (pointerIdRef.current !== e.pointerId) return;
-        const dx = e.clientX - startXRef.current;
-        const dy = e.clientY - startYRef.current;
+  // const onSwipePointerMove: React.PointerEventHandler<HTMLDivElement> =
+  //   useCallback(
+  //     (e) => {
+  //       if (pointerIdRef.current !== e.pointerId) return;
+  //       const dx = e.clientX - startXRef.current;
+  //       const dy = e.clientY - startYRef.current;
 
-        if (!dragCommittedRef.current) {
-          if (
-            Math.abs(dx) > HORIZONTAL_SWIPE_THRESHOLD &&
-            Math.abs(dx) >= Math.abs(dy)
-          ) {
-            dragCommittedRef.current = true;
-            setIsDragging(true);
-            e.currentTarget.setPointerCapture(e.pointerId);
-            setDragOffset(Math.max(0, dx));
-          }
-          return;
-        }
-        if (!isDragging) return;
-        setDragOffset(Math.max(0, dx));
-      },
-      [isDragging],
-    );
+  //       if (!dragCommittedRef.current) {
+  //         if (
+  //           Math.abs(dx) > HORIZONTAL_SWIPE_THRESHOLD &&
+  //           Math.abs(dx) >= Math.abs(dy)
+  //         ) {
+  //           dragCommittedRef.current = true;
+  //           setIsDragging(true);
+  //           e.currentTarget.setPointerCapture(e.pointerId);
+  //           setDragOffset(Math.max(0, dx));
+  //         }
+  //         return;
+  //       }
+  //       if (!isDragging) return;
+  //       setDragOffset(Math.max(0, dx));
+  //     },
+  //     [isDragging],
+  //   );
 
   const onSwipePointerUp: React.PointerEventHandler<HTMLDivElement> =
     useCallback(
@@ -495,7 +495,7 @@ const MainChatWindow: React.FC = () => {
             ref={swipeWrapperRef}
             className={styles.swipeWrapper}
             onPointerDown={onSwipePointerDown}
-            onPointerMove={onSwipePointerMove}
+            // onPointerMove={onSwipePointerMove}
             onPointerUp={onSwipePointerUp}
             onPointerCancel={onSwipePointerCancel}
           >

@@ -48,7 +48,7 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
     },
     ref,
   ) => {
-    const LONG_PRESS_MS = 100;
+    const LONG_PRESS_MS = 200;
     const MOVE_CANCEL_THRESHOLD_PX = 8;
     const { settings } = useSettings();
     const { t } = useTranslation();
@@ -262,37 +262,40 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
           displayMedia={displayPrimaryMedia}
           className={styles['chat-list-item__avatar']}
         />
-
-        <div className={styles['chat-list-item__content']}>
-          <div className={styles['chat-list-item__header']}>
-            <div className={styles['chat-list-item__name']}>{displayName}</div>
-            {lastMessage?.is_own &&
-              (lastMessage?.is_viewed ? readIcon : unreadIcon)}
-            <time className={styles['chat-list-item__date']}>
-              {lastMessageDate}
-            </time>
-          </div>
-          <div className={styles['chat-list-item__message-row']}>
-            <div className={styles['chat-list-item__message-text']}>
-              {lastMessageFiles.length > 0 && (
-                <span className={styles['chat-list-item__attachments']}>
-                  {lastMessageFiles.map((file: File, index: number) => (
-                    <AttachmentPreview key={file.id || index} file={file} />
-                  ))}
+        <div className={styles['chat-list-item__content-wrapper']}>
+          <div className={styles['chat-list-item__content']}>
+            <div className={styles['chat-list-item__header']}>
+              <div className={styles['chat-list-item__name']}>
+                {displayName}
+              </div>
+              {lastMessage?.is_own &&
+                (lastMessage?.is_viewed ? readIcon : unreadIcon)}
+              <time className={styles['chat-list-item__date']}>
+                {lastMessageDate}
+              </time>
+            </div>
+            <div className={styles['chat-list-item__message-row']}>
+              <div className={styles['chat-list-item__message-text']}>
+                {lastMessageFiles.length > 0 && (
+                  <span className={styles['chat-list-item__attachments']}>
+                    {lastMessageFiles.map((file: File, index: number) => (
+                      <AttachmentPreview key={file.id || index} file={file} />
+                    ))}
+                  </span>
+                )}
+                {/* <span className={styles['chat-list-item__message-text-content']}> */}
+                {lastMessage &&
+                  (lastMessageText
+                    ? lastMessageText
+                    : `${lastMessageFiles.length === 1 ? '' : lastMessage.files.length} ${attachment_text}`)}
+                {/* </span> */}
+              </div>
+              {unread_count > 0 && (
+                <span className={styles['chat-list-item__unread']}>
+                  {unread_counter}
                 </span>
               )}
-              {/* <span className={styles['chat-list-item__message-text-content']}> */}
-              {lastMessage &&
-                (lastMessageText
-                  ? lastMessageText
-                  : `${lastMessageFiles.length === 1 ? '' : lastMessage.files.length} ${attachment_text}`)}
-              {/* </span> */}
             </div>
-            {unread_count > 0 && (
-              <span className={styles['chat-list-item__unread']}>
-                {unread_counter}
-              </span>
-            )}
           </div>
         </div>
       </div>

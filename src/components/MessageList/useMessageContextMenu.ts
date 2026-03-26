@@ -11,6 +11,9 @@ import { buildOptimisticReactionUpdate } from './reactionOptimistic';
 import { useTranslation } from '@/contexts/languageCore';
 import type { Viewer } from '@/types';
 
+/** Cancel long-press if finger moves past this distance (scroll / drag). */
+const LONG_PRESS_MOVE_CANCEL_PX = 10;
+
 export interface UseMessageContextMenuParams {
   selectedChat: { id: number } | null;
   setEditingMessage: (msg: MessageType | null) => void;
@@ -59,6 +62,7 @@ export interface UseMessageContextMenuResult {
     message: MessageType,
   ) => void;
   handleTouchStart: (e: React.TouchEvent, msg: MessageType) => void;
+  handleTouchMove: (e: React.TouchEvent | TouchEvent) => void;
   handleTouchEnd: () => void;
   consumeNextContextMenuSuppression: () => boolean;
 }
@@ -80,6 +84,7 @@ export function useMessageContextMenu({
   const [menuMessage, setMenuMessage] = useState<MessageType | null>(null);
   const [menuInstanceKey, setMenuInstanceKey] = useState(0);
   const timerRef = useRef<number | null>(null);
+  const longPressTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const suppressNextContextMenuRef = useRef(false);
   const [isNestedViewersMenuOpen, setIsNestedViewersMenuOpen] = useState(false);
   const [submenuContext, setSubmenuContext] = useState<{
@@ -366,6 +371,10 @@ export function useMessageContextMenu({
 
   const handleTouchStart = useCallback(
     (e: React.TouchEvent, msg: MessageType) => {
+      const t = e.touches[0];
+      longPressTouchStartRef.current = t
+        ? { x: t.clientX, y: t.clientY }
+        : null;
       timerRef.current = window.setTimeout(() => {
         suppressNextContextMenuRef.current = true;
         handleMessageContextMenu(e, msg);
@@ -374,11 +383,30 @@ export function useMessageContextMenu({
     [handleMessageContextMenu],
   );
 
+  const handleTouchMove = useCallback((e: React.TouchEvent | TouchEvent) => {
+    if (timerRef.current == null || longPressTouchStartRef.current == null)
+      return;
+    const t = e.touches[0];
+    if (!t) return;
+    const { x: sx, y: sy } = longPressTouchStartRef.current;
+    const dx = t.clientX - sx;
+    const dy = t.clientY - sy;
+    if (
+      dx * dx + dy * dy >
+      LONG_PRESS_MOVE_CANCEL_PX * LONG_PRESS_MOVE_CANCEL_PX
+    ) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+      longPressTouchStartRef.current = null;
+    }
+  }, []);
+
   const handleTouchEnd = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+    longPressTouchStartRef.current = null;
   }, []);
 
   const consumeNextContextMenuSuppression = useCallback(() => {
@@ -412,6 +440,7 @@ export function useMessageContextMenu({
     handleAnimationEnd,
     handleMessageContextMenu,
     handleTouchStart,
+    handleTouchMove,
     handleTouchEnd,
     consumeNextContextMenuSuppression,
   };

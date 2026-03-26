@@ -191,6 +191,7 @@ const MessageList: React.FC<MessageListProps> = ({
     handleAnimationEnd,
     handleMessageContextMenu,
     handleTouchStart,
+    handleTouchMove,
     handleTouchEnd,
     consumeNextContextMenuSuppression,
   } = useMessageContextMenu({
@@ -275,6 +276,7 @@ const MessageList: React.FC<MessageListProps> = ({
   const handlersRef = useRef({
     handleMessageContextMenu,
     handleTouchStart,
+    handleTouchMove,
     handleTouchEnd,
     consumeNextContextMenuSuppression,
   });
@@ -298,12 +300,14 @@ const MessageList: React.FC<MessageListProps> = ({
     handlersRef.current = {
       handleMessageContextMenu,
       handleTouchStart,
+      handleTouchMove,
       handleTouchEnd,
       consumeNextContextMenuSuppression,
     };
   }, [
     handleMessageContextMenu,
     handleTouchStart,
+    handleTouchMove,
     handleTouchEnd,
     consumeNextContextMenuSuppression,
   ]);
@@ -619,6 +623,9 @@ const MessageList: React.FC<MessageListProps> = ({
         );
     };
     const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        handlersRef.current.handleTouchMove(e);
+      }
       const hasTwoFingerSelectionFlow =
         e.touches.length === 2 &&
         (selectionGestureCandidateRef.current?.kind === 'touch' ||
