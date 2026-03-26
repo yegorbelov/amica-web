@@ -20,7 +20,7 @@ COPY . .
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm run build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.26-alpine
 
 RUN apk add --no-cache nginx-mod-http-brotli
 
