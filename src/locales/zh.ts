@@ -157,6 +157,10 @@ export default {
     clearAll: '全部清除',
     file: '个文件',
     files: '个文件',
+    fileUploading: '上传中',
+    fileStreaming: '正在接收回复…',
+    fileItemUploading: '发送中…',
+    removeFile: '移除文件',
   },
   dateGroup: {
     today: '今天',

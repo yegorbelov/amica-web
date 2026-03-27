@@ -158,6 +158,10 @@ export default {
     clearAll: 'Clear All',
     file: 'File',
     files: 'Files',
+    fileUploading: 'Uploading',
+    fileStreaming: 'Receiving reply…',
+    fileItemUploading: 'Sending…',
+    removeFile: 'Remove file',
   },
   dateGroup: {
     today: 'Today',

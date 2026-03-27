@@ -157,6 +157,10 @@ export default {
     clearAll: 'Очистить всё',
     file: 'файл',
     files: 'файлов',
+    fileUploading: 'Загрузка',
+    fileStreaming: 'Получение ответа…',
+    fileItemUploading: 'Отправка…',
+    removeFile: 'Убрать файл',
   },
   dateGroup: {
     today: 'Сегодня',

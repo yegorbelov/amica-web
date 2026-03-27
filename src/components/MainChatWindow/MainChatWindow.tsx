@@ -582,7 +582,8 @@ const MainChatWindow: React.FC = () => {
             />
           </>
         ))}
-      {!selectedChat &&
+      {!isMobile &&
+        !selectedChat &&
         (!settingsFullWindow || current === 'chats' || !activeProfileTab) && (
           <AppearanceMenu />
         )}

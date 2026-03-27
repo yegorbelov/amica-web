@@ -3,11 +3,16 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useLayoutEffect,
   memo,
   useMemo,
+  startTransition,
 } from 'react';
 import type { Message } from '@/types';
-import { websocketManager } from '../../utils/websocket-manager';
+import {
+  websocketManager,
+  type WebSocketMessage,
+} from '../../utils/websocket-manager';
 import {
   useSelectedChat,
   useMessagesActions,
@@ -40,7 +45,19 @@ const MessageInput: React.FC<SendAreaProps> = ({
   const { t } = useTranslation();
   const [message, setMessage] = useState('');
   const [files, setFiles] = useState<File[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
+  /** idle → XHR upload → WS: канал ждёт чужой ответ; D/G — своё сообщение в чате */
+  const [fileSendPhase, setFileSendPhase] = useState<
+    'idle' | 'uploading' | 'streaming'
+  >('idle');
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const fileSendPhaseRef = useRef(fileSendPhase);
+  const streamingChatIdRef = useRef<number | null>(null);
+  /** Chat type at moment upload finished; `'C'` = ждём не своё сообщение, иначе — своё */
+  const streamingChatTypeRef = useRef<'D' | 'G' | 'C' | null>(null);
+  const streamEndDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editableRef = useRef<HTMLDivElement>(null);
@@ -53,7 +70,6 @@ const MessageInput: React.FC<SendAreaProps> = ({
   >({});
   const prevChatIdRef = useRef<number | undefined>(undefined);
   const messageRef = useRef(message);
-  messageRef.current = message;
   const editingMessageRef =
     useRef<ReturnType<typeof useEditing>['editingMessage']>(null);
   /** When restoring edit from another chat, pass edit text so effect doesn't overwrite */
@@ -67,9 +83,24 @@ const MessageInput: React.FC<SendAreaProps> = ({
   const { user } = useUser();
   const { setTerm, setResults } = useSearchContext();
 
-  editingMessageRef.current = editingMessage;
-
   const chatId = selectedChat?.id;
+  const chatIdRef = useRef(chatId);
+
+  useLayoutEffect(() => {
+    fileSendPhaseRef.current = fileSendPhase;
+  }, [fileSendPhase]);
+
+  useLayoutEffect(() => {
+    messageRef.current = message;
+  }, [message]);
+
+  useLayoutEffect(() => {
+    editingMessageRef.current = editingMessage;
+  }, [editingMessage]);
+
+  useLayoutEffect(() => {
+    chatIdRef.current = chatId;
+  }, [chatId]);
 
   const placeCaretAtEnd = useCallback((el: HTMLDivElement) => {
     el.focus();
@@ -93,21 +124,27 @@ const MessageInput: React.FC<SendAreaProps> = ({
       } else {
         draftByChatIdRef.current[prevId] = messageRef.current;
       }
-      setEditingMessage(null);
+      startTransition(() => {
+        setEditingMessage(null);
+      });
     }
     prevChatIdRef.current = chatId;
     if (chatId !== undefined) {
       const editState = editStateByChatIdRef.current[chatId];
       if (editState) {
         pendingRestoreEditTextRef.current = editState.editText;
-        setEditingMessage(editState.message);
+        startTransition(() => {
+          setEditingMessage(editState.message);
+        });
         editStateByChatIdRef.current[chatId] = null;
       } else {
         if (!editingMessageRef.current) {
           editingChatIdRef.current = undefined;
         }
         const draft = draftByChatIdRef.current[chatId] ?? '';
-        setMessage(draft);
+        startTransition(() => {
+          setMessage(draft);
+        });
         if (editableRef.current) {
           editableRef.current.innerText = draft;
           placeCaretAtEnd(editableRef.current);
@@ -164,12 +201,22 @@ const MessageInput: React.FC<SendAreaProps> = ({
     };
   }, []);
 
+  const clearStreamDebounce = useCallback(() => {
+    if (streamEndDebounceRef.current) {
+      clearTimeout(streamEndDebounceRef.current);
+      streamEndDebounceRef.current = null;
+    }
+  }, []);
+
   const sendFilesViaHttp = useCallback(
     async (filesToSend: File[], textMessage: string = '') => {
       if (!user?.id || !chatId) {
         console.error('User ID or Chat ID is missing');
         return false;
       }
+
+      const uploadChatId = chatId;
+      const uploadChatType = selectedChat?.type;
 
       const formData = new FormData();
 
@@ -181,21 +228,109 @@ const MessageInput: React.FC<SendAreaProps> = ({
       });
 
       try {
-        setIsUploading(true);
+        clearStreamDebounce();
+        streamingChatIdRef.current = chatId;
+        setUploadProgress(0);
+        setFileSendPhase('uploading');
 
-        await apiUpload('/api/messages/', formData, () => {});
+        await apiUpload('/api/messages/', formData, (percent) => {
+          if (chatIdRef.current === uploadChatId) setUploadProgress(percent);
+        });
+
+        if (chatIdRef.current !== uploadChatId) {
+          setFileSendPhase('idle');
+          setUploadProgress(0);
+          streamingChatIdRef.current = null;
+          streamingChatTypeRef.current = null;
+          return true;
+        }
+
+        streamingChatTypeRef.current = uploadChatType ?? null;
+        setFileSendPhase('streaming');
+        setUploadProgress(0);
 
         return true;
       } catch (error: unknown) {
         console.error('Error sending files:', error);
         alert(error instanceof Error ? error.message : String(error));
+        setFileSendPhase('idle');
+        streamingChatIdRef.current = null;
+        streamingChatTypeRef.current = null;
+        setUploadProgress(0);
         return false;
-      } finally {
-        setIsUploading(false);
       }
     },
-    [user?.id, chatId],
+    [user?.id, chatId, selectedChat?.type, clearStreamDebounce],
   );
+
+  useEffect(() => {
+    startTransition(() => {
+      setFileSendPhase('idle');
+      setUploadProgress(0);
+    });
+    streamingChatIdRef.current = null;
+    streamingChatTypeRef.current = null;
+    clearStreamDebounce();
+  }, [chatId, clearStreamDebounce]);
+
+  useEffect(() => {
+    const finishStreaming = () => {
+      clearStreamDebounce();
+      streamingChatIdRef.current = null;
+      streamingChatTypeRef.current = null;
+      setFileSendPhase('idle');
+    };
+
+    const onChatMessage = (data: WebSocketMessage) => {
+      if (fileSendPhaseRef.current !== 'streaming') return;
+      if (data.type !== 'chat_message' || data.chat_id == null || !data.data)
+        return;
+      if (data.chat_id !== streamingChatIdRef.current) return;
+      const msg = data.data as unknown as Message;
+      const chatKind = streamingChatTypeRef.current;
+      if (!msg.is_own) {
+        finishStreaming();
+        return;
+      }
+      if (msg.is_own && chatKind !== 'C') finishStreaming();
+    };
+
+    const onMessageUpdated = (data: WebSocketMessage) => {
+      if (fileSendPhaseRef.current !== 'streaming') return;
+      if (
+        data.type !== 'message_updated' ||
+        data.chat_id == null ||
+        !data.data
+      )
+        return;
+      if (data.chat_id !== streamingChatIdRef.current) return;
+      const msg = data.data as unknown as Message;
+      if (msg.is_own) return;
+      clearStreamDebounce();
+      streamEndDebounceRef.current = setTimeout(() => {
+        streamEndDebounceRef.current = null;
+        if (fileSendPhaseRef.current === 'streaming') finishStreaming();
+      }, 500);
+    };
+
+    websocketManager.on('chat_message', onChatMessage);
+    websocketManager.on('message_updated', onMessageUpdated);
+    return () => {
+      websocketManager.off('chat_message', onChatMessage);
+      websocketManager.off('message_updated', onMessageUpdated);
+    };
+  }, [clearStreamDebounce]);
+
+  useEffect(() => {
+    if (fileSendPhase !== 'streaming') return;
+    const maxWaitMs = 120_000;
+    const id = window.setTimeout(() => {
+      streamingChatIdRef.current = null;
+      streamingChatTypeRef.current = null;
+      setFileSendPhase('idle');
+    }, maxWaitMs);
+    return () => clearTimeout(id);
+  }, [fileSendPhase]);
 
   const handleInput = useCallback(() => {
     const el = editableRef.current;
@@ -342,7 +477,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
       message,
       files,
       chatId,
-      selectedChat?.members,
+      selectedChat,
       sendFilesViaHttp,
       setTerm,
       setResults,
@@ -532,7 +667,21 @@ const MessageInput: React.FC<SendAreaProps> = ({
                   files={files}
                   onClearAll={() => setFiles([])}
                   onRemoveFile={removeFile}
+                  isUploading={fileSendPhase === 'uploading'}
+                  uploadProgress={uploadProgress}
                 />
+              )}
+              {fileSendPhase === 'streaming' && (
+                <div
+                  className={styles['file-send-loader']}
+                  role='status'
+                  aria-live='polite'
+                >
+                  <span className={styles['file-send-loader__spinner']} />
+                  <span className={styles['file-send-loader__label']}>
+                    {t('sendArea.fileStreaming')}
+                  </span>
+                </div>
               )}
               <form
                 className={styles['send_div']}
@@ -581,7 +730,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
                         autoFocus={false}
                       />
                       <span
-                        className={`${styles['textarea_placeholder']} ${editableRef.current?.innerText ? styles.hidden : ''}`}
+                        className={`${styles['textarea_placeholder']} ${message.trim() ? styles.hidden : ''}`}
                       >
                         {t('sendArea.messagePlaceholder')}
                       </span>
@@ -593,7 +742,8 @@ const MessageInput: React.FC<SendAreaProps> = ({
                       onClick={handleSubmit}
                       className={`${styles['input_submit']} ${!message.trim() && files.length === 0 ? styles['input_submit--hidden'] : ''}`}
                       disabled={
-                        (!message.trim() && files.length === 0) || isUploading
+                        (!message.trim() && files.length === 0) ||
+                        fileSendPhase !== 'idle'
                       }
                       aria-label={t('aria.sendMessage')}
                     >

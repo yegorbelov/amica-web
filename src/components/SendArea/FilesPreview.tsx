@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect, useMemo } from 'react';
 import { Icon } from '../Icons/AutoIcons';
 import formatFileSize from '@/utils/formatFileSize';
 import { useTranslation } from '@/contexts/languageCore';
@@ -9,29 +9,53 @@ interface FilesPreviewProps {
   files: File[];
   onClearAll: () => void;
   onRemoveFile: (index: number) => void;
+  isUploading?: boolean;
+  uploadProgress?: number;
 }
 
 const crossIcon = <Icon name='Cross' />;
+
+function getFileKind(file: File): 'image' | 'video' | 'pdf' | 'file' {
+  if (file.type.startsWith('image/')) return 'image';
+  if (file.type.startsWith('video/')) return 'video';
+  if (file.type === 'application/pdf') return 'pdf';
+  return 'file';
+}
 
 const FilesPreview: React.FC<FilesPreviewProps> = ({
   files,
   onClearAll,
   onRemoveFile,
+  isUploading = false,
+  uploadProgress = 0,
 }) => {
   const { t } = useTranslation();
-  if (files.length === 0) return null;
 
   const formatPreviewTitle = (filesCount: number) =>
     filesCount === 1
       ? `1 ${t('sendArea.file')}`
       : `${filesCount} ${t('sendArea.files')}`;
 
-  const getFileType = (file: File) => {
-    if (file.type.startsWith('image/')) return 'image';
-    if (file.type.startsWith('video/')) return 'video';
-    if (file.type === 'application/pdf') return 'pdf';
-    return 'file';
-  };
+  const previewSources = useMemo(() => {
+    if (files.length === 0) return [];
+    return files.map((file) => {
+      const kind = getFileKind(file);
+      if (kind === 'image' || kind === 'video') {
+        return { kind, url: URL.createObjectURL(file) as string };
+      }
+      return { kind, url: null as string | null };
+    });
+  }, [files]);
+
+  useEffect(() => {
+    return () => {
+      previewSources.forEach((s) => {
+        if (s.url) URL.revokeObjectURL(s.url);
+      });
+    };
+  }, [previewSources]);
+
+  if (files.length === 0) return null;
 
   return (
     <div className={styles['files-preview']}>
@@ -45,40 +69,44 @@ const FilesPreview: React.FC<FilesPreviewProps> = ({
           onClick={onClearAll}
           aria-label={t('sendArea.clearAllFiles')}
           type='button'
+          disabled={isUploading}
         >
           {t('sendArea.clearAll')}
         </Button>
       </div>
       <div className={styles['files-preview-list']}>
         {files.map((file, index) => {
-          const fileType = getFileType(file);
-
-          const previewUrl =
-            fileType === 'image' || fileType === 'video'
-              ? URL.createObjectURL(file)
-              : null;
+          const source = previewSources[index];
+          const fileType = source?.kind ?? getFileKind(file);
+          const previewUrl = source?.url ?? null;
 
           return (
-            <div key={index} className={styles['file-preview-item']}>
-              {fileType === 'image' && (
+            <div
+              key={`${file.name}-${file.size}-${index}`}
+              className={styles['file-preview-item']}
+              aria-busy={isUploading}
+            >
+              {fileType === 'image' && previewUrl && (
                 <img
-                  src={previewUrl || ''}
+                  src={previewUrl}
                   alt={file.name}
                   className={styles['file-preview-image']}
                 />
               )}
 
-              {fileType === 'video' && (
+              {fileType === 'video' && previewUrl && (
                 <video
-                  src={previewUrl || ''}
+                  src={previewUrl}
                   muted
                   autoPlay
                   playsInline
                   className={styles['file-preview-image']}
                 />
               )}
-              {fileType === 'file' && (
-                <div className={styles['file-preview-file']}>📄</div>
+              {(fileType === 'pdf' || fileType === 'file') && (
+                <div className={styles['file-preview-file']}>
+                  {fileType === 'pdf' ? '📕' : '📄'}
+                </div>
               )}
 
               <div className={styles['file-info']}>
@@ -88,13 +116,40 @@ const FilesPreview: React.FC<FilesPreviewProps> = ({
                 </span>
               </div>
 
-              <button
-                onClick={() => onRemoveFile(index)}
-                type='button'
-                className={styles['remove-file-btn']}
-              >
-                {crossIcon}
-              </button>
+              {isUploading && (
+                <div
+                  className={styles['file-preview-upload-overlay']}
+                  aria-hidden
+                >
+                  <span
+                    className={styles['file-preview-upload-overlay__spinner']}
+                  />
+                  <span className={styles['file-preview-upload-overlay__text']}>
+                    {uploadProgress > 0
+                      ? `${uploadProgress}%`
+                      : t('sendArea.fileItemUploading')}
+                  </span>
+                  {uploadProgress > 0 && (
+                    <div className={styles['file-preview-upload-overlay__track']}>
+                      <div
+                        className={styles['file-preview-upload-overlay__bar']}
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!isUploading && (
+                <button
+                  onClick={() => onRemoveFile(index)}
+                  type='button'
+                  className={styles['remove-file-btn']}
+                  aria-label={t('sendArea.removeFile')}
+                >
+                  {crossIcon}
+                </button>
+              )}
             </div>
           );
         })}

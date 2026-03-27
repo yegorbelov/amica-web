@@ -157,6 +157,10 @@ export default {
     clearAll: '모두 지우기',
     file: '파일',
     files: '파일',
+    fileUploading: '업로드 중',
+    fileStreaming: '답변 수신 중…',
+    fileItemUploading: '전송 중…',
+    removeFile: '파일 제거',
   },
   dateGroup: {
     today: '오늘',

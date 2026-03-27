@@ -157,6 +157,10 @@ export default {
     clearAll: 'Cancella tutto',
     file: 'file',
     files: 'file',
+    fileUploading: 'Caricamento',
+    fileStreaming: 'Ricezione risposta…',
+    fileItemUploading: 'Invio…',
+    removeFile: 'Rimuovi file',
   },
   dateGroup: {
     today: 'Oggi',

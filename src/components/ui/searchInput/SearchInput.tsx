@@ -3,7 +3,9 @@ import { Icon } from '@/components/Icons/AutoIcons';
 import { useSearchContext } from '@/contexts/search/SearchContextCore';
 import styles from './SearchInput.module.scss';
 
-const searchIcon = <Icon name='Search' className={styles['search_icon']} />;
+const searchIcon = (
+  <Icon name='Search' className={styles['input-search__icon']} />
+);
 
 export interface SearchInputProps {
   placeholder?: string;
@@ -30,7 +32,7 @@ const SearchInput = ({
   return (
     <div className={styles['input-search']}>
       <div className={styles['input-search__inner']}>
-        <div className={styles['input-search__icon']}>{searchIcon}</div>
+        {searchIcon}
         <div className={styles['input-search__input']}>
           <input
             aria-label='Search'

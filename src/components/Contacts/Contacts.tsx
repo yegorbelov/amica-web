@@ -21,9 +21,9 @@ const Contacts = ({
   // if (error) return <div>{t('contacts.error') ?? `Error: ${error}`}</div>;
 
   return (
-    <div className={styles.contacts}>
+    <>
       {contacts.length > 0 && (
-        <ul>
+        <ul className={styles.contacts}>
           {contacts.map((contact) => (
             <li
               key={contact.id}
@@ -48,7 +48,7 @@ const Contacts = ({
       {contacts.length === 0 && (
         <div className={styles.emptyContact}>{t('contacts.empty')}</div>
       )}
-    </div>
+    </>
   );
 };
 

@@ -157,6 +157,10 @@ export default {
     clearAll: 'مسح الكل',
     file: 'ملف',
     files: 'ملفات',
+    fileUploading: 'جاري الرفع',
+    fileStreaming: 'جاري استلام الرد…',
+    fileItemUploading: 'جاري الإرسال…',
+    removeFile: 'إزالة الملف',
   },
   dateGroup: {
     today: 'اليوم',
