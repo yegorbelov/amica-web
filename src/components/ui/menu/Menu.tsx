@@ -247,48 +247,24 @@ export function Menu<T extends string | number>({
       }
     };
 
-    const handleScroll = () => {
-      const menu = menuRef.current;
-      if (!menu) return;
-      if (menuGroupId) {
-        const groupEls = document.querySelectorAll(
-          `[${MENU_GROUP_ATTR}="${menuGroupId}"]`,
-        );
-        const anyVisible = Array.from(groupEls).some((el) => {
-          const rect = el.getBoundingClientRect();
-          const viewportH = window.innerHeight;
-          const viewportW = window.innerWidth;
-          return (
-            rect.bottom >= 0 &&
-            rect.top <= viewportH &&
-            rect.right >= 0 &&
-            rect.left <= viewportW
-          );
-        });
-        if (!anyVisible) onMenuClose();
-      } else {
-        const rect = menu.getBoundingClientRect();
-        const viewportH = window.innerHeight;
-        const viewportW = window.innerWidth;
-        const visible =
-          rect.bottom >= 0 &&
-          rect.top <= viewportH &&
-          rect.right >= 0 &&
-          rect.left <= viewportW;
-        if (!visible) onMenuClose();
+    const handleScroll = (event: Event) => {
+      const target = event.target;
+      if (target instanceof Node && isNodeInsideMenuOrGroup(target)) {
+        return;
       }
+      onMenuClose();
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('resize', onMenuClose);
-    window.addEventListener('scroll', handleScroll, true);
+    document.addEventListener('scroll', handleScroll, true);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', onMenuClose);
-      window.removeEventListener('scroll', handleScroll, true);
+      document.removeEventListener('scroll', handleScroll, true);
     };
   }, [onMenuClose, isInsideMenuOrGroup, isNodeInsideMenuOrGroup, menuGroupId]);
 
