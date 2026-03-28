@@ -114,7 +114,13 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
     [selectedChat, activeTab],
   );
   const { currentColumns, liveScale, zoomOriginX, zoomOriginY, isZooming } =
-    useGridPinchZoom(gridRef, sidebarInnerRef, gridAttachKey, mediaGridRef);
+    useGridPinchZoom(
+      gridRef,
+      sidebarInnerRef,
+      gridAttachKey,
+      mediaGridRef,
+      filteredMediaFiles.length,
+    );
   const mediaRectsRef = useRef<Map<string, DOMRect>>(new Map());
 
   const filterItemsTranslated = useMemo(

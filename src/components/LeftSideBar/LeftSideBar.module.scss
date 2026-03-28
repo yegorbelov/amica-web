@@ -1,11 +1,9 @@
-:global(.choose_list) {
+.left-side-bar {
   display: flex;
   flex-direction: column;
-  align-items: center;
   overflow: hidden;
   width: var(--left-side-bar-width);
   flex-shrink: 0;
-  position: relative;
   border-radius: 24px;
   border: 1px solid var(--surface-border);
   background: var(--surface-bg);
@@ -18,62 +16,34 @@
   @media screen and (max-width: 768px) {
     z-index: 9;
   }
-}
 
-:global(.left-menu) {
-  overscroll-behavior: contain;
-  order: 0;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
+  &__inner {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    height: 100%;
+    overflow: hidden;
 
-.tab-panels {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  overflow: hidden;
-}
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      backdrop-filter: blur(5px);
+      z-index: -1;
+    }
+  }
 
-:global(.left-menu)::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  backdrop-filter: blur(5px);
-  z-index: -1;
+  &__tab-panels {
+    flex: 1;
+  }
 }
-
-// :global(.left-menu)::after {
-//   content: '';
-//   position: fixed;
-//   bottom: 0;
-//   width: 100%;
-//   height: 100%;
-//   backdrop-filter: blur(5px);
-//   background: rgba(0, 0, 0, 0.2);
-//   mask-image: linear-gradient(
-//     to bottom,
-//     rgba(0, 0, 0, 1) 0px,
-//     rgba(0, 0, 0, 0) calc(60px + var(--sat)),
-//     rgba(0, 0, 0, 0) calc(100% - 60px - var(--sab)),
-//     rgba(0, 0, 0, 1) 100%
-//   );
-//   pointer-events: none;
-// }
 
 :global(.chat-list-title) {
   display: none;
 }
 
 @media screen and (max-width: 768px) {
-  :global(.choose_list) {
+  .left-side-bar {
     border-radius: 0;
     margin: 0;
     border: none;
@@ -81,26 +51,22 @@
     background: var(--choose-list-mobile-bg);
   }
 
-  :global(.choose_list) {
+  .left-side-bar {
     transform: translateX(var(--swipe-margin-choose-list));
   }
 
-  :global(.choose_list:not(.swipe)) {
+  .left-side-bar:not(.swipe) {
     transition: transform 0.35s ease !important;
   }
 
-  :global(.choose_list.swipe) {
+  .left-side-bar.swipe {
     transform: translateX(calc(var(--swipe-margin) / 3 - 33%));
     transition: transform 0s;
   }
 
-  :global(.choose_list) {
+  .left-side-bar {
     width: 100%;
     height: 100%;
-  }
-
-  :global(.left-menu) {
-    order: 2;
   }
 
   :global(.chat-list-title) {
@@ -115,23 +81,9 @@
 }
 
 .tab-content {
-  width: 100%;
   height: 100%;
   padding-bottom: calc(var(--sab));
   overflow: hidden;
-
-  // transition: padding-bottom 0.2s ease;
-  // @media screen and (max-width: 768px) {
-  //   padding-top: calc(var(--sat) + 20px);
-  // }
-
-  &--profile {
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-  &--contacts {
-    padding-top: 0;
-  }
 }
 
 .global-search-input-container {
@@ -167,7 +119,6 @@
 .createGroupOverlay {
   position: fixed;
   inset: 0;
-  /* Above sidebar (9999) and in-chat panels; portaled to document.body */
   z-index: 20050;
   display: flex;
   align-items: center;

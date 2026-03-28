@@ -1,7 +1,6 @@
 .message__text {
   white-space: pre-line;
   overflow-wrap: break-word;
-  word-wrap: break-word;
   display: inline;
   max-width: 100%;
   vertical-align: baseline;
@@ -226,8 +225,8 @@
       content: '';
       position: fixed;
       inset: 0;
-      // contain-intrinsic-size: 432px 100%;
       contain: strict;
+      content-visibility: auto;
 
       background: linear-gradient(
         var(--messageGradientDegree, 168deg),
@@ -237,8 +236,6 @@
         var(--messageColor4) var(--messageStop4),
         var(--messageColor5) var(--messageStop5)
       );
-
-      // background: linear-gradient(90deg, #08203e, #557c93);
     }
   }
 }
@@ -305,11 +302,9 @@
 }
 
 .message_reactions {
-  // margin-top: 4px;
   display: inline-flex;
   flex-wrap: wrap;
   gap: 4px;
-  // padding: 6px 8px;
   justify-content: flex-start;
   align-self: flex-start;
   margin-right: auto;
@@ -436,22 +431,18 @@
 :global(.temp_full) {
   transition: background 1.5s;
   position: relative;
-  width: 100%;
   contain: style;
 
   &::before {
     content: '';
     position: absolute;
-    height: 100%;
     width: 100dvw;
     top: 0;
     bottom: 0;
-    left: -50%;
+    left: calc(-50dvw + 50%);
   }
 
   &.liteMode {
-    // border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-
     &:last-child {
       border-bottom: none;
     }

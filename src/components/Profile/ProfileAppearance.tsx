@@ -104,6 +104,15 @@ export default function ProfileAppearance() {
           }
         />
       </div>
+      {windowWidth > 768 && (
+        <div className={styles.optionRow}>
+          <div>Wide Screen Mode</div>
+          <Toggle
+            checked={wideScreenModeEnabled}
+            onChange={setWideScreenModeEnabled}
+          />
+        </div>
+      )}
       <div className={styles.optionRow}>
         <div>Lite Mode</div>
         <Toggle checked={liteModeEnabled} onChange={setLiteModeEnabled} />
@@ -130,22 +139,13 @@ export default function ProfileAppearance() {
             </div>
           )}
           {windowWidth > 768 && settings.activeWallpaper && (
-            <>
-              <div className={styles.optionRow}>
-                <div>{t('profile.wallpaperGlow')}</div>
-                <Toggle
-                  checked={settings.wallpaperGlowEnabled}
-                  onChange={setSetting.bind(null, 'wallpaperGlowEnabled')}
-                />
-              </div>
-              <div className={styles.optionRow}>
-                <div>Wide Screen Mode</div>
-                <Toggle
-                  checked={wideScreenModeEnabled}
-                  onChange={setWideScreenModeEnabled}
-                />
-              </div>
-            </>
+            <div className={styles.optionRow}>
+              <div>{t('profile.wallpaperGlow')}</div>
+              <Toggle
+                checked={settings.wallpaperGlowEnabled}
+                onChange={setSetting.bind(null, 'wallpaperGlowEnabled')}
+              />
+            </div>
           )}
         </>
       )}

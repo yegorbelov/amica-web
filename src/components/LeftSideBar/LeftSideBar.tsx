@@ -20,13 +20,11 @@ const LeftSideBar: React.FC<ChooseListProps> = () => {
   const { activeProfileTab } = useSettings();
 
   return (
-    <div className='choose_list'>
-      <div className='left-menu'>
-        <div className={styles['tab-panels']}>
+    <div className={styles['left-side-bar']}>
+      <div className={styles['left-side-bar__inner']}>
+        <div className={styles['left-side-bar__tab-panels']}>
           <Tab id='contacts'>
-            <div
-              className={`${styles['tab-content']} ${styles['tab-content--contacts']}`}
-            >
+            <div className={`${styles['tab-content']}`}>
               <ContactsTabContent />
             </div>
           </Tab>

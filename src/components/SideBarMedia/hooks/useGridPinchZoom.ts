@@ -1,18 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const MIN_COLUMNS = 1;
-const MAX_COLUMNS = 20;
+/** Fewer than this many media cells → column cap `MAX_COLUMNS_SMALL_GRID`. */
+const GRID_COLUMN_ITEM_THRESHOLD = 20;
+/** At/above threshold → column cap `MAX_COLUMNS_LARGE_GRID`. */
+const MAX_COLUMNS_SMALL_GRID = 5;
+const MAX_COLUMNS_LARGE_GRID = 12;
+
 const COMMIT_THRESHOLD = 0.5;
 
-/** Minimum pinch span (px) to avoid unstable ratios at finger overlap */
-const MIN_PINCH_SPAN = 24;
+function maxColumnsForItemCount(itemCount: number): number {
+  return Math.floor(itemCount) < GRID_COLUMN_ITEM_THRESHOLD
+    ? MAX_COLUMNS_SMALL_GRID
+    : MAX_COLUMNS_LARGE_GRID;
+}
 
 function pointerDistance(p1: PointerEvent, p2: PointerEvent): number {
   return Math.hypot(p2.clientX - p1.clientX, p2.clientY - p1.clientY);
-}
-
-function clampColumns(value: number): number {
-  return Math.max(MIN_COLUMNS, Math.min(MAX_COLUMNS, value));
 }
 
 function normalizeWheelDelta(deltaY: number, deltaMode: number): number {
@@ -47,6 +51,8 @@ export function useGridPinchZoom(
   gridAttachKey: string,
   /** Element that receives scale(); origin is computed in its coordinate space. */
   originTargetRef: React.RefObject<HTMLDivElement | null>,
+  /** Visible media cells count (filters pinch sensitivity when the grid is small). */
+  mediaItemCount: number,
 ): GridPinchZoomState {
   const [rowScale, setRowScale] = useState(3);
   const [liveScale, setLiveScale] = useState(1);
@@ -60,12 +66,30 @@ export function useGridPinchZoom(
     rowScaleRef.current = rowScale;
   }, [rowScale]);
 
+  /** Keep column count within bounds when item count / max columns changes. */
+  useEffect(() => {
+    const maxColumns = maxColumnsForItemCount(mediaItemCount);
+    setRowScale((prev) => {
+      const next = Math.max(MIN_COLUMNS, Math.min(maxColumns, prev));
+      rowScaleRef.current = next;
+      return next;
+    });
+  }, [mediaItemCount]);
+
   useEffect(() => {
     const grid = gridRef.current;
     if (!grid) return;
 
+    const maxColumns = maxColumnsForItemCount(mediaItemCount);
+    const clampColumns = (value: number) =>
+      Math.max(MIN_COLUMNS, Math.min(maxColumns, value));
+
+    const minPinchSpan = maxColumns;
+    /** Ignore jitter when fingers are very close; align with `minPinchSpan` on small grids. */
+    const pinchMoveSpanFloor = Math.min(8, minPinchSpan);
+
     const pointers = new Map<number, PointerEvent>();
-    let initialPinchSpan = MIN_PINCH_SPAN;
+    let initialPinchSpan = minPinchSpan;
     let initialColumns = rowScaleRef.current;
     /** Touch pinch: spread → fewer columns (bigger cells); pinch in → more columns. */
     let touchPinchInverted = false;
@@ -95,7 +119,11 @@ export function useGridPinchZoom(
         savedSidebarOverflow = sidebar.style.overflow;
         sidebar.style.overflow = 'hidden';
       }
-      window.addEventListener('touchmove', preventTouchMoveWhilePinching, touchMoveOpts);
+      window.addEventListener(
+        'touchmove',
+        preventTouchMoveWhilePinching,
+        touchMoveOpts,
+      );
     };
 
     const unlockPinchScroll = () => {
@@ -106,7 +134,11 @@ export function useGridPinchZoom(
       if (sidebar) {
         sidebar.style.overflow = savedSidebarOverflow;
       }
-      window.removeEventListener('touchmove', preventTouchMoveWhilePinching, touchMoveOpts);
+      window.removeEventListener(
+        'touchmove',
+        preventTouchMoveWhilePinching,
+        touchMoveOpts,
+      );
     };
 
     const resetZoomVisualState = () => {
@@ -175,7 +207,7 @@ export function useGridPinchZoom(
         const [p1, p2] = Array.from(pointers.values());
         touchPinchInverted =
           p1.pointerType === 'touch' && p2.pointerType === 'touch';
-        initialPinchSpan = Math.max(pointerDistance(p1, p2), MIN_PINCH_SPAN);
+        initialPinchSpan = Math.max(pointerDistance(p1, p2), minPinchSpan);
         const centerX = (p1.clientX + p2.clientX) / 2;
         const centerY = (p1.clientY + p2.clientY) / 2;
         setIsZooming(true);
@@ -199,7 +231,7 @@ export function useGridPinchZoom(
 
       const [p1, p2] = Array.from(pointers.values());
       const span = pointerDistance(p1, p2);
-      if (span < 8) return;
+      if (span < pinchMoveSpanFloor) return;
 
       const prevColumns = rowScaleRef.current;
       const ratio = span / initialPinchSpan;
@@ -230,7 +262,7 @@ export function useGridPinchZoom(
       commitColumns(roundedColumns, centerX, container);
 
       initialColumns = roundedColumns;
-      initialPinchSpan = Math.max(span, MIN_PINCH_SPAN);
+      initialPinchSpan = Math.max(span, minPinchSpan);
       wheelFloatRef.current = roundedColumns;
       setLiveScale(1);
     };
@@ -319,7 +351,13 @@ export function useGridPinchZoom(
       grid.removeEventListener('wheel', handleWheel);
       window.removeEventListener('wheel', handleWheelCapture, true);
     };
-  }, [gridRef, sidebarInnerRef, gridAttachKey, originTargetRef]);
+  }, [
+    gridRef,
+    sidebarInnerRef,
+    gridAttachKey,
+    originTargetRef,
+    mediaItemCount,
+  ]);
 
   return useMemo(
     () => ({

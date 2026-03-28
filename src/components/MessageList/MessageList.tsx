@@ -1156,15 +1156,6 @@ const MessageList: React.FC<MessageListProps> = ({
         onSelectDate={handleDatePickerSelect}
       />
 
-      {/* {messagesLoading && (
-        <div className={styles['messages-loading']}>Loading</div>
-      )} */}
-      {/* {loadingOlderMessages && (
-        <div className={styles['messages-loading']}>Loading older…</div>
-      )}
-      {loadingNewerMessages && (
-        <div className={styles['messages-loading']}>Loading newer…</div>
-      )} */}
       {messages.length === 0 && !messagesLoading && (
         <div className={styles['no-messages']}>No messages yet</div>
       )}

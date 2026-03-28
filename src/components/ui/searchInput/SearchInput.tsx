@@ -30,7 +30,10 @@ const SearchInput = ({
     : context.clear;
 
   return (
-    <div className={styles['input-search']}>
+    <div
+      className={styles['input-search']}
+      onClick={() => inputRef.current?.focus()}
+    >
       <div className={styles['input-search__inner']}>
         {searchIcon}
         <div className={styles['input-search__input']}>

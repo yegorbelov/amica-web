@@ -112,15 +112,15 @@ const suggestedGradients: GradientSuggestedType[] = [
       },
     ],
   },
-  {
-    name: 'Plum Glow',
-    degree: '168deg',
-    colors: [
-      { color: '#3e196e', stop: '0%' },
-      { color: '#d46c76', stop: '50%' },
-      { color: '#ffc07c', stop: '100%' },
-    ],
-  },
+  // {
+  //   name: 'Plum Glow',
+  //   degree: '168deg',
+  //   colors: [
+  //     { color: '#3e196e', stop: '0%' },
+  //     { color: '#d46c76', stop: '50%' },
+  //     { color: '#ffc07c', stop: '100%' },
+  //   ],
+  // },
   {
     name: 'Rust Furnace',
     degree: '0deg',
@@ -160,6 +160,14 @@ const suggestedGradients: GradientSuggestedType[] = [
     colors: [
       { color: '#239eab', stop: '0%' },
       { color: '#74deee', stop: '100%' },
+    ],
+  },
+  {
+    name: 'Blue Abyss',
+    degree: '90deg',
+    colors: [
+      { color: '#08203e', stop: '0%' },
+      { color: '#557c93', stop: '100%' },
     ],
   },
 ];
