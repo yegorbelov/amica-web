@@ -54,6 +54,7 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
   const sidebarInnerRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const mediaGridRef = useRef<HTMLDivElement>(null);
   const membersRef = useRef<HTMLButtonElement>(null);
   const mediaRef = useRef<HTMLButtonElement>(null);
   const audioRef = useRef<HTMLButtonElement>(null);
@@ -112,8 +113,8 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
       selectedChat != null ? `${selectedChat.id}-${activeTab}` : 'none',
     [selectedChat, activeTab],
   );
-  const { currentColumns, liveScale, zoomOriginX, isZooming } =
-    useGridPinchZoom(gridRef, sidebarInnerRef, gridAttachKey);
+  const { currentColumns, liveScale, zoomOriginX, zoomOriginY, isZooming } =
+    useGridPinchZoom(gridRef, sidebarInnerRef, gridAttachKey, mediaGridRef);
   const mediaRectsRef = useRef<Map<string, DOMRect>>(new Map());
 
   const filterItemsTranslated = useMemo(
@@ -343,14 +344,15 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
                 )}
                 {activeTab === 'media' && mediaFiles.length > 0 && (
                   <MediaGrid
+                    ref={mediaGridRef}
                     files={filteredMediaFiles}
                     rowScale={currentColumns}
                     className={styles.singleZoomGrid}
                     style={{
                       transform: `scale(${liveScale})`,
                       transformOrigin:
-                        zoomOriginX != null
-                          ? `${zoomOriginX}px center`
+                        zoomOriginX != null && zoomOriginY != null
+                          ? `${zoomOriginX}px ${zoomOriginY}px`
                           : 'center center',
                       transition: isZooming
                         ? 'none'

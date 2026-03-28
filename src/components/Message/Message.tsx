@@ -4,6 +4,7 @@ import styles from './Message.module.scss';
 import { useMessageDimensions } from './useMessageDimensions';
 import MessageContent from './MessageContent';
 import { Icon } from '../Icons/AutoIcons';
+import { useSettings } from '@/contexts/settings/context';
 
 export interface MessageProps {
   message: MessageType;
@@ -38,6 +39,7 @@ const Message: React.FC<MessageProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const suppressSelectionClickRef = useRef(false);
+  const { liteModeEnabled } = useSettings();
   const lastPointerTapRef = useRef<{
     ts: number;
     x: number;
@@ -64,7 +66,7 @@ const Message: React.FC<MessageProps> = ({
 
   return (
     <div
-      className={`temp_full ${isOwn ? 'own-message' : 'other-message'} ${selectionMode && isSelected ? 'selected' : ''} ${selectionMode ? 'selection-mode' : ''}`}
+      className={`temp_full ${isOwn ? 'own-message' : 'other-message'} ${liteModeEnabled ? styles.liteMode : ''} ${selectionMode && isSelected ? 'selected' : ''} ${selectionMode ? 'selection-mode' : ''}`}
       data-message-id={message.id}
       style={messageDivStyle}
       onPointerDown={(e) => {
@@ -139,7 +141,7 @@ const Message: React.FC<MessageProps> = ({
       )}
       <div
         ref={containerRef}
-        className={`${styles.message_div} ${isOwn ? `${styles.darker} ${styles.right}` : ''} ${selectionMode ? styles.selected_prepare : ''} ${!isFirstInGroup ? styles.groupedWithNewer : ''} ${!isLastInGroup ? styles.groupedWithOlder : ''} ${typeof appearDelayMs === 'number' ? styles.initialAppear : ''}`}
+        className={`${styles.message_div} ${isOwn ? `${styles.darker} ${styles.right}` : ''} ${liteModeEnabled ? styles.liteMode : ''} ${selectionMode ? styles.selected_prepare : ''} ${!isFirstInGroup ? styles.groupedWithNewer : ''} ${!isLastInGroup ? styles.groupedWithOlder : ''} ${typeof appearDelayMs === 'number' ? styles.initialAppear : ''}`}
       >
         <MessageContent
           message={message}

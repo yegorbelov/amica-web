@@ -193,6 +193,20 @@
     opacity var(--td) var(--ttf),
     translate var(--td) var(--ttf);
 
+  &.liteMode {
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    outline: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    clip-path: none !important;
+
+    &::before {
+      content: none !important;
+    }
+  }
+
   &.darker {
     clip-path: inset(0 round 20px);
     color: #fff;
@@ -424,6 +438,24 @@
   position: relative;
   width: 100%;
   contain: style;
+
+  &::before {
+    content: '';
+    position: absolute;
+    height: 100%;
+    width: 100dvw;
+    top: 0;
+    bottom: 0;
+    left: -50%;
+  }
+
+  &.liteMode {
+    // border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
 }
 
 :global(.temp_full.active) {

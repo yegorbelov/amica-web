@@ -34,8 +34,9 @@ function calcLayerScale(
 interface GridPinchZoomState {
   currentColumns: number;
   liveScale: number;
-  /** X for transform-origin, relative to grid element (px). */
+  /** transform-origin in px relative to the scaled element (MediaGrid root). */
   zoomOriginX: number | null;
+  zoomOriginY: number | null;
   isZooming: boolean;
 }
 
@@ -44,10 +45,13 @@ export function useGridPinchZoom(
   sidebarInnerRef: React.RefObject<HTMLDivElement | null>,
   /** When this changes, listeners re-bind (e.g. grid mounts after chat/tab). */
   gridAttachKey: string,
+  /** Element that receives scale(); origin is computed in its coordinate space. */
+  originTargetRef: React.RefObject<HTMLDivElement | null>,
 ): GridPinchZoomState {
   const [rowScale, setRowScale] = useState(3);
   const [liveScale, setLiveScale] = useState(1);
   const [zoomOriginX, setZoomOriginX] = useState<number | null>(null);
+  const [zoomOriginY, setZoomOriginY] = useState<number | null>(null);
   const [isZooming, setIsZooming] = useState(false);
   /** Mirrors column count for listeners; updated synchronously when columns change. */
   const rowScaleRef = useRef(rowScale);
@@ -69,15 +73,54 @@ export function useGridPinchZoom(
     let wheelEndTimer: ReturnType<typeof setTimeout> | null = null;
     const wheelFloatRef = { current: rowScaleRef.current };
 
+    let pinchScrollLocked = false;
+    let savedGridTouchAction = '';
+    let savedSidebarOverflow = '';
+
+    const preventTouchMoveWhilePinching = (e: TouchEvent) => {
+      e.preventDefault();
+    };
+    const touchMoveOpts: AddEventListenerOptions = {
+      passive: false,
+      capture: true,
+    };
+
+    const lockPinchScroll = () => {
+      if (pinchScrollLocked) return;
+      pinchScrollLocked = true;
+      savedGridTouchAction = grid.style.touchAction;
+      grid.style.touchAction = 'none';
+      const sidebar = sidebarInnerRef.current;
+      if (sidebar) {
+        savedSidebarOverflow = sidebar.style.overflow;
+        sidebar.style.overflow = 'hidden';
+      }
+      window.addEventListener('touchmove', preventTouchMoveWhilePinching, touchMoveOpts);
+    };
+
+    const unlockPinchScroll = () => {
+      if (!pinchScrollLocked) return;
+      pinchScrollLocked = false;
+      grid.style.touchAction = savedGridTouchAction;
+      const sidebar = sidebarInnerRef.current;
+      if (sidebar) {
+        sidebar.style.overflow = savedSidebarOverflow;
+      }
+      window.removeEventListener('touchmove', preventTouchMoveWhilePinching, touchMoveOpts);
+    };
+
     const resetZoomVisualState = () => {
       setIsZooming(false);
       setZoomOriginX(null);
+      setZoomOriginY(null);
       setLiveScale(1);
     };
 
-    const updateZoomFocus = (clientX: number) => {
-      const rect = grid.getBoundingClientRect();
+    const updateZoomFocus = (clientX: number, clientY: number) => {
+      const originEl = originTargetRef.current ?? grid;
+      const rect = originEl.getBoundingClientRect();
       setZoomOriginX(Math.max(0, clientX - rect.left));
+      setZoomOriginY(Math.max(0, clientY - rect.top));
     };
 
     const isInsideGrid = (x: number, y: number) => {
@@ -134,9 +177,11 @@ export function useGridPinchZoom(
           p1.pointerType === 'touch' && p2.pointerType === 'touch';
         initialPinchSpan = Math.max(pointerDistance(p1, p2), MIN_PINCH_SPAN);
         const centerX = (p1.clientX + p2.clientX) / 2;
+        const centerY = (p1.clientY + p2.clientY) / 2;
         setIsZooming(true);
-        updateZoomFocus(centerX);
+        updateZoomFocus(centerX, centerY);
         setLiveScale(1);
+        lockPinchScroll();
         for (const id of pointers.keys()) {
           try {
             grid.setPointerCapture(id);
@@ -163,8 +208,9 @@ export function useGridPinchZoom(
         : initialColumns * ratio;
       nextFloat = clampColumns(nextFloat);
       const centerX = (p1.clientX + p2.clientX) / 2;
+      const centerY = (p1.clientY + p2.clientY) / 2;
       setIsZooming(true);
-      updateZoomFocus(centerX);
+      updateZoomFocus(centerX, centerY);
 
       const delta = nextFloat - prevColumns;
       const direction = delta > 0 ? 1 : delta < 0 ? -1 : 0;
@@ -197,6 +243,7 @@ export function useGridPinchZoom(
       }
       pointers.delete(e.pointerId);
       if (pointers.size < 2) {
+        unlockPinchScroll();
         resetZoomVisualState();
       }
     };
@@ -223,7 +270,7 @@ export function useGridPinchZoom(
         Math.min(1, Math.abs(nextFloat - prevColumns)),
       );
       setIsZooming(true);
-      updateZoomFocus(e.clientX);
+      updateZoomFocus(e.clientX, e.clientY);
       setLiveScale(calcLayerScale(prevColumns, adjacentColumns, progress));
 
       const nextColumns = clampColumns(Math.round(nextFloat));
@@ -261,6 +308,7 @@ export function useGridPinchZoom(
     });
 
     return () => {
+      unlockPinchScroll();
       if (wheelEndTimer) {
         clearTimeout(wheelEndTimer);
       }
@@ -271,15 +319,16 @@ export function useGridPinchZoom(
       grid.removeEventListener('wheel', handleWheel);
       window.removeEventListener('wheel', handleWheelCapture, true);
     };
-  }, [gridRef, sidebarInnerRef, gridAttachKey]);
+  }, [gridRef, sidebarInnerRef, gridAttachKey, originTargetRef]);
 
   return useMemo(
     () => ({
       currentColumns: rowScale,
       liveScale,
       zoomOriginX,
+      zoomOriginY,
       isZooming,
     }),
-    [rowScale, liveScale, zoomOriginX, isZooming],
+    [rowScale, liveScale, zoomOriginX, zoomOriginY, isZooming],
   );
 }
