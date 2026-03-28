@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePrivateMedia } from '@/hooks/usePrivateMedia';
 import styles from './SmartMediaLayout.module.scss';
-import { Icon } from '../Icons/AutoIcons';
-
-const spinnerIcon = <Icon name='Spinner' className={styles.spinner} />;
 
 interface ProgressiveImageProps {
   small: string | null;
@@ -89,7 +86,7 @@ export default function ProgressiveImage({
       {isVisible && (smallLoading || fullLoading || !loaded) && (
         <div className={styles.loading}>
           <div className={styles['loading__background']} />
-          {spinnerIcon}
+          <span className={styles.spinner} role='status' aria-label='Loading' />
         </div>
       )}
     </div>

@@ -154,36 +154,6 @@
   transform: translate(-50%, -50%) scale(1.1);
   background: transparent;
 
-  // &::before {
-  //   background: rgba(90, 90, 90, 0.26);
-  //   backdrop-filter: blur(12px);
-  //   -webkit-backdrop-filter: blur(12px);
-
-  //   // Keep center stronger, edges softer.
-  //   mask-image: radial-gradient(
-  //     ellipse at center,
-  //     rgba(0, 0, 0, 0.95) 45%,
-  //     rgba(0, 0, 0, 0.25) 70%,
-  //     rgba(0, 0, 0, 0) 100%
-  //   );
-  //   -webkit-mask-image: radial-gradient(
-  //     ellipse at center,
-  //     rgba(0, 0, 0, 0.95) 45%,
-  //     rgba(0, 0, 0, 0.25) 70%,
-  //     rgba(0, 0, 0, 0) 100%
-  //   );
-  //   opacity: 1;
-  // }
-
-  // &::after {
-  //   background: radial-gradient(
-  //     ellipse at center,
-  //     rgba(255, 255, 255, 0) 55%,
-  //     rgba(255, 255, 255, 0.1) 100%
-  //   );
-  //   opacity: 0.6;
-  // }
-
   transition:
     left 0ms linear,
     transform 0.2s ease,
@@ -193,34 +163,6 @@
 
 .drag-indicator--moving {
   transform: translate(-50%, -50%) scale(1.1);
-
-  // &::before {
-  //   background: rgba(90, 90, 90, 0.18);
-  //   backdrop-filter: blur(10px);
-  //   -webkit-backdrop-filter: blur(10px);
-  //   mask-image: radial-gradient(
-  //     ellipse at center,
-  //     rgba(0, 0, 0, 0.95) 45%,
-  //     rgba(0, 0, 0, 0.25) 70%,
-  //     rgba(0, 0, 0, 0) 100%
-  //   );
-  //   -webkit-mask-image: radial-gradient(
-  //     ellipse at center,
-  //     rgba(0, 0, 0, 0.95) 45%,
-  //     rgba(0, 0, 0, 0.25) 70%,
-  //     rgba(0, 0, 0, 0) 100%
-  //   );
-  //   opacity: 1;
-  // }
-
-  // &::after {
-  //   background: radial-gradient(
-  //     ellipse at center,
-  //     rgba(255, 255, 255, 0) 55%,
-  //     rgba(255, 255, 255, 0.1) 100%
-  //   );
-  //   opacity: 0.6;
-  // }
 }
 
 .drag-indicator--no-anim {
@@ -235,7 +177,6 @@
   justify-content: center;
   gap: 4px;
   height: 100%;
-  // padding: 8px 12px;
   border-radius: 99rem;
   background: none;
   border: none;
@@ -245,18 +186,10 @@
   z-index: 1;
   position: relative;
 
-  // For masked highlight layer (set inline from JS).
   --mask-left: 0px;
   --mask-right: 0px;
   --mask-inset-right: 0px;
   --mask-opacity: 0;
-  // transition: scale 0.4s cubic-bezier(0.175, 0.885, 0.32, 2.2);
-  // &:hover {
-  //   .icon,
-  //   .avatar {
-  //     scale: 1.1;
-  //   }
-  // }
 
   &.pulse {
     animation: pulse 0.4s ease-in-out;
@@ -332,7 +265,6 @@
   opacity: var(--mask-opacity);
   clip-path: inset(0 var(--mask-inset-right) 0 var(--mask-left) round 999px);
 
-  // Force-color SVG icons under the mask (some icons ship with hardcoded fills).
   :global(svg path),
   :global(svg circle),
   :global(svg rect),
@@ -343,7 +275,6 @@
     stroke: var(--mainColor) !important;
   }
 
-  // Lottie animations should remain stroke-only.
   .contacts-lottie,
   .chats-lottie {
     :global(svg path),
