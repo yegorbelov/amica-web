@@ -3,6 +3,7 @@ import type {
   SettingsContextValue,
   SettingsStateValue,
   SettingsActionsValue,
+  SettingsLiveValue,
 } from './types';
 
 export const SettingsStateContext = createContext<SettingsStateValue | null>(
@@ -11,12 +12,9 @@ export const SettingsStateContext = createContext<SettingsStateValue | null>(
 export const SettingsActionsContext =
   createContext<SettingsActionsValue | null>(null);
 
-export interface BlurContextValue {
-  blur: number;
-  setBlur: (value: number) => void;
-}
-
-export const BlurContext = createContext<BlurContextValue | null>(null);
+export const SettingsLiveContext = createContext<SettingsLiveValue | null>(
+  null,
+);
 
 export function useSettingsState(): SettingsStateValue {
   const ctx = useContext(SettingsStateContext);
@@ -32,11 +30,17 @@ export function useSettingsActions(): SettingsActionsValue {
   return ctx;
 }
 
-export function useBlur(): BlurContextValue {
-  const ctx = useContext(BlurContext);
+export function useSettingsLive(): SettingsLiveValue {
+  const ctx = useContext(SettingsLiveContext);
   if (!ctx)
-    throw new Error('useBlur must be used within SettingsProvider');
+    throw new Error('useSettingsLive must be used within SettingsProvider');
   return ctx;
+}
+
+/** @deprecated Prefer useSettingsLive — same slice, kept for call sites. */
+export function useBlur(): Pick<SettingsLiveValue, 'blur' | 'setBlur'> {
+  const { blur, setBlur } = useSettingsLive();
+  return { blur, setBlur };
 }
 
 export function useSettings(): SettingsContextValue {

@@ -3,7 +3,7 @@
 .context-menu {
   position: fixed;
   background-color: var(--surface-bg);
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
   border: 1px solid var(--surface-border);
   border-radius: 32px;
   z-index: 1000;

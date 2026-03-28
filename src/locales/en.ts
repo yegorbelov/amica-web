@@ -191,7 +191,7 @@ export default {
   messageContextMenu: {
     copyText: 'Copy Text',
     copyMedia: 'Copy Media',
-    saveAs: 'Save As...',
+    saveAs: 'Download',
     edit: 'Edit',
     select: 'Select',
     delete: 'Delete for everyone',

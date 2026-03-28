@@ -5,6 +5,8 @@
   --swipe-margin-choose-list: 0%;
   --device-corner-radius: 0px;
 
+  --glass-shadow: #{$glass-shadow};
+
   --room_BG_color_hex: #4d8ddb;
   --myColor1: #4d8ddb;
   --myColor2: #4d8ddb99;
@@ -374,7 +376,7 @@ svg {
   display: flex;
   font-weight: 600;
   overflow: hidden;
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 2.2);
 }
 

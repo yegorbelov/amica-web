@@ -44,6 +44,7 @@ const MainChatWindow: React.FC = () => {
     settingsFullWindow,
     setSettingsFullWindow,
     activeProfileTab,
+    liteModeEnabled,
   } = useSettings();
   // const { activeWallpaper } = settings;
   // const { blur } = useBlur();
@@ -473,7 +474,6 @@ const MainChatWindow: React.FC = () => {
 
   return (
     <div className={`main_chat_window ${isSwiped ? 'swiped' : ''}`}>
-      {/* <Wallpaper isChatWindow /> */}
       {/* {windowWidth <= 768 && <BackgroundComponent />} */}
 
       {current === 'profile' && settingsFullWindow && activeProfileTab && (
@@ -512,7 +512,7 @@ const MainChatWindow: React.FC = () => {
               }}
               onTransitionEnd={handleSwipeTransitionEnd}
             >
-              <Wallpaper />
+              {!liteModeEnabled && <Wallpaper />}
               <ChatHeader
                 onChatInfoClick={handleHeaderClick}
                 onGoHome={handleGoHome}
@@ -524,7 +524,7 @@ const MainChatWindow: React.FC = () => {
                 <div
                   className={`room_wrapper ${sideBarVisible ? 'shifted' : ''}`}
                 >
-                  <Wallpaper />
+                  {!liteModeEnabled && <Wallpaper />}
                   <MessageList
                     isSelectionMode={isSelectionMode}
                     selectedMessageIds={selectedMessageIds}
@@ -548,7 +548,7 @@ const MainChatWindow: React.FC = () => {
           </div>
         ) : (
           <>
-            <Wallpaper />
+            {!liteModeEnabled && <Wallpaper />}
             <ChatHeader
               onChatInfoClick={handleHeaderClick}
               onGoHome={handleGoHome}
@@ -560,7 +560,7 @@ const MainChatWindow: React.FC = () => {
               <div
                 className={`room_wrapper ${sideBarVisible ? 'shifted' : ''}`}
               >
-                <Wallpaper />
+                {!liteModeEnabled && <Wallpaper />}
                 <MessageList
                   isSelectionMode={isSelectionMode}
                   selectedMessageIds={selectedMessageIds}

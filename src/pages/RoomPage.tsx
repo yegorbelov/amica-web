@@ -4,7 +4,7 @@ import MainChatWindow from '../components/MainChatWindow/MainChatWindow';
 import Wallpaper from './Wallpaper';
 import { TabsProvider } from '../components/Tabs/TabsContext';
 import styles from './RoomPage.module.scss';
-// import { useSettings } from '@/contexts/settings/context';
+import { useSettings } from '@/contexts/settings/context';
 
 // function isGlowDisabledByFlag(): boolean {
 //   if (typeof import.meta.env.VITE_WALLPAPER_GLOW === 'string') {
@@ -22,7 +22,7 @@ import styles from './RoomPage.module.scss';
 const RoomPage: React.FC = () => {
   // const { settings } = useSettings();
   // const glow = settings.wallpaperGlowEnabled && !isGlowDisabledByFlag();
-
+  const { liteModeEnabled } = useSettings();
   return (
     <>
       <TabsProvider>
@@ -43,7 +43,7 @@ const RoomPage: React.FC = () => {
             value={'test'}
             position={{ x: 100, y: 100 }}
           /> */}
-          <Wallpaper isChatWindow={false} />
+          {!liteModeEnabled && <Wallpaper isChatWindow={false} />}
           <LeftSideBar />
           <MainChatWindow />
         </div>

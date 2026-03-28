@@ -43,6 +43,19 @@ async function fetchPrivateMedia(url: string): Promise<string> {
   return URL.createObjectURL(blob);
 }
 
+function isDisplayMediaReadyForAvatar(
+  media: DisplayMedia | undefined,
+): media is DisplayMedia {
+  if (!media) return false;
+  if (media.type === 'photo') {
+    return Boolean(media.small && media.medium);
+  }
+  if (media.type === 'video') {
+    return Boolean(media.url);
+  }
+  return false;
+}
+
 function getProtectedUrl(
   displayMedia: DisplayMedia | File,
   size?: 'small' | 'medium',
@@ -81,7 +94,7 @@ const Avatar = memo(function Avatar({
     const middle = pSBC(-0.6, color);
     const darker = pSBC(-0.8, color);
     return {
-      avatarStyle: !displayMedia
+      avatarStyle: !isDisplayMediaReadyForAvatar(displayMedia)
         ? {
             background: `linear-gradient(0deg, ${darker} 0%, ${middle} 35%, ${color} 100%)`,
           }
@@ -103,11 +116,11 @@ const Avatar = memo(function Avatar({
   }, []);
 
   useEffect(() => {
-    if (!displayMedia) return;
+    if (!isDisplayMediaReadyForAvatar(displayMedia)) return;
     const id = crypto.randomUUID();
     const newLayer: MediaLayerWithUrl = {
       id,
-      media: displayMedia as DisplayMedia,
+      media: displayMedia,
       ready: false,
     };
     const frameId = requestAnimationFrame(() => {

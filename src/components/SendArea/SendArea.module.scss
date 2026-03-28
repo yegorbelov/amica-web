@@ -359,7 +359,7 @@
   background: var(--send-area-bg);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(2px);
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
   border-radius: 20px;
   transition:
     background 1s,

@@ -22,7 +22,7 @@ import { apiUpload, apiFetch } from '@/utils/apiFetch';
 import {
   SettingsStateContext,
   SettingsActionsContext,
-  BlurContext,
+  SettingsLiveContext,
   useSettingsActions,
 } from './context';
 import { useUser } from '../UserContextCore';
@@ -39,6 +39,7 @@ type StoredSettings = Partial<
     color?: string;
     gradient?: GradientSuggested;
     wideScreenModeEnabled?: boolean;
+    liteModeEnabled?: boolean;
   }
 >;
 
@@ -156,6 +157,18 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     initialParsed.wideScreenModeEnabled ?? false,
   );
 
+  const [liteModeEnabled, setLiteModeEnabled] = useState(
+    initialParsed.liteModeEnabled ?? false,
+  );
+
+  useEffect(() => {
+    if (liteModeEnabled) {
+      document.documentElement.style.setProperty('--glass-shadow', 'none');
+    } else {
+      document.documentElement.style.removeProperty('--glass-shadow');
+    }
+  }, [liteModeEnabled]);
+
   useEffect(() => {
     if (!window.visualViewport) return;
 
@@ -257,6 +270,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, [color]);
 
   useEffect(() => {
+    if (liteModeEnabled) return;
     const degree = gradient?.degree ?? '168deg';
     document.documentElement.style.setProperty(
       '--messageGradientDegree',
@@ -288,7 +302,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         );
       }
     }
-  }, [gradient, color]);
+  }, [gradient, color, liteModeEnabled]);
 
   useEffect(() => {
     const theme = settings.theme;
@@ -369,6 +383,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           ...rest,
           autoplayVideos,
           wideScreenModeEnabled,
+          liteModeEnabled,
           color,
           gradient,
         }),
@@ -386,6 +401,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           ...rest,
           autoplayVideos,
           wideScreenModeEnabled,
+          liteModeEnabled,
           color,
           gradient,
         }),
@@ -395,6 +411,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     settings,
     autoplayVideos,
     wideScreenModeEnabled,
+    liteModeEnabled,
     color,
     gradient,
     storageKey,
@@ -579,9 +596,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       autoplayVideos,
       settingsFullWindow,
       isResizingPermitted,
+      liteModeEnabled,
       color,
       gradient,
-      keyboardHeight,
       wideScreenModeEnabled,
     }),
     [
@@ -592,9 +609,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       autoplayVideos,
       settingsFullWindow,
       isResizingPermitted,
+      liteModeEnabled,
       color,
       gradient,
-      keyboardHeight,
       wideScreenModeEnabled,
     ],
   );
@@ -613,6 +630,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setAutoplayVideos,
       setSettingsFullWindow,
       setIsResizingPermitted,
+      setLiteModeEnabled,
       setColor,
       setGradient,
       setWideScreenModeEnabled,
@@ -628,18 +646,22 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       pushProfilePage,
       popProfilePage,
       setWideScreenModeEnabled,
+      setLiteModeEnabled,
     ],
   );
 
-  const blurValue = useMemo(() => ({ blur, setBlur }), [blur, setBlur]);
+  const liveValue = useMemo(
+    () => ({ blur, setBlur, keyboardHeight }),
+    [blur, setBlur, keyboardHeight],
+  );
 
   return (
     <SettingsActionsContext.Provider value={actionsValue}>
       <SettingsStateContext.Provider value={stateValue}>
-        <BlurContext.Provider value={blurValue}>
+        <SettingsLiveContext.Provider value={liveValue}>
           <SyncWallpaperFromUser />
           {children}
-        </BlurContext.Provider>
+        </SettingsLiveContext.Provider>
       </SettingsStateContext.Provider>
     </SettingsActionsContext.Provider>
   );

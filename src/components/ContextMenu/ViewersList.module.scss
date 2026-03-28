@@ -19,7 +19,7 @@
   max-height: 400px;
   min-width: 180px;
   overflow-y: auto;
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
 }
 
 .viewer-item {

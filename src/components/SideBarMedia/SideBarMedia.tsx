@@ -1,4 +1,10 @@
-import React, { useCallback, useRef, useMemo, memo } from 'react';
+import React, {
+  useCallback,
+  useRef,
+  useMemo,
+  memo,
+  useLayoutEffect,
+} from 'react';
 import {
   useChatMeta,
   useSelectedChat,
@@ -101,7 +107,14 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
   );
 
   // useTabSwipe(gridRef, activeTab, availableTabs, setActiveTab);
-  const rowScale = useGridPinchZoom(gridRef, sidebarInnerRef);
+  const gridAttachKey = useMemo(
+    () =>
+      selectedChat != null ? `${selectedChat.id}-${activeTab}` : 'none',
+    [selectedChat, activeTab],
+  );
+  const { currentColumns, liveScale, zoomOriginX, isZooming } =
+    useGridPinchZoom(gridRef, sidebarInnerRef, gridAttachKey);
+  const mediaRectsRef = useRef<Map<string, DOMRect>>(new Map());
 
   const filterItemsTranslated = useMemo(
     () =>
@@ -187,6 +200,51 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
     },
     [deleteContact, setInterlocutorEditVisible],
   );
+
+  useLayoutEffect(() => {
+    if (!selectedChat) return;
+    if (activeTab !== 'media') return;
+    const root = gridRef.current;
+    if (!root) return;
+    const nodes = Array.from(
+      root.querySelectorAll<HTMLElement>('[data-media-id]'),
+    );
+    const nextRects = new Map<string, DOMRect>();
+    for (const node of nodes) {
+      const id = node.dataset.mediaId;
+      if (id) {
+        nextRects.set(id, node.getBoundingClientRect());
+      }
+    }
+
+    const prevRects = mediaRectsRef.current;
+    for (const node of nodes) {
+      const id = node.dataset.mediaId;
+      if (!id) continue;
+      const prevRect = prevRects.get(id);
+      const nextRect = nextRects.get(id);
+      if (!prevRect || !nextRect) continue;
+
+      const deltaX = prevRect.left - nextRect.left;
+      const deltaY = prevRect.top - nextRect.top;
+      if (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5) continue;
+
+      node.classList.add(styles.mediaWrapperFlipping);
+      node.style.transition = 'none';
+      node.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+      node.getBoundingClientRect();
+      node.style.transition = '';
+      node.style.transform = '';
+
+      const clearFlip = () => {
+        node.classList.remove(styles.mediaWrapperFlipping);
+        node.removeEventListener('transitionend', clearFlip);
+      };
+      node.addEventListener('transitionend', clearFlip);
+    }
+
+    mediaRectsRef.current = nextRects;
+  }, [selectedChat, activeTab, currentColumns, filteredMediaFiles]);
 
   if (!selectedChat) return null;
 
@@ -284,7 +342,21 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
                   />
                 )}
                 {activeTab === 'media' && mediaFiles.length > 0 && (
-                  <MediaGrid files={filteredMediaFiles} rowScale={rowScale} />
+                  <MediaGrid
+                    files={filteredMediaFiles}
+                    rowScale={currentColumns}
+                    className={styles.singleZoomGrid}
+                    style={{
+                      transform: `scale(${liveScale})`,
+                      transformOrigin:
+                        zoomOriginX != null
+                          ? `${zoomOriginX}px center`
+                          : 'center center',
+                      transition: isZooming
+                        ? 'none'
+                        : 'transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1)',
+                    }}
+                  />
                 )}
                 {activeTab === 'audio' && audioFiles.length > 0 && (
                   <AudioGrid files={audioFiles} />

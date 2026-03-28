@@ -13,7 +13,7 @@
   overflow: hidden;
   backdrop-filter: blur(2px);
   border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
 
   transition:
     background 1s,

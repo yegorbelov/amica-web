@@ -16,7 +16,7 @@
   align-items: center;
   font-size: 1rem;
   backdrop-filter: blur(2px);
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
   border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
   white-space: nowrap;
   font-weight: 400;

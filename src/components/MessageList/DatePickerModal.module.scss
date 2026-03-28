@@ -35,7 +35,7 @@
   max-height: 70vh;
   display: flex;
   flex-direction: column;
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
   animation: slideUp 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 

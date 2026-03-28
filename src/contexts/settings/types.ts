@@ -51,8 +51,15 @@ export interface SettingsStateValue {
   isResizingPermitted: boolean;
   color: string;
   gradient: GradientSuggested | null;
-  keyboardHeight: number;
   wideScreenModeEnabled: boolean;
+  liteModeEnabled: boolean;
+}
+
+/** High-churn UI state: subscribe here to avoid re-rendering on full settings. */
+export interface SettingsLiveValue {
+  blur: number;
+  setBlur: (value: number) => void;
+  keyboardHeight: number;
 }
 
 export interface SettingsActionsValue {
@@ -71,6 +78,7 @@ export interface SettingsActionsValue {
   setColor: (color: string) => void;
   setGradient: (gradient: GradientSuggested | null) => void;
   setWideScreenModeEnabled: (value: boolean) => void;
+  setLiteModeEnabled: (value: boolean) => void;
 }
 
 export interface SettingsContextValue

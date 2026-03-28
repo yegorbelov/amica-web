@@ -26,6 +26,8 @@ export default function ProfileAppearance() {
     setAutoplayVideos,
     setWideScreenModeEnabled,
     wideScreenModeEnabled,
+    liteModeEnabled,
+    setLiteModeEnabled,
   } = useSettings();
   const { blur, setBlur } = useBlur();
 
@@ -103,154 +105,167 @@ export default function ProfileAppearance() {
         />
       </div>
       <div className={styles.optionRow}>
-        <div>{t('profile.autoplayVideos')}</div>
-        <Toggle
-          checked={autoplayVideos}
-          onChange={(checked) => setAutoplayVideos(checked)}
-        />
+        <div>Lite Mode</div>
+        <Toggle checked={liteModeEnabled} onChange={setLiteModeEnabled} />
       </div>
-      {windowWidth <= 768 && (
-        <div className={styles.optionRow}>
-          <div>{t('profile.useWallpaperThroughout')}</div>
-          <Toggle
-            checked={settings.useBackgroundThroughoutTheApp}
-            onChange={setSetting.bind(null, 'useBackgroundThroughoutTheApp')}
-          />
-        </div>
-      )}
-      {windowWidth > 768 && settings.activeWallpaper && (
+      {!liteModeEnabled && (
         <>
           <div className={styles.optionRow}>
-            <div>{t('profile.wallpaperGlow')}</div>
+            <div>{t('profile.autoplayVideos')}</div>
             <Toggle
-              checked={settings.wallpaperGlowEnabled}
-              onChange={setSetting.bind(null, 'wallpaperGlowEnabled')}
+              checked={autoplayVideos}
+              onChange={(checked) => setAutoplayVideos(checked)}
             />
           </div>
-          <div className={styles.optionRow}>
-            <div>Wide Screen Mode</div>
-            <Toggle
-              checked={wideScreenModeEnabled}
-              onChange={setWideScreenModeEnabled}
-            />
-          </div>
-        </>
-      )}
-
-      <div className={styles.optionRow}>
-        <div className={styles.wallpapersContainer}>
-          {settings.activeWallpaper && (
-            <div className={styles.blurSlider}>
-              <Slider
-                label={t('profile.blur')}
-                value={blur}
-                min={0}
-                max={50}
-                step={1}
-                onChange={handleBlurChange}
+          {windowWidth <= 768 && (
+            <div className={styles.optionRow}>
+              <div>{t('profile.useWallpaperThroughout')}</div>
+              <Toggle
+                checked={settings.useBackgroundThroughoutTheApp}
+                onChange={setSetting.bind(
+                  null,
+                  'useBackgroundThroughoutTheApp',
+                )}
               />
             </div>
           )}
-          <div className={styles.colorChangeContainer}>
-            <Button
-              key={'profile-appearance-change-color-button'}
-              onClick={() => setColorPickerOpen(!colorPickerOpen)}
-              className={styles.changeColorButton}
-            >
-              {colorPickerOpen
-                ? t('profile.closeColorPicker')
-                : t('profile.changeColor')}
-            </Button>
-            {colorPickerOpen && <ColorPicker />}
-          </div>
-          {loading ? (
-            <div>{t('profile.loadingWallpapers')}</div>
-          ) : (
-            <div className={styles.wallpaperList}>
-              <div
-                className={`${styles.wallpaperItem} ${
-                  settings.activeWallpaper === null ? styles.selected : ''
-                }`}
-                onClick={() => setActiveWallpaper(null)}
-              >
-                <div className={styles.wallpaperThumbnailEmpty}>
-                  {t('profile.noBackground')}
-                </div>
+          {windowWidth > 768 && settings.activeWallpaper && (
+            <>
+              <div className={styles.optionRow}>
+                <div>{t('profile.wallpaperGlow')}</div>
+                <Toggle
+                  checked={settings.wallpaperGlowEnabled}
+                  onChange={setSetting.bind(null, 'wallpaperGlowEnabled')}
+                />
               </div>
-              {[...settings.wallpapers].reverse().map((wall) => (
+              <div className={styles.optionRow}>
+                <div>Wide Screen Mode</div>
+                <Toggle
+                  checked={wideScreenModeEnabled}
+                  onChange={setWideScreenModeEnabled}
+                />
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {!liteModeEnabled && (
+        <div className={styles.optionRow}>
+          <div className={styles.wallpapersContainer}>
+            {settings.activeWallpaper && (
+              <div className={styles.blurSlider}>
+                <Slider
+                  label={t('profile.blur')}
+                  value={blur}
+                  min={0}
+                  max={50}
+                  step={1}
+                  onChange={handleBlurChange}
+                />
+              </div>
+            )}
+            <div className={styles.colorChangeContainer}>
+              <Button
+                key={'profile-appearance-change-color-button'}
+                onClick={() => setColorPickerOpen(!colorPickerOpen)}
+                className={styles.changeColorButton}
+              >
+                {colorPickerOpen
+                  ? t('profile.closeColorPicker')
+                  : t('profile.changeColor')}
+              </Button>
+              {colorPickerOpen && <ColorPicker />}
+            </div>
+            {loading ? (
+              <div>{t('profile.loadingWallpapers')}</div>
+            ) : (
+              <div className={styles.wallpaperList}>
                 <div
-                  key={wall.id}
-                  className={`${styles.wallpaperItem}  ${
-                    settings.activeWallpaper?.id === wall.id
-                      ? styles.selected
-                      : ''
+                  className={`${styles.wallpaperItem} ${
+                    settings.activeWallpaper === null ? styles.selected : ''
                   }`}
+                  onClick={() => setActiveWallpaper(null)}
                 >
-                  {settings.activeWallpaper?.id === wall.id && (
-                    <Dropdown
-                      items={[
-                        {
-                          label: t('profile.wallpaperEditMode.natural'),
-                          value: 'natural',
-                        },
-                        {
-                          label: t('profile.wallpaperEditMode.blackAndWhite'),
-                          value: 'black-and-white',
-                        },
-                        {
-                          label: t('profile.wallpaperEditMode.colourWash'),
-                          value: 'colour-wash',
-                        },
-                      ]}
-                      value={settings.activeWallpaperEditMode ?? 'natural'}
-                      placeholder={t('buttons.edit')}
-                      onChange={(value) =>
-                        setSetting(
-                          'activeWallpaperEditMode',
-                          value as
-                            | 'natural'
-                            | 'black-and-white'
-                            | 'colour-wash',
-                        )
-                      }
-                      buttonStyles={styles.editSelectedWallpaper}
-                      dropdownStyles={styles.editSelectedWallpaperDropdown}
-                    />
-                  )}
-                  {wall.type === 'video' ? (
-                    <video
-                      src={wall.url || ''}
-                      className={`${styles.wallpaperThumbnail}`}
-                      onClick={() => handleSelectWallpaper(wall)}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      preload='none'
-                    />
-                  ) : (
-                    <img
-                      src={wall.url || ''}
-                      alt={`Wallpaper ${wall.id}`}
-                      className={`${styles.wallpaperThumbnail}`}
-                      onClick={() => handleSelectWallpaper(wall)}
-                      fetchPriority='low'
-                      loading='lazy'
-                      decoding='async'
-                    />
-                  )}
-                  <div
-                    className={styles.removeWallpaper}
-                    onClick={removeWallpaper.bind(null, wall.id as string)}
-                  >
-                    {crossIcon}
+                  <div className={styles.wallpaperThumbnailEmpty}>
+                    {t('profile.noBackground')}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+                {[...settings.wallpapers].reverse().map((wall) => (
+                  <div
+                    key={wall.id}
+                    className={`${styles.wallpaperItem}  ${
+                      settings.activeWallpaper?.id === wall.id
+                        ? styles.selected
+                        : ''
+                    }`}
+                  >
+                    {settings.activeWallpaper?.id === wall.id && (
+                      <Dropdown
+                        items={[
+                          {
+                            label: t('profile.wallpaperEditMode.natural'),
+                            value: 'natural',
+                          },
+                          {
+                            label: t('profile.wallpaperEditMode.blackAndWhite'),
+                            value: 'black-and-white',
+                          },
+                          {
+                            label: t('profile.wallpaperEditMode.colourWash'),
+                            value: 'colour-wash',
+                          },
+                        ]}
+                        value={settings.activeWallpaperEditMode ?? 'natural'}
+                        placeholder={t('buttons.edit')}
+                        onChange={(value) =>
+                          setSetting(
+                            'activeWallpaperEditMode',
+                            value as
+                              | 'natural'
+                              | 'black-and-white'
+                              | 'colour-wash',
+                          )
+                        }
+                        buttonStyles={styles.editSelectedWallpaper}
+                        dropdownStyles={styles.editSelectedWallpaperDropdown}
+                      />
+                    )}
+                    {wall.type === 'video' ? (
+                      <video
+                        src={wall.url || ''}
+                        className={`${styles.wallpaperThumbnail}`}
+                        onClick={() => handleSelectWallpaper(wall)}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload='none'
+                      />
+                    ) : (
+                      <img
+                        src={wall.url || ''}
+                        alt={`Wallpaper ${wall.id}`}
+                        className={`${styles.wallpaperThumbnail}`}
+                        onClick={() => handleSelectWallpaper(wall)}
+                        fetchPriority='low'
+                        loading='lazy'
+                        decoding='async'
+                      />
+                    )}
+                    <div
+                      className={styles.removeWallpaper}
+                      onClick={removeWallpaper.bind(null, wall.id as string)}
+                    >
+                      {crossIcon}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

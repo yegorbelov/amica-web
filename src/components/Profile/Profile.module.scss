@@ -437,7 +437,7 @@
   padding: 14px;
   border-radius: 32px;
   background-color: rgba(0, 0, 0, 0.1);
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
 
   &__icon {
     color: #fff;
@@ -451,7 +451,7 @@
       var(--background-color),
       color-mix(in srgb, var(--background-color) 50%, #fff)
     );
-    box-shadow: $glass-shadow;
+    box-shadow: var(--glass-shadow);
   }
 
   &__title {
@@ -655,7 +655,7 @@ $suggestedColorPreviewSize: 40px;
   border: none;
   border-radius: 20px;
   cursor: pointer;
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
 }
 
 .customGradientPreviewInfo {

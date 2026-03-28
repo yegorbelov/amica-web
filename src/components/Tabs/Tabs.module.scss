@@ -142,7 +142,7 @@
 .drag-indicator--dragging,
 .drag-indicator--moving {
   // border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
 }
 
 .drag-indicator--active {

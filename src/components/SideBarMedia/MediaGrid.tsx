@@ -7,17 +7,29 @@ import styles from './SideBarMedia.module.scss';
 interface MediaGridProps {
   files: File[];
   rowScale: number;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-const MediaGrid: React.FC<MediaGridProps> = ({ files, rowScale }) => (
+const MediaGrid: React.FC<MediaGridProps> = ({
+  files,
+  rowScale,
+  className,
+  style,
+}) => (
   <div
-    className={styles.grid}
+    className={[styles.grid, className].filter(Boolean).join(' ')}
     style={{
       gridTemplateColumns: `repeat(${rowScale}, 1fr)`,
+      ...style,
     }}
   >
     {files.map((file) => (
-      <div key={file.id} className={styles.mediaWrapper}>
+      <div
+        key={file.id}
+        className={styles.mediaWrapper}
+        data-media-id={String(file.id)}
+      >
         {file.category === 'image' && (
           <ProgressiveImage
             small={file.thumbnail_small_url ?? null}

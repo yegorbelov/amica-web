@@ -91,7 +91,7 @@
   gap: 4px;
   border-radius: 24px;
   border: 0.5px solid #999;
-  box-shadow: $glass-shadow;
+  box-shadow: var(--glass-shadow);
   background-color: var(--surface-button-bg);
   backdrop-filter: blur(2px);
   padding: 10px 20px;
