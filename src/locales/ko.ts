@@ -160,6 +160,7 @@ export default {
     fileUploading: '업로드 중',
     fileStreaming: '답변 수신 중…',
     fileItemUploading: '전송 중…',
+    fileItemCompressing: '처리 중…',
     removeFile: '파일 제거',
   },
   dateGroup: {

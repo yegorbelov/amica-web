@@ -161,6 +161,7 @@ export default {
     fileUploading: 'Uploading',
     fileStreaming: 'Receiving reply…',
     fileItemUploading: 'Sending…',
+    fileItemCompressing: 'Processing…',
     removeFile: 'Remove file',
   },
   dateGroup: {

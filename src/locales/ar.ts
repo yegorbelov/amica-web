@@ -160,6 +160,7 @@ export default {
     fileUploading: 'جاري الرفع',
     fileStreaming: 'جاري استلام الرد…',
     fileItemUploading: 'جاري الإرسال…',
+    fileItemCompressing: 'جاري المعالجة…',
     removeFile: 'إزالة الملف',
   },
   dateGroup: {

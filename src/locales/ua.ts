@@ -160,6 +160,7 @@ export default {
     fileUploading: 'Завантаження',
     fileStreaming: 'Отримання відповіді…',
     fileItemUploading: 'Надсилання…',
+    fileItemCompressing: 'Обробка…',
     removeFile: 'Прибрати файл',
   },
   dateGroup: {

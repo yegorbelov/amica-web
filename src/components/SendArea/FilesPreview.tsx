@@ -9,6 +9,7 @@ interface FilesPreviewProps {
   files: File[];
   onClearAll: () => void;
   onRemoveFile: (index: number) => void;
+  isCompressing?: boolean;
   isUploading?: boolean;
   uploadProgress?: number;
 }
@@ -26,10 +27,12 @@ const FilesPreview: React.FC<FilesPreviewProps> = ({
   files,
   onClearAll,
   onRemoveFile,
+  isCompressing = false,
   isUploading = false,
   uploadProgress = 0,
 }) => {
   const { t } = useTranslation();
+  const isBusy = isCompressing || isUploading;
 
   const formatPreviewTitle = (filesCount: number) =>
     filesCount === 1
@@ -69,7 +72,7 @@ const FilesPreview: React.FC<FilesPreviewProps> = ({
           onClick={onClearAll}
           aria-label={t('sendArea.clearAllFiles')}
           type='button'
-          disabled={isUploading}
+          disabled={isBusy}
         >
           {t('sendArea.clearAll')}
         </Button>
@@ -84,7 +87,7 @@ const FilesPreview: React.FC<FilesPreviewProps> = ({
             <div
               key={`${file.name}-${file.size}-${index}`}
               className={styles['file-preview-item']}
-              aria-busy={isUploading}
+              aria-busy={isBusy}
             >
               {fileType === 'image' && previewUrl && (
                 <img
@@ -116,7 +119,7 @@ const FilesPreview: React.FC<FilesPreviewProps> = ({
                 </span>
               </div>
 
-              {isUploading && (
+              {isBusy && (
                 <div
                   className={styles['file-preview-upload-overlay']}
                   aria-hidden
@@ -125,11 +128,13 @@ const FilesPreview: React.FC<FilesPreviewProps> = ({
                     className={styles['file-preview-upload-overlay__spinner']}
                   />
                   <span className={styles['file-preview-upload-overlay__text']}>
-                    {uploadProgress > 0
-                      ? `${uploadProgress}%`
-                      : t('sendArea.fileItemUploading')}
+                    {isCompressing
+                      ? t('sendArea.fileItemCompressing')
+                      : uploadProgress > 0
+                        ? `${uploadProgress}%`
+                        : t('sendArea.fileItemUploading')}
                   </span>
-                  {uploadProgress > 0 && (
+                  {!isCompressing && uploadProgress > 0 && (
                     <div className={styles['file-preview-upload-overlay__track']}>
                       <div
                         className={styles['file-preview-upload-overlay__bar']}
@@ -140,7 +145,7 @@ const FilesPreview: React.FC<FilesPreviewProps> = ({
                 </div>
               )}
 
-              {!isUploading && (
+              {!isBusy && (
                 <button
                   onClick={() => onRemoveFile(index)}
                   type='button'

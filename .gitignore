@@ -8,6 +8,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+
+# stb (fetched by scripts/ensure-stb.mjs for local wasm builds)
+native/image_compress/third_party/stb
+
 dist
 dist-ssr
 *.local

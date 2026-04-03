@@ -160,6 +160,7 @@ export default {
     fileUploading: 'Envoi en cours',
     fileStreaming: 'Réception de la réponse…',
     fileItemUploading: 'Envoi…',
+    fileItemCompressing: 'Traitement…',
     removeFile: 'Retirer le fichier',
   },
   dateGroup: {

@@ -160,6 +160,7 @@ export default {
     fileUploading: 'アップロード中',
     fileStreaming: '返信を受信中…',
     fileItemUploading: '送信中…',
+    fileItemCompressing: '処理中…',
     removeFile: 'ファイルを削除',
   },
   dateGroup: {

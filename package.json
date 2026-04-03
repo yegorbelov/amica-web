@@ -13,6 +13,8 @@
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
     "gen:icons": "node scripts/generate-icons.ts",
+    "ensure-stb": "node scripts/ensure-stb.mjs",
+    "build:wasm": "bash scripts/build-image-compress-wasm.sh",
     "test": "echo \"No tests yet\"",
     "update-build-lockfile": "node scripts/update-build-lockfile.mjs"
   },

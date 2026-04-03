@@ -22,12 +22,20 @@ import styles from './SendArea.module.scss';
 import { useUser } from '../../contexts/UserContextCore';
 import { useTranslation } from '@/contexts/languageCore';
 import { useSearchContext } from '@/contexts/search/SearchContextCore';
+import {
+  shouldUseChunkedVideoUpload,
+  uploadMessageFilesChunked,
+} from '@/lib/upload/chunkedMessageUpload';
 import { apiUpload } from '../../utils/apiFetch';
 import { Icon } from '../Icons/AutoIcons';
 import DropZone from '../DropZone/DropZone';
 import JumpToBottom from '../JumpToBottom/JumpToBottom';
 import Button from '../ui/button/Button';
 import FilesPreview from './FilesPreview';
+import {
+  compressRasterImage,
+  shouldTryRasterCompress,
+} from '@/lib/image-compress/compressImageWasm';
 
 interface SendAreaProps {
   isSelectionMode?: boolean;
@@ -45,9 +53,9 @@ const MessageInput: React.FC<SendAreaProps> = ({
   const { t } = useTranslation();
   const [message, setMessage] = useState('');
   const [files, setFiles] = useState<File[]>([]);
-  /** idle → XHR upload → WS: канал ждёт чужой ответ; D/G — своё сообщение в чате */
+  /** idle → WASM compress (worker) → XHR upload → WS: канал ждёт чужой ответ; D/G — своё сообщение в чате */
   const [fileSendPhase, setFileSendPhase] = useState<
-    'idle' | 'uploading' | 'streaming'
+    'idle' | 'compressing' | 'uploading' | 'streaming'
   >('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -220,14 +228,31 @@ const MessageInput: React.FC<SendAreaProps> = ({
       const uploadChatId = chatId;
       const uploadChatType = selectedChat?.type;
 
-      const formData = new FormData();
+      const needsCompress = filesToSend.some((f) => shouldTryRasterCompress(f));
+      if (needsCompress) {
+        fileSendPhaseRef.current = 'compressing';
+        setFileSendPhase('compressing');
+      }
 
-      formData.append('message', textMessage);
-      formData.append('chat_id', chatId.toString());
+      let prepared: File[];
+      try {
+        prepared = await Promise.all(
+          filesToSend.map(async (file) => {
+            if (shouldTryRasterCompress(file)) {
+              const compressed = await compressRasterImage(file);
+              return compressed ?? file;
+            }
+            return file;
+          }),
+        );
+      } catch (compressErr) {
+        console.error('Error compressing files:', compressErr);
+        fileSendPhaseRef.current = 'idle';
+        setFileSendPhase('idle');
+        return false;
+      }
 
-      filesToSend.forEach((file) => {
-        formData.append('file', file);
-      });
+      setFiles(prepared);
 
       try {
         clearStreamDebounce();
@@ -238,9 +263,26 @@ const MessageInput: React.FC<SendAreaProps> = ({
         fileSendPhaseRef.current = 'uploading';
         setFileSendPhase('uploading');
 
-        await apiUpload('/api/messages/', formData, (percent) => {
-          if (chatIdRef.current === uploadChatId) setUploadProgress(percent);
-        });
+        if (shouldUseChunkedVideoUpload(prepared)) {
+          await uploadMessageFilesChunked(
+            prepared,
+            chatId,
+            textMessage,
+            (percent) => {
+              if (chatIdRef.current === uploadChatId) setUploadProgress(percent);
+            },
+          );
+        } else {
+          const formData = new FormData();
+          formData.append('message', textMessage);
+          formData.append('chat_id', chatId.toString());
+          prepared.forEach((file) => {
+            formData.append('file', file);
+          });
+          await apiUpload('/api/messages/', formData, (percent) => {
+            if (chatIdRef.current === uploadChatId) setUploadProgress(percent);
+          });
+        }
 
         if (chatIdRef.current !== uploadChatId) {
           fileSendPhaseRef.current = 'idle';
@@ -279,7 +321,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
         return false;
       }
     },
-    [user?.id, chatId, selectedChat?.type, clearStreamDebounce],
+    [user?.id, chatId, selectedChat?.type, clearStreamDebounce, setFiles],
   );
 
   useEffect(() => {
@@ -716,6 +758,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
                   files={files}
                   onClearAll={() => setFiles([])}
                   onRemoveFile={removeFile}
+                  isCompressing={fileSendPhase === 'compressing'}
                   isUploading={fileSendPhase === 'uploading'}
                   uploadProgress={uploadProgress}
                 />
