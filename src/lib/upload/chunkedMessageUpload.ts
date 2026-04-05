@@ -5,6 +5,12 @@ import type { WebSocketMessage } from '@/utils/websocket-manager';
 const CHUNK_WS_TIMEOUT_MS = 120_000;
 const CHUNK_UPLOAD_MAX_INFLIGHT_BYTES = 24 * 1024 * 1024;
 
+/** Adaptive chunk size bounds for message attachment uploads. */
+const MIN_MESSAGE_CHUNK_UPLOAD_BYTES = 512 * 1024;
+const MAX_MESSAGE_CHUNK_UPLOAD_BYTES = 4 * 1024 * 1024;
+const CHUNK_UPLOAD_TARGET_CHUNKS = 128;
+const CHUNK_UPLOAD_ALIGNMENT_BYTES = 64 * 1024;
+
 let chunkWsRequestSeq = 0;
 
 const chunkWsPending = new Map<
@@ -52,12 +58,20 @@ class InflightBytesLimiter {
 
 function makeChunkBinaryFrame(
   requestId: number,
+  uploadId: string,
+  chunkIndex: number,
   payload: Uint8Array,
 ): Uint8Array {
-  const frame = new Uint8Array(4 + payload.byteLength);
+  const uploadIdBytes = new TextEncoder().encode(uploadId);
+  const frame = new Uint8Array(
+    4 + 4 + 2 + uploadIdBytes.byteLength + payload.byteLength,
+  );
   const dv = new DataView(frame.buffer);
   dv.setUint32(0, requestId, false);
-  frame.set(payload, 4);
+  dv.setUint32(4, chunkIndex, false);
+  dv.setUint16(8, uploadIdBytes.byteLength, false);
+  frame.set(uploadIdBytes, 10);
+  frame.set(payload, 10 + uploadIdBytes.byteLength);
   return frame;
 }
 
@@ -75,20 +89,29 @@ function ensureChunkWsResponseListener(): void {
     }
     const raw = data as {
       request_id?: number;
+      request_ids?: number[];
       ok?: boolean;
       error?: string;
     };
-    const id = raw.request_id;
-    if (id == null || typeof id !== 'number') return;
-    const p = chunkWsPending.get(id);
-    if (!p) return;
-    clearTimeout(p.timer);
-    chunkWsPending.delete(id);
-    if (raw.ok === false) {
-      p.reject(new Error(raw.error || 'Chunk upload failed'));
-    } else {
-      p.resolve(data);
-    }
+    const ids =
+      Array.isArray(raw.request_ids) && raw.request_ids.length > 0
+        ? raw.request_ids.filter((v): v is number => typeof v === 'number')
+        : typeof raw.request_id === 'number'
+          ? [raw.request_id]
+          : [];
+    if (ids.length === 0) return;
+
+    ids.forEach((id) => {
+      const p = chunkWsPending.get(id);
+      if (!p) return;
+      clearTimeout(p.timer);
+      chunkWsPending.delete(id);
+      if (raw.ok === false) {
+        p.reject(new Error(raw.error || 'Chunk upload failed'));
+      } else {
+        p.resolve(data);
+      }
+    });
   });
 }
 
@@ -125,7 +148,7 @@ async function chunkWsPartBinaryRpc(
   ensureChunkWsResponseListener();
   const request_id = ++chunkWsRequestSeq;
   const raw = new Uint8Array(await blob.arrayBuffer());
-  const frame = makeChunkBinaryFrame(request_id, raw);
+  const frame = makeChunkBinaryFrame(request_id, uploadId, chunkIndex, raw);
 
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -138,21 +161,6 @@ async function chunkWsPartBinaryRpc(
       timer,
     });
 
-    const sentMeta = websocketManager.sendMessage({
-      type: 'message_chunk_part',
-      request_id,
-      data: {
-        upload_id: uploadId,
-        chunk_index: chunkIndex,
-      },
-    } as unknown as WebSocketMessage);
-    if (!sentMeta) {
-      clearTimeout(timer);
-      chunkWsPending.delete(request_id);
-      reject(new Error('WebSocket not connected (part metadata)'));
-      return;
-    }
-
     const sentBinary = websocketManager.sendBinary(frame);
     if (!sentBinary) {
       clearTimeout(timer);
@@ -161,9 +169,6 @@ async function chunkWsPartBinaryRpc(
     }
   });
 }
-
-/** Use chunked + parallel upload when a video is at least this size. */
-export const VIDEO_CHUNK_UPLOAD_MIN_BYTES = 3 * 1024 * 1024;
 
 export const CHUNK_UPLOAD_PARALLELISM = 6;
 
@@ -200,9 +205,18 @@ function getDeclaredMediaKind(file: File): MediaKind {
 }
 
 export function shouldUseChunkedVideoUpload(files: File[]): boolean {
-  return files.some(
-    (f) =>
-      f.type.startsWith('video/') && f.size >= VIDEO_CHUNK_UPLOAD_MIN_BYTES,
+  return files.some((f) => f.type.startsWith('video/'));
+}
+
+function getAdaptiveChunkSizeBytes(fileSize: number): number {
+  if (fileSize <= 0) return MIN_MESSAGE_CHUNK_UPLOAD_BYTES;
+  const raw = Math.ceil(fileSize / CHUNK_UPLOAD_TARGET_CHUNKS);
+  const aligned =
+    Math.ceil(raw / CHUNK_UPLOAD_ALIGNMENT_BYTES) *
+    CHUNK_UPLOAD_ALIGNMENT_BYTES;
+  return Math.min(
+    MAX_MESSAGE_CHUNK_UPLOAD_BYTES,
+    Math.max(MIN_MESSAGE_CHUNK_UPLOAD_BYTES, aligned),
   );
 }
 
@@ -226,6 +240,7 @@ async function uploadSingleFileChunks(
   const inFlightLimiter = new InflightBytesLimiter(
     CHUNK_UPLOAD_MAX_INFLIGHT_BYTES,
   );
+  const requestedChunkSize = getAdaptiveChunkSizeBytes(file.size);
   const initRes = await apiFetch('/api/messages/chunk/init/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -235,6 +250,7 @@ async function uploadSingleFileChunks(
       mime_type: file.type || null,
       media_kind: getDeclaredMediaKind(file),
       total_size: file.size,
+      chunk_size: requestedChunkSize,
     }),
   });
 
@@ -384,12 +400,14 @@ async function uploadSingleFileChunksWs(
   const inFlightLimiter = new InflightBytesLimiter(
     CHUNK_UPLOAD_MAX_INFLIGHT_BYTES,
   );
+  const requestedChunkSize = getAdaptiveChunkSizeBytes(file.size);
   const initRaw = (await chunkWsRpc('message_chunk_init', {
     chat_id: chatId,
     filename: file.name,
     mime_type: file.type || null,
     media_kind: getDeclaredMediaKind(file),
     total_size: file.size,
+    chunk_size: requestedChunkSize,
   })) as {
     ok?: boolean;
     upload_id: string;
