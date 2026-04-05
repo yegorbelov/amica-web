@@ -226,29 +226,36 @@ const MessageInput: React.FC<SendAreaProps> = ({
 
       const uploadChatId = chatId;
       const uploadChatType = selectedChat?.type;
+      const useChunkedUpload = shouldUseChunkedVideoUpload(filesToSend);
 
-      const needsCompress = filesToSend.some((f) => shouldTryRasterCompress(f));
+      const needsCompress =
+        !useChunkedUpload && filesToSend.some((f) => shouldTryRasterCompress(f));
       if (needsCompress) {
         fileSendPhaseRef.current = 'compressing';
         setFileSendPhase('compressing');
       }
 
       let prepared: File[];
-      try {
-        prepared = await Promise.all(
-          filesToSend.map(async (file) => {
-            if (shouldTryRasterCompress(file)) {
-              const compressed = await compressRasterImage(file);
-              return compressed ?? file;
-            }
-            return file;
-          }),
-        );
-      } catch (compressErr) {
-        console.error('Error compressing files:', compressErr);
-        fileSendPhaseRef.current = 'idle';
-        setFileSendPhase('idle');
-        return false;
+      if (useChunkedUpload) {
+        // Start chunked upload immediately for videos; avoid waiting on preprocessing.
+        prepared = filesToSend;
+      } else {
+        try {
+          prepared = await Promise.all(
+            filesToSend.map(async (file) => {
+              if (shouldTryRasterCompress(file)) {
+                const compressed = await compressRasterImage(file);
+                return compressed ?? file;
+              }
+              return file;
+            }),
+          );
+        } catch (compressErr) {
+          console.error('Error compressing files:', compressErr);
+          fileSendPhaseRef.current = 'idle';
+          setFileSendPhase('idle');
+          return false;
+        }
       }
 
       setFiles(prepared);
@@ -299,7 +306,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
           });
         };
 
-        if (shouldUseChunkedVideoUpload(prepared)) {
+        if (useChunkedUpload) {
           await uploadMessageFilesChunkedPreferWs(
             prepared,
             chatId,
