@@ -116,17 +116,84 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     return chats.find((c) => c.id === selectedChatId) ?? null;
   }, [chats, selectedChatId, temporaryChat]);
 
+  const requestChatViaWs = useCallback(
+    async (
+      chatId: number,
+      options?: {
+        cursor?: number;
+        cursor_newer?: number;
+        page_size?: number;
+        timeoutMs?: number;
+      },
+    ) => {
+      await websocketManager.waitForConnection();
+      return new Promise<{
+        chat_id?: number;
+        media?: Chat['media'];
+        members?: Chat['members'];
+        messages?: Message[];
+        next_cursor?: number | null;
+        next_newer_cursor?: number | null;
+      }>((resolve, reject) => {
+        const timeoutId = window.setTimeout(() => {
+          cleanup();
+          reject(new Error('get_chat timeout'));
+        }, options?.timeoutMs ?? 10000);
+
+        const cleanup = () => {
+          window.clearTimeout(timeoutId);
+          websocketManager.off('chat', handleChat);
+        };
+
+        const handleChat = (
+          data: WebSocketMessage & {
+            chat_id?: number;
+            media?: unknown;
+            members?: unknown;
+            messages?: unknown[];
+            next_cursor?: number | null;
+            next_newer_cursor?: number | null;
+          },
+        ) => {
+          if (data.chat_id !== chatId) return;
+          cleanup();
+          resolve({
+            chat_id: data.chat_id,
+            media: data.media as Chat['media'] | undefined,
+            members: data.members as Chat['members'] | undefined,
+            messages: data.messages as Message[] | undefined,
+            next_cursor: data.next_cursor ?? null,
+            next_newer_cursor: data.next_newer_cursor ?? null,
+          });
+        };
+
+        websocketManager.on('chat', handleChat);
+        const sent = websocketManager.sendMessage({
+          type: 'get_chat',
+          chat_id: chatId,
+          cursor: options?.cursor,
+          cursor_newer: options?.cursor_newer,
+          page_size: options?.page_size ?? 25,
+        });
+        if (!sent) {
+          cleanup();
+          reject(new Error('WebSocket not connected'));
+        }
+      });
+    },
+    [],
+  );
+
   const loadOlderMessages = useCallback(
     async (chatId: number): Promise<boolean> => {
       const cursor = nextCursorByChatRef.current[chatId];
       if (cursor === null || cursor === undefined) return false;
       setLoadingOlderChatId(chatId);
       try {
-        const res = await apiFetch(
-          `/api/get_chat/${chatId}/?cursor=${cursor}&page_size=25`,
-        );
-        if (!res.ok) return true;
-        const data = (await res.json()) as {
+        const data = (await requestChatViaWs(chatId, {
+          cursor,
+          page_size: 25,
+        })) as {
           messages?: Message[];
           next_cursor?: number | null;
           media?: Chat['media'];
@@ -144,7 +211,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         setLoadingOlderChatId((prev) => (prev === chatId ? null : prev));
       }
     },
-    [prependMessages],
+    [prependMessages, requestChatViaWs],
   );
 
   const loadNewerMessages = useCallback(
@@ -156,11 +223,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       if (newestId == null) return false;
       setLoadingNewerChatId(chatId);
       try {
-        const res = await apiFetch(
-          `/api/get_chat/${chatId}/?cursor_newer=${newestId}&page_size=25`,
-        );
-        if (!res.ok) return true;
-        const data = (await res.json()) as {
+        const data = (await requestChatViaWs(chatId, {
+          cursor_newer: newestId,
+          page_size: 25,
+        })) as {
           messages?: Message[];
           next_newer_cursor?: number | null;
           media?: Chat['media'];
@@ -177,7 +243,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         setLoadingNewerChatId((prev) => (prev === chatId ? null : prev));
       }
     },
-    [getCachedMessages, appendMessages],
+    [getCachedMessages, appendMessages, requestChatViaWs],
   );
 
   const updateChatLastMessage = useCallback(
@@ -270,6 +336,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   const selectChat = useCallback((chatId: number | null) => {
+    selectedChatIdRef.current = chatId;
     setSelectedChatId(chatId);
     // Don't clear editingMessage here — SendArea restores or clears it when chatId changes
   }, []);
@@ -330,10 +397,11 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         if (!isPrepend) setSelectedChatId(chatId);
       };
 
-      const clearLoadingForThis = () =>
-        setLoadingChatId((prev) => (prev === chatId ? null : prev));
-
-      const startWsGetChat = () => {
+      try {
+        if (selectedChatIdRef.current !== chatId) {
+          setLoadingChatId((prev) => (prev === chatId ? null : prev));
+          return;
+        }
         if (!wsGetChatRequestedOnceRef.current[chatId]) {
           wsGetChatRequestedOnceRef.current[chatId] = true;
           const cached = getCachedMessages(chatId);
@@ -342,93 +410,20 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
             wsInitialAnimationPendingRef.current[chatId] = true;
           }
         }
-        const timeoutId = window.setTimeout(() => {
-          websocketManager.off('chat', handleChat);
-          websocketManager.off('message', handleError);
-          clearLoadingForThis();
-          apiFetch(`/api/get_chat/${chatId}/`)
-            .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-            .then(applyChatData)
-            .catch(() => {
-              delete wsInitialAnimationPendingRef.current[chatId];
-              setLoadingChatId((prev) => (prev === chatId ? null : prev));
-              if (selectedChatIdRef.current === chatId) {
-                updateMessages([], chatId);
-                setSelectedChatId(chatId);
-              }
-            });
-        }, 10000);
 
-        const handleChat = (
-          data: WebSocketMessage & {
-            chat_id?: number;
-            media?: Chat['media'];
-            members?: Chat['members'];
-            messages?: Message[];
-            next_cursor?: number | null;
-          },
-        ) => {
-          if (data.chat_id !== chatId) return;
-          window.clearTimeout(timeoutId);
-          websocketManager.off('chat', handleChat);
-          websocketManager.off('message', handleError);
-          applyChatData(data);
-        };
-
-        const handleError = (msg: { type?: string }) => {
-          if (msg.type !== 'error') return;
-          window.clearTimeout(timeoutId);
-          websocketManager.off('chat', handleChat);
-          websocketManager.off('message', handleError);
-          clearLoadingForThis();
-          apiFetch(`/api/get_chat/${chatId}/`)
-            .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-            .then(applyChatData)
-            .catch(() => {
-              delete wsInitialAnimationPendingRef.current[chatId];
-              setLoadingChatId((prev) => (prev === chatId ? null : prev));
-              if (selectedChatIdRef.current === chatId) {
-                updateMessages([], chatId);
-                setSelectedChatId(chatId);
-              }
-            });
-        };
-
-        websocketManager.on('chat', handleChat);
-        websocketManager.on('message', handleError);
-        websocketManager.sendMessage({ type: 'get_chat', chat_id: chatId });
-      };
-
-      try {
-        if (!websocketManager.isConnected()) {
-          await websocketManager.waitForConnection();
-        }
-        if (selectedChatIdRef.current !== chatId) {
-          clearLoadingForThis();
-          return;
-        }
-        startWsGetChat();
+        const data = await requestChatViaWs(chatId, { page_size: 25 });
+        applyChatData(data);
       } catch (err) {
         console.error(err);
-        try {
-          const res = await apiFetch(`/api/get_chat/${chatId}/`);
-          if (!res.ok) {
-            throw new Error(`Failed: ${res.status}`, { cause: err });
-          }
-          const data = await res.json();
-          applyChatData(data);
-        } catch (fallbackErr) {
-          delete wsInitialAnimationPendingRef.current[chatId];
-          console.error(fallbackErr);
-          setLoadingChatId((prev) => (prev === chatId ? null : prev));
-          if (selectedChatIdRef.current === chatId) {
-            updateMessages([], chatId);
-            setSelectedChatId(chatId);
-          }
+        delete wsInitialAnimationPendingRef.current[chatId];
+        setLoadingChatId((prev) => (prev === chatId ? null : prev));
+        if (selectedChatIdRef.current === chatId) {
+          updateMessages([], chatId);
+          setSelectedChatId(chatId);
         }
       }
     },
-    [updateMessages, prependMessages, getCachedMessages],
+    [updateMessages, prependMessages, getCachedMessages, requestChatViaWs],
   );
 
   const saveContact = useCallback(

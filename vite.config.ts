@@ -47,6 +47,27 @@ const brotliParams = {
   [zlib.constants.BROTLI_PARAM_LGWIN]: 24,
 } as const;
 
+/** Precompressed .br / .gz only when `build:ci` sets `AMICA_BUILD_COMPRESS=1`. */
+const compressPlugins: Plugin[] =
+  process.env.AMICA_BUILD_COMPRESS === '1'
+    ? [
+        compression({
+          algorithm: 'brotliCompress',
+          ext: '.br',
+          filter: /\.(js|mjs|css|html)$/i,
+          threshold: 1024,
+          compressionOptions: { params: { ...brotliParams } },
+        }),
+        compression({
+          algorithm: 'gzip',
+          ext: '.gz',
+          filter: /\.(js|mjs|css|html)$/i,
+          threshold: 1024,
+          compressionOptions: { level: zlib.constants.Z_BEST_COMPRESSION },
+        }),
+      ]
+    : [];
+
 export default defineConfig({
   // Module worker + dynamic import (e.g. wasm ?url) produces multiple chunks; iife cannot.
   worker: { format: 'es' },
@@ -65,22 +86,7 @@ export default defineConfig({
   plugins: [
     imageCompressWasmPlaceholder(),
     react(),
-
-    compression({
-      algorithm: 'brotliCompress',
-      ext: '.br',
-      filter: /\.(js|mjs|css|html)$/i,
-      threshold: 1024,
-      compressionOptions: { params: { ...brotliParams } },
-    }),
-
-    compression({
-      algorithm: 'gzip',
-      ext: '.gz',
-      filter: /\.(js|mjs|css|html)$/i,
-      threshold: 1024,
-      compressionOptions: { level: zlib.constants.Z_BEST_COMPRESSION },
-    }),
+    ...compressPlugins,
   ],
   resolve: {
     alias: {

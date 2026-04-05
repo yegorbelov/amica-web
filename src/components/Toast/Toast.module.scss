@@ -4,10 +4,11 @@
   position: fixed;
   left: 50%;
   top: 50%;
-  background: var(--surface-bg);
+  background: var(--surface-button-bg);
   color: var(--color-text);
   backdrop-filter: blur(5px);
   box-shadow: var(--glass-shadow);
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
   padding: 14px 22px;
   border-radius: 32px;
   font-size: 14px;

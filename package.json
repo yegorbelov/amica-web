@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:ci": "bun run typecheck && bun run lint && bun run build",
+    "build:ci": "bun run typecheck && bun run lint && AMICA_BUILD_COMPRESS=1 vite build",
     "build:ignore": "bun run build",
     "typecheck": "tsc -b",
     "lint": "eslint src scripts vite.config.ts --cache --cache-location .eslintcache",

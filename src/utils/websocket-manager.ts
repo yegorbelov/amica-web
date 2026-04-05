@@ -33,6 +33,9 @@ export interface WebSocketMessageData {
 export interface WebSocketMessage {
   type: string;
   chat_id?: number;
+  cursor?: number;
+  cursor_newer?: number;
+  page_size?: number;
   data?: WebSocketMessageData;
   temp_chat_id?: number;
   chat?: unknown;
@@ -98,6 +101,8 @@ interface WebSocketEventMap {
       media?: unknown;
       members?: unknown;
       messages?: unknown[];
+      next_cursor?: number | null;
+      next_newer_cursor?: number | null;
     },
   ) => void;
   group_members_updated: (

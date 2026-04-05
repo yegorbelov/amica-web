@@ -26,6 +26,8 @@ const Wallpaper: React.FC<Props> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [, setIsPlaying] = useState(false);
 
+  console.log('activeWallpaper', activeWallpaper);
+
   const colourWash = settings.activeWallpaperEditMode === 'colour-wash';
   const blackAndWhite = settings.activeWallpaperEditMode === 'black-and-white';
 
