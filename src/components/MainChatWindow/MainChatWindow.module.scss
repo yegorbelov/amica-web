@@ -8,7 +8,6 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  container: main_chat_window / inline-size;
   overflow: hidden;
   contain: style;
 
@@ -119,13 +118,17 @@
   scale: 1;
 }
 
-@container main_chat_window (max-width: 1094px) {
-  :global(.room_wrapper.shifted) {
-    margin-right: 0;
-  }
-  :global(.main_chat_window:has(.room_wrapper.shifted) .send_area) {
-    margin-right: 0;
-  }
+:global(
+  .main_chat_window.main_chat_window--narrow-stack .room_wrapper.shifted
+) {
+  margin-right: 0;
+}
+
+:global(
+  .main_chat_window.main_chat_window--narrow-stack:has(.room_wrapper.shifted)
+    .send_area
+) {
+  margin-right: 0;
 }
 
 @media screen and (max-width: 768px) {

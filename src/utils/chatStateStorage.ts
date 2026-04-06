@@ -2,7 +2,46 @@ import type { Chat, Message } from '@/types';
 
 const DB_NAME = 'amica-chat-state';
 const STORE_NAME = 'state';
-const DB_VERSION = 1;
+const LAYOUT_STORE_NAME = 'layout';
+const CHATS_SIDEBAR_WIDTH_KEY = 'chatsSidebarWidth';
+const CHATS_SIDEBAR_WIDTH_SESSION_KEY = 'amica-chats-sidebar-width';
+const CHATS_SIDEBAR_STORED_MIN_PX = 80;
+const CHATS_SIDEBAR_STORED_MAX_PX = 500;
+const DB_VERSION = 2;
+
+export function clampChatsSidebarWidthForStorage(widthPx: number): number {
+  return Math.min(
+    CHATS_SIDEBAR_STORED_MAX_PX,
+    Math.max(CHATS_SIDEBAR_STORED_MIN_PX, Math.round(widthPx)),
+  );
+}
+
+export function readChatsSidebarWidthFromSessionStorageSync(): number | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(CHATS_SIDEBAR_WIDTH_SESSION_KEY);
+    if (raw == null) return null;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return null;
+    return clampChatsSidebarWidthForStorage(n);
+  } catch {
+    return null;
+  }
+}
+
+export function writeChatsSidebarWidthToSessionStorageSync(
+  widthPx: number,
+): void {
+  if (typeof window === 'undefined' || !Number.isFinite(widthPx)) return;
+  try {
+    sessionStorage.setItem(
+      CHATS_SIDEBAR_WIDTH_SESSION_KEY,
+      String(clampChatsSidebarWidthForStorage(widthPx)),
+    );
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
 const LAST_USER_ID_KEY = 'amica-last-user-id';
 /** Max messages per chat to store in IDB (last N); keeps size small */
 const MAX_MESSAGES_PER_CHAT = 100;
@@ -55,8 +94,68 @@ function openDB(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onerror = () => reject(req.error);
     req.onsuccess = () => resolve(req.result);
-    req.onupgradeneeded = () => {
-      req.result.createObjectStore(STORE_NAME, { keyPath: 'userId' });
+    req.onupgradeneeded = (event) => {
+      const db = req.result;
+      const oldVersion = (event as IDBVersionChangeEvent).oldVersion;
+      if (oldVersion < 1) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'userId' });
+      }
+      if (oldVersion < 2 && !db.objectStoreNames.contains(LAYOUT_STORE_NAME)) {
+        db.createObjectStore(LAYOUT_STORE_NAME, { keyPath: 'key' });
+      }
+    };
+  });
+}
+
+type ChatsSidebarWidthRow = { key: string; widthPx: number };
+
+export async function getChatsSidebarWidthFromIdb(): Promise<number | null> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    if (!db.objectStoreNames.contains(LAYOUT_STORE_NAME)) {
+      db.close();
+      resolve(null);
+      return;
+    }
+    const req = db
+      .transaction(LAYOUT_STORE_NAME, 'readonly')
+      .objectStore(LAYOUT_STORE_NAME)
+      .get(CHATS_SIDEBAR_WIDTH_KEY);
+    req.onerror = () => {
+      db.close();
+      reject(req.error);
+    };
+    req.onsuccess = () => {
+      db.close();
+      const row = req.result as ChatsSidebarWidthRow | undefined;
+      const w = row?.widthPx;
+      resolve(typeof w === 'number' && Number.isFinite(w) ? w : null);
+    };
+  });
+}
+
+export async function setChatsSidebarWidthInIdb(
+  widthPx: number,
+): Promise<void> {
+  if (!Number.isFinite(widthPx)) return;
+  const clamped = clampChatsSidebarWidthForStorage(widthPx);
+  writeChatsSidebarWidthToSessionStorageSync(clamped);
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const store = db
+      .transaction(LAYOUT_STORE_NAME, 'readwrite')
+      .objectStore(LAYOUT_STORE_NAME);
+    const req = store.put({
+      key: CHATS_SIDEBAR_WIDTH_KEY,
+      widthPx: clamped,
+    } satisfies ChatsSidebarWidthRow);
+    req.onerror = () => {
+      db.close();
+      reject(req.error);
+    };
+    req.onsuccess = () => {
+      db.close();
+      resolve();
     };
   });
 }
@@ -77,7 +176,9 @@ export async function getChatState(
     };
     req.onsuccess = () => {
       db.close();
-      const row = req.result as { userId: number; data: ChatStateSnapshot } | undefined;
+      const row = req.result as
+        | { userId: number; data: ChatStateSnapshot }
+        | undefined;
       resolve(row?.data ?? null);
     };
   });

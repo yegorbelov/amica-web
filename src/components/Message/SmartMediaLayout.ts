@@ -30,7 +30,6 @@ function isLandscapeMedia(file: File): boolean {
   return mediaAspectRatio(file) > LANDSCAPE_MIN_RATIO;
 }
 
-/** Высота ряда при полной ширине W (приоритет ширины). */
 function heightForFullWidthRow(
   w: number,
   file: File,
@@ -40,7 +39,6 @@ function heightForFullWidthRow(
   return w / r;
 }
 
-/** Высота портрета при заданной ширине колонки (ширина фиксирована первой). */
 function heightForPortraitColumn(colW: number, file: File) {
   const r = mediaAspectRatio(file, 3 / 4);
   return colW / r;

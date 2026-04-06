@@ -109,8 +109,7 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
 
   // useTabSwipe(gridRef, activeTab, availableTabs, setActiveTab);
   const gridAttachKey = useMemo(
-    () =>
-      selectedChat != null ? `${selectedChat.id}-${activeTab}` : 'none',
+    () => (selectedChat != null ? `${selectedChat.id}-${activeTab}` : 'none'),
     [selectedChat, activeTab],
   );
   const { currentColumns, liveScale, zoomOriginX, zoomOriginY, isZooming } =

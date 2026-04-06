@@ -1,6 +1,5 @@
 import type { File, Message } from '@/types';
 
-/** Стабильный порядок вложений: по возрастанию id (как на сервере при поочередном add). */
 export function sortMessageFilesOldToNew(
   files: File[] | undefined | null,
 ): File[] | undefined {
@@ -28,7 +27,6 @@ function filesAlreadyOldToNew(files: File[]): boolean {
   return true;
 }
 
-/** Нормализует порядок files у сообщения (без лишних копий, если уже по id). */
 export function normalizeMessageFilesOrder<M extends Message>(message: M): M {
   const f = message.files;
   if (!f || f.length <= 1) return message;

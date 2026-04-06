@@ -208,6 +208,45 @@ export function shouldUseChunkedVideoUpload(files: File[]): boolean {
   return files.some((f) => f.type.startsWith('video/'));
 }
 
+/** Reported with chunk init so VideoFile can store width/height before background ffprobe. */
+async function getVideoIntrinsicDimensions(
+  file: File,
+): Promise<{ width: number; height: number } | null> {
+  if (getDeclaredMediaKind(file) !== 'video') {
+    return null;
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    return await new Promise<{ width: number; height: number } | null>(
+      (resolve, reject) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.muted = true;
+        video.playsInline = true;
+        video.onloadedmetadata = () => {
+          const w = video.videoWidth;
+          const h = video.videoHeight;
+          video.removeAttribute('src');
+          video.load();
+          if (w > 0 && h > 0) {
+            resolve({ width: w, height: h });
+          } else {
+            resolve(null);
+          }
+        };
+        video.onerror = () => {
+          reject(new Error('video metadata load failed'));
+        };
+        video.src = url;
+      },
+    );
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 function getAdaptiveChunkSizeBytes(fileSize: number): number {
   if (fileSize <= 0) return MIN_MESSAGE_CHUNK_UPLOAD_BYTES;
   const raw = Math.ceil(fileSize / CHUNK_UPLOAD_TARGET_CHUNKS);
@@ -241,17 +280,23 @@ async function uploadSingleFileChunks(
     CHUNK_UPLOAD_MAX_INFLIGHT_BYTES,
   );
   const requestedChunkSize = getAdaptiveChunkSizeBytes(file.size);
+  const videoDims = await getVideoIntrinsicDimensions(file);
+  const initPayload: Record<string, unknown> = {
+    chat_id: chatId,
+    filename: file.name,
+    mime_type: file.type || null,
+    media_kind: getDeclaredMediaKind(file),
+    total_size: file.size,
+    chunk_size: requestedChunkSize,
+  };
+  if (videoDims) {
+    initPayload.width = videoDims.width;
+    initPayload.height = videoDims.height;
+  }
   const initRes = await apiFetch('/api/messages/chunk/init/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      filename: file.name,
-      mime_type: file.type || null,
-      media_kind: getDeclaredMediaKind(file),
-      total_size: file.size,
-      chunk_size: requestedChunkSize,
-    }),
+    body: JSON.stringify(initPayload),
   });
 
   if (!initRes.ok) {
@@ -401,14 +446,20 @@ async function uploadSingleFileChunksWs(
     CHUNK_UPLOAD_MAX_INFLIGHT_BYTES,
   );
   const requestedChunkSize = getAdaptiveChunkSizeBytes(file.size);
-  const initRaw = (await chunkWsRpc('message_chunk_init', {
+  const videoDimsWs = await getVideoIntrinsicDimensions(file);
+  const initData: Record<string, unknown> = {
     chat_id: chatId,
     filename: file.name,
     mime_type: file.type || null,
     media_kind: getDeclaredMediaKind(file),
     total_size: file.size,
     chunk_size: requestedChunkSize,
-  })) as {
+  };
+  if (videoDimsWs) {
+    initData.width = videoDimsWs.width;
+    initData.height = videoDimsWs.height;
+  }
+  const initRaw = (await chunkWsRpc('message_chunk_init', initData)) as {
     ok?: boolean;
     upload_id: string;
     chunk_count: number;

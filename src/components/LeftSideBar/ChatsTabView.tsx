@@ -1,10 +1,11 @@
 // components/Search/UserSearch.tsx
-import React, { memo, useCallback, useMemo, useState } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import SearchInput from '@/components/ui/searchInput/SearchInput';
 import GlobalSearchList from '@/components/GlobalSearchList/GlobalSearchList';
 import ChatList from '@/components/ChatList/ChatList';
 import styles from './LeftSideBar.module.scss';
+import { useLeftSideBarLayout } from './leftSideBarLayoutContext';
 import { SearchProvider } from '@/contexts/search/SearchContext';
 import { searchChatsTab } from '@/providers/searchGlobal';
 import { useTranslation } from '@/contexts/languageCore';
@@ -17,6 +18,8 @@ import type { Chat } from '@/types';
 import Input from '../SideBarMedia/Input';
 
 const ChatsTabView: React.FC = () => {
+  const leftBarLayout = useLeftSideBarLayout();
+  const chatsChromeCollapsed = leftBarLayout?.chatsChromeCollapsed ?? false;
   const { t } = useTranslation();
   const { showToast } = useToast();
   const { handleChatClick, setChats } = useChatMeta();
@@ -58,25 +61,30 @@ const ChatsTabView: React.FC = () => {
 
   return (
     <SearchProvider searchFn={searchChatsTab} minLength={1}>
-      <div className={styles['global-search-input-container']}>
-        <SearchInput placeholder={t('search.default')} />
-        <Button
-          type='button'
-          className={styles['add-plus-button']}
-          onClick={() => setCreateOpen(true)}
-          aria-label={t('sidebar.newGroupTitle')}
+      <div className={styles['chats-tab-layout']}>
+        <div
+          className={`${styles['global-search-input-container']} ${
+            chatsChromeCollapsed
+              ? styles['global-search-input-container--chats-collapsed']
+              : ''
+          }`}
         >
-          {useMemo(
-            () => (
-              <Icon name='AddPlus' className={styles['add-plus-icon']} />
-            ),
-            [],
+          {!chatsChromeCollapsed && (
+            <SearchInput placeholder={t('search.default')} />
           )}
-        </Button>
-      </div>
-      <div className={styles['tab-content']}>
-        <ChatList />
-        <GlobalSearchList />
+          <Button
+            type='button'
+            className={styles['add-plus-button']}
+            onClick={() => setCreateOpen(true)}
+            aria-label={t('sidebar.newGroupTitle')}
+          >
+            <Icon name='AddPlus' className={styles['add-plus-icon']} />
+          </Button>
+        </div>
+        <div className={styles['tab-content']}>
+          <ChatList />
+          <GlobalSearchList />
+        </div>
       </div>
 
       {createOpen &&

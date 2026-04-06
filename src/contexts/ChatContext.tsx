@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import type { ReactNode } from 'react';
 import type { Message, Chat, User } from '@/types';
-import { apiFetch, apiUpload } from '@/utils/apiFetch';
+import { apiFetch } from '@/utils/apiFetch';
 import { websocketManager } from '@/utils/websocket-manager';
 import type { WebSocketMessage } from '@/utils/websocket-manager';
 import { useSettingsActions } from './settings/context';
@@ -487,35 +487,73 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   const addContact = useCallback(
-    async (usedId: number) => {
+    (userId: number) => {
       if (!selectedChatId) return;
-      const formData = new FormData();
-      formData.append('user_id', usedId.toString());
-      const res: unknown = await apiUpload('/api/contact/', formData);
-      if (typeof res === 'object' && res !== null) {
-        const r = res as Record<string, unknown>;
-        if (typeof r.error === 'string') {
-          setError(r.error);
-          return;
-        }
+
+      if (!websocketManager.isConnected()) {
+        setError('Not connected');
+        return;
       }
 
-      setChats((prevChats) =>
-        prevChats.map((chat) => {
-          if (chat.id !== selectedChatId) return chat;
+      const chatId = selectedChatId;
+      let settled = false;
 
-          if (!chat.members || chat.members.length === 0) return chat;
+      const cleanup = () => {
+        window.clearTimeout(timeoutId);
+        websocketManager.off('message', onMessage);
+      };
 
-          const updatedUsers = chat.members.map((u, index) =>
-            index === 0 ? { ...u, is_contact: true } : u,
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+      };
+
+      const onMessage = (data: WebSocketMessage) => {
+        if (data.type === 'contact_added') {
+          const uid = (data as { user_id?: number }).user_id;
+          if (uid !== userId) return;
+          finish();
+          const contactId = (data as { contact_id?: number }).contact_id;
+          const contactName = (data as { name?: string }).name;
+          setChats((prevChats) =>
+            prevChats.map((chat) => {
+              if (chat.id !== chatId) return chat;
+              if (!chat.members || chat.members.length === 0) return chat;
+              const updatedUsers = chat.members.map((u, index) =>
+                index === 0
+                  ? {
+                      ...u,
+                      is_contact: true,
+                      ...(contactId != null ? { contact_id: contactId } : {}),
+                      ...(contactName != null && contactName !== ''
+                        ? { name: contactName }
+                        : {}),
+                    }
+                  : u,
+              );
+              return { ...chat, members: updatedUsers };
+            }),
           );
+          return;
+        }
+        if (data.type === 'error' && typeof data.message === 'string') {
+          finish();
+          setError(data.message);
+        }
+      };
 
-          return {
-            ...chat,
-            members: updatedUsers,
-          };
-        }),
-      );
+      const timeoutId = window.setTimeout(() => {
+        finish();
+        setError('Request timed out');
+      }, 15000);
+
+      websocketManager.on('message', onMessage);
+      const sent = websocketManager.sendAddContact(userId);
+      if (!sent) {
+        finish();
+        setError('Failed to send');
+      }
     },
     [selectedChatId],
   );

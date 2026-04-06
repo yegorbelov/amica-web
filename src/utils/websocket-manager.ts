@@ -530,6 +530,13 @@ class WebSocketManager {
     });
   }
 
+  public sendAddContact(userId: number) {
+    return this.sendMessage({
+      type: 'add_contact',
+      data: { user_id: userId },
+    });
+  }
+
   public sendCreateGroup(name: string) {
     return this.sendMessage({
       type: 'create_group',

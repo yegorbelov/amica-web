@@ -36,6 +36,8 @@ const SWIPE_DISTANCE_RATIO = 0.5;
 const SWIPE_VELOCITY_THRESHOLD = 40.3;
 const SLIDE_DURATION_MS = 200;
 const MOBILE_BREAKPOINT = 768;
+/** Синхронно с `--main-chat-stack-breakpoint` fallback в `_global.scss`. */
+const MAIN_CHAT_STACK_BREAKPOINT_FALLBACK_PX = 1094;
 // const HORIZONTAL_SWIPE_THRESHOLD = 50;
 
 const MainChatWindow: React.FC = () => {
@@ -72,7 +74,10 @@ const MainChatWindow: React.FC = () => {
     () =>
       typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT,
   );
+  const [narrowStackForDesktop, setNarrowStackForDesktop] = useState(false);
+  const narrowStackLayout = !isMobile && narrowStackForDesktop;
 
+  const mainChatWindowRef = useRef<HTMLDivElement>(null);
   const swipeWrapperRef = useRef<HTMLDivElement>(null);
   const swipeTrackRef = useRef<HTMLDivElement>(null);
   const pointerIdRef = useRef<number | null>(null);
@@ -93,6 +98,38 @@ const MainChatWindow: React.FC = () => {
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
+
+  useLayoutEffect(() => {
+    if (isMobile) {
+      return;
+    }
+    const el = mainChatWindowRef.current;
+    if (!el) return;
+
+    const apply = () => {
+      const raw = getComputedStyle(document.documentElement).getPropertyValue(
+        '--main-chat-stack-breakpoint',
+      );
+      const threshold =
+        parseFloat(raw) || MAIN_CHAT_STACK_BREAKPOINT_FALLBACK_PX;
+      const w = el.getBoundingClientRect().width;
+      const next = w <= threshold;
+      setNarrowStackForDesktop((prev) => (prev === next ? prev : next));
+    };
+
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    const mo = new MutationObserver(apply);
+    mo.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['style'],
+    });
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+    };
+  }, [isMobile]);
 
   const isSelectionMode =
     selectedChat != null &&
@@ -473,7 +510,16 @@ const MainChatWindow: React.FC = () => {
   // }, []);
 
   return (
-    <div className={`main_chat_window ${isSwiped ? 'swiped' : ''}`}>
+    <div
+      ref={mainChatWindowRef}
+      className={[
+        'main_chat_window',
+        isSwiped && 'swiped',
+        narrowStackLayout && 'main_chat_window--narrow-stack',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       {/* {windowWidth <= 768 && <BackgroundComponent />} */}
 
       {current === 'profile' && settingsFullWindow && activeProfileTab && (

@@ -1,4 +1,5 @@
 import { useTabs } from './tabsShared';
+import { useLeftSideBarLayout } from '@/components/LeftSideBar/leftSideBarLayoutContext';
 import { useUser } from '@/contexts/UserContextCore';
 import { Icon } from '@/components/Icons/AutoIcons';
 import Avatar from '@/components/Avatar/Avatar';
@@ -46,6 +47,7 @@ function snapToDevicePixel(
 }
 
 export function Tabs() {
+  const leftSideBarLayout = useLeftSideBarLayout();
   const { activeTab, setActiveTab } = useTabs();
   const { user } = useUser();
   const { t } = useTranslation();
@@ -589,6 +591,10 @@ export function Tabs() {
     // Cancel should return to the current active tab without a long animation.
     snapIndicatorToTab(activeTab, { animated: false });
   };
+
+  if (leftSideBarLayout?.chatsChromeCollapsed) {
+    return null;
+  }
 
   return (
     <nav className={styles.tabs}>
