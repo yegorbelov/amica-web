@@ -47,6 +47,10 @@
     cursor: pointer;
     position: relative;
 
+    &:last-of-type::after {
+      background: none;
+    }
+
     &::after {
       content: '';
       position: absolute;

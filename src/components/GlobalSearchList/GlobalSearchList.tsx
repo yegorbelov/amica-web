@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useSearchContext } from '@/contexts/search/SearchContextCore';
 import type { GlobalSearchItem } from '@/contexts/search/globalSearchTypes';
 import styles from './GlobalSearchList.module.scss';
@@ -67,18 +68,24 @@ const GlobalSearchList: React.FC = () => {
 
   // if (loading) return <div className={styles.loading}>Loading...</div>;
   // if (error) return <div className={styles.error}>{error}</div>;
-  const users = results.filter(
-    (r): r is GlobalSearchItem & { type: 'user' } => r.type === 'user',
-  );
-  const contacts = results.filter(
-    (r): r is GlobalSearchItem & { type: 'contact' } => r.type === 'contact',
-  );
-  const groups = results.filter(
-    (r): r is GlobalSearchItem & { type: 'group' } => r.type === 'group',
-  );
-  const settings = results.filter(
-    (r): r is GlobalSearchItem & { type: 'setting' } => r.type === 'setting',
-  );
+  const { users, contacts, groups, settings } = useMemo(() => {
+    return {
+      users: results.filter(
+        (r): r is GlobalSearchItem & { type: 'user' } => r.type === 'user',
+      ),
+      contacts: results.filter(
+        (r): r is GlobalSearchItem & { type: 'contact' } =>
+          r.type === 'contact',
+      ),
+      groups: results.filter(
+        (r): r is GlobalSearchItem & { type: 'group' } => r.type === 'group',
+      ),
+      settings: results.filter(
+        (r): r is GlobalSearchItem & { type: 'setting' } =>
+          r.type === 'setting',
+      ),
+    };
+  }, [results]);
 
   const renderItem = (item: GlobalSearchItem, key: string) => (
     <li

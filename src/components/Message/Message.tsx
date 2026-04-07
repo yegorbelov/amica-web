@@ -1,4 +1,10 @@
-import React, { useRef, useMemo, type CSSProperties } from 'react';
+import React, {
+  useRef,
+  useMemo,
+  useCallback,
+  useLayoutEffect,
+  type CSSProperties,
+} from 'react';
 import type { Message as MessageType } from '@/types';
 import styles from './Message.module.scss';
 import { useMessageDimensions } from './useMessageDimensions';
@@ -48,6 +54,106 @@ const Message: React.FC<MessageProps> = ({
   } | null>(null);
   useMessageDimensions(containerRef);
 
+  const messageRef = useRef(message);
+  const selectionModeRef = useRef(selectionMode);
+  const onReactionClickRef = useRef(onReactionClick);
+  const onSelectionGestureCandidateStartRef = useRef(
+    onSelectionGestureCandidateStart,
+  );
+  const onPointerSelectStartRef = useRef(onPointerSelectStart);
+  const onToggleSelectRef = useRef(onToggleSelect);
+
+  useLayoutEffect(() => {
+    messageRef.current = message;
+    selectionModeRef.current = selectionMode;
+    onReactionClickRef.current = onReactionClick;
+    onSelectionGestureCandidateStartRef.current =
+      onSelectionGestureCandidateStart;
+    onPointerSelectStartRef.current = onPointerSelectStart;
+    onToggleSelectRef.current = onToggleSelect;
+  }, [
+    message,
+    selectionMode,
+    onReactionClick,
+    onSelectionGestureCandidateStart,
+    onPointerSelectStart,
+    onToggleSelect,
+  ]);
+
+  const handleContentReactionClick = useCallback((reactionType: string) => {
+    onReactionClickRef.current?.(messageRef.current, reactionType);
+  }, []);
+
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const msg = messageRef.current;
+      const inSelectionMode = selectionModeRef.current;
+
+      if (!inSelectionMode && e.button === 0) {
+        const target = e.target as HTMLElement | null;
+        if (
+          !target?.closest('button') &&
+          !target?.closest('a') &&
+          !target?.closest('[data-reaction-type]')
+        ) {
+          const now = performance.now();
+          const prevTap = lastPointerTapRef.current;
+          const isDoubleTap =
+            prevTap &&
+            prevTap.pointerType === e.pointerType &&
+            now - prevTap.ts <= 280 &&
+            Math.hypot(e.clientX - prevTap.x, e.clientY - prevTap.y) <= 24;
+
+          if (isDoubleTap) {
+            onReactionClickRef.current?.(msg, 'heart');
+            lastPointerTapRef.current = null;
+            return;
+          }
+
+          lastPointerTapRef.current = {
+            ts: now,
+            x: e.clientX,
+            y: e.clientY,
+            pointerType: e.pointerType,
+          };
+        }
+      }
+
+      if (!inSelectionMode && e.pointerType === 'mouse' && e.button === 0) {
+        onSelectionGestureCandidateStartRef.current?.(
+          e.pointerId,
+          e.clientX,
+          e.clientY,
+        );
+        return;
+      }
+      if (!inSelectionMode) return;
+      if (e.pointerType === 'touch') return;
+      e.preventDefault();
+      suppressSelectionClickRef.current = true;
+      onPointerSelectStartRef.current?.(e.pointerId);
+    },
+    [],
+  );
+
+  const handleSelectionClick = useCallback(() => {
+    if (suppressSelectionClickRef.current) {
+      suppressSelectionClickRef.current = false;
+      return;
+    }
+    onToggleSelectRef.current?.();
+  }, []);
+
+  const handleSelectionKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onToggleSelectRef.current?.();
+      }
+    },
+    [],
+  );
+
   const isOwn = message.is_own;
   const hasOnlyMediaFiles = useMemo(
     () =>
@@ -69,68 +175,15 @@ const Message: React.FC<MessageProps> = ({
       className={`temp_full ${isOwn ? 'own-message' : 'other-message'} ${liteModeEnabled ? styles.liteMode : ''} ${selectionMode && isSelected ? 'selected' : ''} ${selectionMode ? 'selection-mode' : ''}`}
       data-message-id={message.id}
       style={messageDivStyle}
-      onPointerDown={(e) => {
-        if (!selectionMode && e.button === 0) {
-          const target = e.target as HTMLElement | null;
-          if (
-            !target?.closest('button') &&
-            !target?.closest('a') &&
-            !target?.closest('[data-reaction-type]')
-          ) {
-            const now = performance.now();
-            const prevTap = lastPointerTapRef.current;
-            const isDoubleTap =
-              prevTap &&
-              prevTap.pointerType === e.pointerType &&
-              now - prevTap.ts <= 280 &&
-              Math.hypot(e.clientX - prevTap.x, e.clientY - prevTap.y) <= 24;
-
-            if (isDoubleTap) {
-              onReactionClick?.(message, 'heart');
-              lastPointerTapRef.current = null;
-              return;
-            }
-
-            lastPointerTapRef.current = {
-              ts: now,
-              x: e.clientX,
-              y: e.clientY,
-              pointerType: e.pointerType,
-            };
-          }
-        }
-
-        if (!selectionMode && e.pointerType === 'mouse' && e.button === 0) {
-          onSelectionGestureCandidateStart?.(e.pointerId, e.clientX, e.clientY);
-          return;
-        }
-        if (!selectionMode) return;
-        if (e.pointerType === 'touch') return;
-        e.preventDefault();
-        suppressSelectionClickRef.current = true;
-        onPointerSelectStart?.(e.pointerId);
-      }}
+      onPointerDown={onPointerDown}
       onClick={
-        selectionMode && onToggleSelect
-          ? () => {
-              if (suppressSelectionClickRef.current) {
-                suppressSelectionClickRef.current = false;
-                return;
-              }
-              onToggleSelect();
-            }
-          : undefined
+        selectionMode && onToggleSelect ? handleSelectionClick : undefined
       }
       role={selectionMode ? 'button' : undefined}
       tabIndex={selectionMode ? 0 : undefined}
       onKeyDown={
         selectionMode && onToggleSelect
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onToggleSelect();
-              }
-            }
+          ? handleSelectionKeyDown
           : undefined
       }
     >
@@ -148,9 +201,7 @@ const Message: React.FC<MessageProps> = ({
           reelItems={reelItems}
           isOwn={isOwn}
           hasOnlyMediaFiles={hasOnlyMediaFiles}
-          onReactionClick={(reactionType) =>
-            onReactionClick?.(message, reactionType)
-          }
+          onReactionClick={handleContentReactionClick}
         />
       </div>
     </div>

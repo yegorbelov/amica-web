@@ -145,6 +145,14 @@
     display: flex;
     animation: chatSlideIn 0.2s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }
+
+  :global(.room_wrapper.shifted) {
+    margin-right: 0;
+  }
+
+  :global(.main_chat_window:has(.room_wrapper.shifted) .send_area) {
+    margin-right: 0;
+  }
 }
 
 @keyframes chatSlideIn {

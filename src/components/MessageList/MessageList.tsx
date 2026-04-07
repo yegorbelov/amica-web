@@ -1,4 +1,3 @@
-import Message from '../Message/Message';
 import {
   useSelectedChat,
   useChatMessages,
@@ -24,6 +23,7 @@ import { websocketManager } from '@/utils/websocket-manager';
 import { buildOptimisticReactionUpdate } from './reactionOptimistic';
 import DateSeparator from './DateSeparator';
 import DatePickerModal from './DatePickerModal';
+import MessageListItem from './MessageListItem';
 import type { DateKey } from './DateSeparator';
 import { useUser } from '@/contexts/UserContextCore';
 import { Menu } from '../ui/menu/Menu';
@@ -1306,33 +1306,17 @@ const MessageList: React.FC<MessageListProps> = ({
                 }
               }
               return (
-                <Message
+                <MessageListItem
                   key={message.id}
                   message={message}
                   reelItems={reelItems}
                   onReactionClick={handleMessageReactionClick}
                   selectionMode={isSelectionMode}
                   isSelected={selectedMessageIds.has(message.id)}
-                  onToggleSelect={() => onToggleMessageSelection(message.id)}
-                  onPointerSelectStart={(pointerId) =>
-                    handlePointerSelectionStart(
-                      message.id,
-                      selectedMessageIds.has(message.id),
-                      pointerId,
-                    )
-                  }
-                  onSelectionGestureCandidateStart={(
-                    pointerId,
-                    clientX,
-                    clientY,
-                  ) =>
-                    beginSelectionGestureCandidate(
-                      message.id,
-                      selectedMessageIds.has(message.id),
-                      pointerId,
-                      clientX,
-                      clientY,
-                    )
+                  onToggleMessageSelection={onToggleMessageSelection}
+                  handlePointerSelectionStart={handlePointerSelectionStart}
+                  beginSelectionGestureCandidate={
+                    beginSelectionGestureCandidate
                   }
                   isFirstInGroup={isFirstInGroup}
                   isLastInGroup={isLastInGroup}

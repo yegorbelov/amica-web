@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
+import { useSharedWindowInnerWidth } from '@/hooks/useSharedWindowInnerWidth';
 import styles from './SmartMediaLayout.module.scss';
 import { generateLayout } from './SmartMediaLayout';
 import ProgressiveImage from './ProgressiveImage';
@@ -22,7 +23,7 @@ interface InnerProps {
 }
 
 function SmartMediaLayoutInner({ files, items }: InnerProps) {
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const windowWidth = useSharedWindowInnerWidth();
 
   const mediaFiles = useMemo(
     () =>
@@ -45,12 +46,6 @@ function SmartMediaLayoutInner({ files, items }: InnerProps) {
       files.filter((f) => f.category === 'document' || f.category === 'other'),
     [files],
   );
-
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const [reelVisible, setReelVisible] = useState(false);
 
