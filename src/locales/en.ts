@@ -74,11 +74,36 @@ export default {
     backupCodesRegenerateConfirm: 'Generate',
     backupCodesRegenerateError:
       'Could not generate codes. Open settings from your trusted device.',
+    totpTitle: 'Authenticator app',
+    totpDescription:
+      'Add a second step at sign-in with Google Authenticator or another TOTP app. Set up from your trusted device.',
+    totpEnable: 'Set up authenticator',
+    totpOpenAuthenticatorLink: 'Open in authenticator app',
+    totpCodePlaceholder: '6-digit code',
+    totpConfirmEnable: 'Confirm and enable',
+    totpEnabledStatus: 'Authenticator is enabled for your account.',
+    totpDisable: 'Turn off authenticator',
+    totpDisablePasswordPlaceholder: 'Current password',
+    totpTrustedDeviceRequired:
+      'Set up or change this only from your trusted device (see Active sessions).',
+    totpSetupStartError: 'Could not start authenticator setup.',
+    totpConfirmError: 'Could not enable authenticator. Check the code and try again.',
+    totpDisableError: 'Could not turn off authenticator.',
+    totpInvalidCode: 'That code is not valid.',
+    totpWrongPassword: 'Wrong password.',
     trustedDeviceTitle: 'Trusted device',
     trustedDeviceBodyHas:
       'Sign-ins from new browsers or devices may need your approval on this device first. Under Active sessions, the trusted device shows a badge.',
     trustedDeviceBodyNone:
       'Your first successful sign-in sets a trusted device. You will see which session is trusted under Active sessions.',
+    trustedSessionsTitle: 'Trusted sessions',
+    trustedSessionsDescription:
+      'Active sessions whose fingerprint matches your account trusted device. End a session here or under Active sessions.',
+    trustedSessionsNotSet:
+      'You have not set a trusted device yet. Your first successful sign-in will set one.',
+    trustedSessionsEmpty:
+      'No active sessions currently show as trusted. Check Active sessions or sign in from your usual browser.',
+    trustedSessionsTerminateOthers: 'End other trusted sessions',
     signOut: 'Sign Out',
     languageDescription: 'Select your preferred language.',
     privacyDescription:
@@ -154,8 +179,10 @@ export default {
     deviceLoginTitle: 'Sign in from this device',
     deviceLoginTrustedWhereHint:
       'The code appears on another device or browser where you’re already signed in to Amica — open that app or tab and look for the security alert.',
-    deviceLoginRequestDeviceIntro:
-      'On your other device, this sign-in is labeled as:',
+    deviceLoginTrustedDeviceIntro:
+      'Your trusted device — open Amica there to approve this sign-in and see the code:',
+    deviceLoginTrustedDeviceUnknown:
+      'We couldn’t load a device name. Open Amica on the phone or browser you usually use for this account.',
     deviceLoginHint:
       'Enter the 6-digit code from that screen below.',
     deviceLoginSubmitCode: 'Submit code',
@@ -180,6 +207,7 @@ export default {
       'If you did not try to sign in, secure your account and change your password.',
     trustedDeviceWarningDismiss: 'Got it',
     trustedDeviceIpLabel: 'Approximate IP of the new device',
+    trustedDeviceLocationLabel: 'Approximate location',
     trustedDeviceUaLabel: 'Browser / app on the new device',
     deviceOtpInvalid: 'That code is wrong or expired. Try again.',
     deviceOtpWrongClient:
@@ -205,6 +233,16 @@ export default {
     trustedConfirmHint: 'Enter the 6-digit code shown on the new device.',
     trustedConfirmDismiss: 'Dismiss',
     trustedConfirmSubmit: 'Confirm',
+    totpModalTitle: 'Authenticator code',
+    totpModalBody:
+      'Open your authenticator app (e.g. Google Authenticator) and enter the 6-digit code.',
+    totpRequiredHint:
+      'Enter the 6-digit code from your authenticator app, then sign in again.',
+    invalidTotp: 'Invalid authenticator code.',
+    totpLabel: 'Authenticator code',
+    totpContinueOAuth: 'Continue with code',
+    totpOAuthHint:
+      'Your account uses an authenticator app. Enter the current 6-digit code.',
   },
   signUp: {
     title: 'Sign Up',

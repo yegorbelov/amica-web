@@ -16,6 +16,14 @@ export interface ApiResponse {
   refresh?: string;
 }
 
+/** Result of `loginWithPassword` (throws on network/unhandled errors). */
+export type LoginPasswordOutcome =
+  | 'session'
+  | 'deferred'
+  | 'needs_totp'
+  | 'invalid_totp'
+  | 'email_not_verified';
+
 export interface UserContextType extends UserState {
   isAuthenticated: boolean;
   refreshUser: () => Promise<void>;
@@ -24,7 +32,8 @@ export interface UserContextType extends UserState {
     username: string,
     password: string,
     backupCode?: string,
-  ) => Promise<void>;
+    totpCode?: string,
+  ) => Promise<LoginPasswordOutcome>;
   signupWithCredentials: (
     username: string,
     email: string,
@@ -34,16 +43,29 @@ export interface UserContextType extends UserState {
     email?: string;
     emailVerificationOtpId?: string;
   }>;
-  loginWithGoogle: (idToken: string) => Promise<void>;
-  loginWithPasskey: (passkeyData: unknown) => Promise<void>;
+  loginWithGoogle: (idToken: string, totpCode?: string) => Promise<void>;
+  loginWithPasskey: (passkeyData: unknown, totpCode?: string) => Promise<void>;
+  /** After Google/Passkey returned totp_required, submit the 6-digit code. */
+  pendingTotpSecondFactor:
+    | { kind: 'google'; accessToken: string }
+    | { kind: 'passkey'; body: Record<string, unknown> }
+    | null;
+  submitTotpSecondFactor: (code: string) => Promise<void>;
+  dismissPendingTotpSecondFactor: () => void;
+  /** Password login: server asked for authenticator code. */
+  passwordLoginNeedsTotp: boolean;
+  dismissPasswordLoginTotp: () => void;
   logout: () => Promise<void>;
   /** Clear global auth error (e.g. device-login poll failure) without logging out. */
   dismissAuthError: () => void;
-  /** New device: poll until trusted device confirms; optional parsed UA label for UI. */
-  pendingDeviceLogin: { challengeId: string; requestDevice?: string } | null;
+  /** New device: poll until trusted device confirms; trusted device label when known. */
+  pendingDeviceLogin: { challengeId: string; trustedDeviceLabel?: string } | null;
   dismissPendingDeviceLogin: () => void;
   /** e.g. passkey register/finish returned needs_device_confirmation */
-  applyDeviceChallenge: (r: { challenge_id: string; request_device?: string }) => void;
+  applyDeviceChallenge: (r: {
+    challenge_id: string;
+    trusted_device?: string;
+  }) => void;
   /** Shown once after first full session when server issues backup codes */
   pendingBackupCodes: string[] | null;
   dismissPendingBackupCodes: () => void;

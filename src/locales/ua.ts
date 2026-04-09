@@ -141,8 +141,10 @@ export default {
     deviceLoginTitle: 'Вхід з цього пристрою',
     deviceLoginTrustedWhereHint:
       'Код з’являється на тому пристрої або у вкладці браузера, де ви вже увійшли в Amica — відкрийте застосунок і знайдіть попередження безпеки.',
-    deviceLoginRequestDeviceIntro:
-      'На іншому пристрої цю спробу входу показано так:',
+    deviceLoginTrustedDeviceIntro:
+      'Ваш довірений пристрій — відкрийте там Amica, щоб підтвердити вхід і побачити код:',
+    deviceLoginTrustedDeviceUnknown:
+      'Не вдалося показати назву. Відкрийте Amica на тому телефоні або в тому браузері, яким зазвичай користуєтесь.',
     deviceLoginHint:
       'Введіть нижче 6-значний код з того екрана.',
     deviceLoginSubmitCode: 'Надіслати код',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import GoogleLoginButton from '../components/GoogleLoginButton/GoogleLoginButton';
 import { PasskeyLoginButton } from '../components/PasskeyButton/PasskeyLoginButton';
+import { LoginTotpModal } from '@/components/Login/LoginTotpModal';
 import { useUser } from '../contexts/UserContextCore';
 import { useTranslation } from '@/contexts/languageCore';
 import styles from './LoginPage.module.scss';
@@ -28,6 +29,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
     username: '',
     password: '',
   });
+  const [oauthTotp, setOauthTotp] = useState('');
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [oauthTotpBusy, setOauthTotpBusy] = useState(false);
   const [error, setError] = useState<string>('');
   const [emailVerifiedNotice] = useState(() => {
     try {
@@ -41,8 +45,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
   const usernameRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
-  const { loginWithPassword, loading, error: contextError, dismissAuthError } =
-    useUser();
+  const {
+    loginWithPassword,
+    loading,
+    error: contextError,
+    dismissAuthError,
+    pendingTotpSecondFactor,
+    submitTotpSecondFactor,
+    dismissPendingTotpSecondFactor,
+    passwordLoginNeedsTotp,
+    dismissPasswordLoginTotp,
+  } = useUser();
 
   useEffect(() => {
     usernameRef.current?.focus();
@@ -58,9 +71,16 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
     }
   }, [emailVerifiedNotice]);
 
+  useEffect(() => {
+    if (!pendingTotpSecondFactor) setOauthTotp('');
+  }, [pendingTotpSecondFactor]);
+
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
+      if (name === 'username' || name === 'password') {
+        dismissPasswordLoginTotp();
+      }
       const next =
         name === 'password' ? value : normalizeLoginIdentifier(value);
 
@@ -72,45 +92,56 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
       if (error) setError('');
       if (contextError) dismissAuthError();
     },
-    [error, contextError, dismissAuthError],
+    [error, contextError, dismissAuthError, dismissPasswordLoginTotp],
   );
 
   const handleLogin = useCallback(async () => {
+    setLoginBusy(true);
     try {
       await loginWithPassword(formData.username, formData.password);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
       }
+    } finally {
+      setLoginBusy(false);
     }
   }, [formData.username, formData.password, loginWithPassword]);
 
+  const handleTotpModalSubmit = useCallback(
+    async (code: string) => {
+      const r = await loginWithPassword(
+        formData.username,
+        formData.password,
+        undefined,
+        code,
+      );
+      return r === 'invalid_totp';
+    },
+    [formData.username, formData.password, loginWithPassword],
+  );
+
   const handleKeyPress = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        if (e.currentTarget === passwordRef.current) handleLogin();
-        else if (e.currentTarget === usernameRef.current)
-          passwordRef.current?.focus();
+      if (e.key !== 'Enter') return;
+      if (e.currentTarget === usernameRef.current) {
+        passwordRef.current?.focus();
+        return;
       }
+      if (e.currentTarget === passwordRef.current) void handleLogin();
     },
     [handleLogin],
   );
 
   const handleSignUp = useCallback(() => onShowSignup(), [onShowSignup]);
 
+  const formDisabled = loading || loginBusy;
+  const oauthBusy = loading || oauthTotpBusy;
+
   return (
     <div className={styles['login-wrapper']}>
       <div className={styles['login-top-fill']} />
-      <form
-        className={styles['login-form']}
-        noValidate
-        onSubmit={(e) => e.preventDefault()}
-      >
-        {/* <img
-          src='Images/512-transparent.png'
-          alt='Amica'
-          className={styles['login-logo']}
-        /> */}
+      <div className={styles['login-form']}>
         <h4 className={styles['login-title']}>{t('login.signIn')}</h4>
         {emailVerifiedNotice ? (
           <div
@@ -136,7 +167,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
             value={formData.username}
             onChange={handleInputChange}
             onKeyPress={handleKeyPress}
-            disabled={loading}
+            disabled={formDisabled}
             autoComplete='email'
             required
             placeholder={t('login.email')}
@@ -144,7 +175,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
           />
         </fieldset>
         <fieldset className={styles['form']}>
-          {/* <legend className={styles['form-label']}>Password</legend> */}
           <input
             ref={passwordRef}
             type='password'
@@ -152,7 +182,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
             value={formData.password}
             onChange={handleInputChange}
             onKeyPress={handleKeyPress}
-            disabled={loading}
+            disabled={formDisabled}
             autoComplete='current-password'
             required
             placeholder={t('login.password')}
@@ -166,19 +196,86 @@ const LoginPage: React.FC<LoginPageProps> = ({ onShowSignup }) => {
         <button
           type='button'
           className={styles['next-button']}
-          disabled={loading || !formData.username || !formData.password}
+          disabled={
+            formDisabled || !formData.username || !formData.password
+          }
           onClick={() => void handleLogin()}
         >
-          {loading ? t('login.loggingIn') : t('buttons.next')}
+          {loginBusy ? t('login.loggingIn') : t('buttons.next')}
         </button>
+
+        {pendingTotpSecondFactor ? (
+          <div
+            style={{
+              marginTop: 16,
+              padding: '12px',
+              borderRadius: 8,
+              background: 'rgba(255,255,255,0.06)',
+            }}
+          >
+            <p style={{ margin: '0 0 10px', fontSize: 14, lineHeight: 1.45 }}>
+              {t('login.totpOAuthHint')}
+            </p>
+            <input
+              inputMode='numeric'
+              autoComplete='one-time-code'
+              value={oauthTotp}
+              onChange={(e) =>
+                setOauthTotp(e.target.value.replace(/\D/g, '').slice(0, 6))
+              }
+              disabled={oauthBusy}
+              placeholder={t('login.totpLabel')}
+              aria-label={t('login.totpLabel')}
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: '10px 12px',
+                marginBottom: 10,
+                borderRadius: 8,
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                type='button'
+                className={styles['next-button']}
+                disabled={oauthBusy || oauthTotp.length !== 6}
+                onClick={() => {
+                  setOauthTotpBusy(true);
+                  void submitTotpSecondFactor(oauthTotp).finally(() =>
+                    setOauthTotpBusy(false),
+                  );
+                }}
+              >
+                {oauthTotpBusy ? t('login.loggingIn') : t('login.totpContinueOAuth')}
+              </button>
+              <button
+                type='button'
+                disabled={oauthBusy}
+                onClick={() => {
+                  dismissPendingTotpSecondFactor();
+                  setOauthTotp('');
+                }}
+              >
+                {t('buttons.cancel')}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <GoogleLoginButton className={styles['google-login-button']} />
         <PasskeyLoginButton styles={styles} />
         <div className={styles['need-account']}>
           <span>{t('login.needAccount')}</span>
           <a onClick={handleSignUp}>{t('login.signUp')}</a>
         </div>
-      </form>
+      </div>
       <div className={styles['login-bottom-fill']} />
+
+      <LoginTotpModal
+        open={passwordLoginNeedsTotp}
+        onDismiss={dismissPasswordLoginTotp}
+        onSubmitCode={handleTotpModalSubmit}
+      />
     </div>
   );
 };

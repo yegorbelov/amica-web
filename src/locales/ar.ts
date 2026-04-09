@@ -142,8 +142,10 @@ export default {
     deviceLoginTitle: 'Confirm on trusted device',
     deviceLoginTrustedWhereHint:
       'The code appears where you’re already signed in to Amica — another phone, tablet, or browser tab — in a security alert.',
-    deviceLoginRequestDeviceIntro:
-      'On your other device, this sign-in is labeled as:',
+    deviceLoginTrustedDeviceIntro:
+      'Your trusted device — open Amica there to approve this sign-in and see the code:',
+    deviceLoginTrustedDeviceUnknown:
+      'We couldn’t load a device name. Open Amica on the phone or browser you usually use for this account.',
     deviceLoginHint: 'Open Amica on your trusted device and enter this code:',
     deviceLoginWaiting: 'Waiting for confirmation…',
     deviceLoginCancel: 'Cancel',

@@ -4,6 +4,7 @@ import { apiJson } from '@/utils/apiFetch';
 import { BackupCodesSavedModal } from '@/components/DeviceLogin/BackupCodesModal';
 import { useWarning } from '@/contexts/warning/WarningContextCore';
 import { useUser } from '@/contexts/UserContextCore';
+import Button from '@/components/ui/button/Button';
 import styles from './Profile.module.scss';
 
 export default function ProfileBackupCodes() {
@@ -90,14 +91,14 @@ export default function ProfileBackupCodes() {
       {unusedLabel ? (
         <p className={styles.backupCodesCount}>{unusedLabel}</p>
       ) : null}
-      <button
+      <Button
         type='button'
         disabled={regenerateBusy}
         onClick={requestRegenerateBackupCodes}
         className={styles.backupCodesButton}
       >
         {regenerateBusy ? '…' : t('profile.regenerateBackupCodes')}
-      </button>
+      </Button>
 
       {regeneratedCodes?.length ? (
         <BackupCodesSavedModal

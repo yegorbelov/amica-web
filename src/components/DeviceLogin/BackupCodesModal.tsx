@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from '@/contexts/languageCore';
 import { useWarning } from '@/contexts/warning/WarningContextCore';
 import styles from './DeviceLoginFlows.module.scss';
@@ -29,7 +30,7 @@ export function BackupCodesSavedModal({
     });
   }, [showWarning, t, onDismiss]);
 
-  return (
+  const modal = (
     <div className={styles.overlay} role='dialog' aria-modal='true'>
       <div className={styles.modal}>
         <div className={styles.body}>
@@ -60,4 +61,6 @@ export function BackupCodesSavedModal({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

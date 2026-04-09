@@ -1,15 +1,12 @@
 import styles from './Profile.module.scss';
 import { useTranslation } from '@/contexts/languageCore';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { useUser } from '@/contexts/UserContextCore';
 import { Dropdown } from '../Dropdown/Dropdown';
-import {
-  websocketManager,
-  type WebSocketMessage,
-} from '@/utils/websocket-manager';
-import type { Session } from '@/types';
+import { websocketManager } from '@/utils/websocket-manager';
 import ProfileTabDescription from './ProfileTabDescription';
 import Button from '../ui/button/Button';
+import { useWsActiveSessions } from './useWsActiveSessions';
 
 const SESSION_LIFETIME_KEYS: Record<number, string> = {
   7: 'sessions.week',
@@ -19,8 +16,6 @@ const SESSION_LIFETIME_KEYS: Record<number, string> = {
   90: 'sessions.months3',
   180: 'sessions.months6',
 };
-
-const SESSIONS_LOAD_TIMEOUT_MS = 20_000;
 
 export default function ProfileSessions() {
   const { t, locale } = useTranslation();
@@ -44,130 +39,22 @@ export default function ProfileSessions() {
     { value: 180 },
   ];
   const { user, setUser } = useUser();
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [sessionLifetime, setSessionLifetime] = useState<number>(
     user?.preferred_session_lifetime_days || 0,
   );
   const [savingLifetime, setSavingLifetime] = useState(false);
 
-  const sessionsRequestIdRef = useRef(0);
-  const loadSessionsTimeoutRef = useRef<number | null>(null);
-
-  const clearLoadSessionsTimeout = useCallback(() => {
-    if (loadSessionsTimeoutRef.current != null) {
-      window.clearTimeout(loadSessionsTimeoutRef.current);
-      loadSessionsTimeoutRef.current = null;
-    }
-  }, []);
-
-  const loadSessions = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      await websocketManager.connect();
-      await websocketManager.waitForConnection();
-
-      const requestId = ++sessionsRequestIdRef.current;
-      clearLoadSessionsTimeout();
-      loadSessionsTimeoutRef.current = window.setTimeout(() => {
-        loadSessionsTimeoutRef.current = null;
-        if (sessionsRequestIdRef.current === requestId) {
-          setLoading(false);
-          setError(t('sessions.loadError'));
-          setSessions([]);
-        }
-      }, SESSIONS_LOAD_TIMEOUT_MS);
-
-      const sent = websocketManager.sendMessage({
-        type: 'get_active_sessions',
-        request_id: requestId,
-      });
-      if (!sent) {
-        clearLoadSessionsTimeout();
-        throw new Error('WebSocket not ready');
-      }
-    } catch (err) {
-      console.error(err);
-      clearLoadSessionsTimeout();
-      setError(t('sessions.loadError'));
-      setSessions([]);
-      setLoading(false);
-    }
-  }, [t, clearLoadSessionsTimeout]);
-
-  const handleWSMessage = useCallback(
-    (data: WebSocketMessage) => {
-      if (!data.type) return;
-      switch (data.type) {
-        case 'active_sessions': {
-          if (data.request_id !== sessionsRequestIdRef.current) return;
-          clearLoadSessionsTimeout();
-          const list = (data.sessions ?? []) as Session[];
-          setSessions(list.sort((a) => (a.is_current ? -1 : 1)));
-          setError(null);
-          setLoading(false);
-          break;
-        }
-        case 'error':
-          if (
-            data.code === 'active_sessions' &&
-            data.request_id === sessionsRequestIdRef.current
-          ) {
-            clearLoadSessionsTimeout();
-            setError(t('sessions.loadError'));
-            setSessions([]);
-            setLoading(false);
-          }
-          break;
-        case 'session_created': {
-          const sess = data.session;
-          if (!sess?.jti) break;
-          setSessions((prev) => [
-            ...prev.filter((s) => s.jti !== sess.jti),
-            sess as Session,
-          ]);
-          break;
-        }
-        case 'session_updated': {
-          const sess = data.session;
-          if (!sess?.jti) break;
-          setSessions((prev) =>
-            prev.map((s) => (s.jti === sess.jti ? (sess as Session) : s)),
-          );
-          break;
-        }
-        case 'session_deleted': {
-          const jti = data.session?.jti;
-          if (!jti) break;
-          setSessions((prev) => prev.filter((s) => s.jti !== jti));
-          break;
-        }
-        case 'session_lifetime_updated':
-          setSessionLifetime(data.days!);
-          if (user)
-            setUser({ ...user, preferred_session_lifetime_days: data.days! });
-          break;
-      }
+  const onSessionLifetimeUpdated = useCallback(
+    (days: number) => {
+      setSessionLifetime(days);
+      if (user) setUser({ ...user, preferred_session_lifetime_days: days });
     },
-    [user, setUser, t, clearLoadSessionsTimeout],
+    [user, setUser],
   );
 
-  useEffect(() => {
-    websocketManager.on('message', handleWSMessage);
-    if (!websocketManager.isConnected()) {
-      websocketManager.connect();
-    }
-    return () => {
-      websocketManager.off('message', handleWSMessage);
-      clearLoadSessionsTimeout();
-    };
-  }, [handleWSMessage, clearLoadSessionsTimeout]);
-
-  useEffect(() => {
-    loadSessions();
-  }, [loadSessions]);
+  const { sessions, loading, error } = useWsActiveSessions({
+    onSessionLifetimeUpdated,
+  });
 
   const updateSessionLifetime = async (value: number) => {
     setSavingLifetime(true);

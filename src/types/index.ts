@@ -107,6 +107,8 @@ export interface User {
   dm_chat_id?: number | null;
   /** Account has a trusted device fingerprint (new logins may require approval there). */
   has_trusted_device?: boolean;
+  /** Time-based one-time password (authenticator app) enabled. */
+  totp_enabled?: boolean;
 }
 
 export interface Contact {

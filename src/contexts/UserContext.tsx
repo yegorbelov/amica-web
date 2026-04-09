@@ -20,7 +20,11 @@ import {
 import type { DisplayMedia, User } from '@/types';
 import type { WallpaperSetting } from './settings/types';
 import { UserContext } from './UserContextCore';
-import type { UserState, ApiResponse } from './UserContextCore';
+import type {
+  UserState,
+  ApiResponse,
+  LoginPasswordOutcome,
+} from './UserContextCore';
 import type { File as FileType } from '@/types';
 import { setLastUserId, getLastUserId, deleteChatState } from '@/utils/chatStateStorage';
 import { pollDeviceLoginUntilReady } from '@/utils/deviceLoginPoll';
@@ -97,9 +101,22 @@ function getPlaceholderUser(): User {
 export const UserProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const lastPasswordCredentialsRef = useRef<{ u: string; p: string } | null>(
-    null,
-  );
+  const lastPasswordCredentialsRef = useRef<{
+    u: string;
+    p: string;
+    totp?: string;
+  } | null>(null);
+  const pendingTotpSecondFactorRef = useRef<
+    | { kind: 'google'; accessToken: string }
+    | { kind: 'passkey'; body: Record<string, unknown> }
+    | null
+  >(null);
+  const [pendingTotpSecondFactor, setPendingTotpSecondFactor] = useState<
+    | { kind: 'google'; accessToken: string }
+    | { kind: 'passkey'; body: Record<string, unknown> }
+    | null
+  >(null);
+  const [passwordLoginNeedsTotp, setPasswordLoginNeedsTotp] = useState(false);
   const [pendingBackupCodes, setPendingBackupCodes] = useState<string[] | null>(
     null,
   );
@@ -118,7 +135,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   });
   const [pendingDeviceLogin, setPendingDeviceLogin] = useState<{
     challengeId: string;
-    requestDevice?: string;
+    trustedDeviceLabel?: string;
   } | null>(null);
 
   const fetchUser = useCallback(async () => {
@@ -333,6 +350,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   const handleLoginSuccess = useCallback(
     (data: ApiResponse) => {
       if (!data.access || !data.user) throw new Error('Invalid response');
+      pendingTotpSecondFactorRef.current = null;
+      setPendingTotpSecondFactor(null);
+      setPasswordLoginNeedsTotp(false);
       setAccessToken(data.access);
       if (data.refresh) setRefreshCookie(data.refresh);
       setState((prev) => ({
@@ -358,11 +378,12 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
       if (data.needs_device_confirmation && typeof data.challenge_id === 'string') {
         setDeviceBackupCodeError(null);
         setDeviceOtpError(null);
-        const rd = data.request_device;
+        setPasswordLoginNeedsTotp(false);
+        const td = data.trusted_device;
         setPendingDeviceLogin({
           challengeId: data.challenge_id,
-          ...(typeof rd === 'string' && rd.trim()
-            ? { requestDevice: rd.trim() }
+          ...(typeof td === 'string' && td.trim()
+            ? { trustedDeviceLabel: td.trim() }
             : {}),
         });
         return 'deferred';
@@ -458,6 +479,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
             username: c.u,
             password: c.p,
             backup_code: rawCode,
+            ...(c.totp ? { totp_code: c.totp } : {}),
           }),
         });
         const data = (await res.json()) as Record<string, unknown>;
@@ -482,14 +504,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   const applyDeviceChallenge = useCallback(
-    (r: { challenge_id: string; request_device?: string }) => {
+    (r: { challenge_id: string; trusted_device?: string }) => {
       setDeviceOtpError(null);
       setDeviceBackupCodeError(null);
-      const rd = r.request_device;
+      const td = r.trusted_device;
       setPendingDeviceLogin({
         challengeId: r.challenge_id,
-        ...(typeof rd === 'string' && rd.trim()
-          ? { requestDevice: rd.trim() }
+        ...(typeof td === 'string' && td.trim()
+          ? { trustedDeviceLabel: td.trim() }
           : {}),
       });
     },
@@ -565,10 +587,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
         onDismissAction: deny,
         body: (
           <TrustedDeviceLoginRequestBody
-            ip={msg.request_ip || ''}
-            city={msg.request_city || ''}
-            country={msg.request_country || ''}
             device={msg.request_device || ''}
+            requestIp={msg.request_ip}
+            requestCity={msg.request_city}
+            requestCountry={msg.request_country}
           />
         ),
         onConfirm: () => {
@@ -594,10 +616,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
                     body: (
                       <TrustedDeviceLoginWarningBody
                         code={code}
-                        ip={msg.request_ip || ''}
-                        city={msg.request_city || ''}
-                        country={msg.request_country || ''}
                         device={msg.request_device || ''}
+                        requestIp={msg.request_ip}
+                        requestCity={msg.request_city}
+                        requestCountry={msg.request_country}
                       />
                     ),
                   }),
@@ -643,10 +665,20 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   const loginWithPassword = useCallback(
-    async (username: string, password: string, backupCode?: string) => {
-      lastPasswordCredentialsRef.current = { u: username, p: password };
+    async (
+      username: string,
+      password: string,
+      backupCode?: string,
+      totpCode?: string,
+    ): Promise<LoginPasswordOutcome> => {
+      lastPasswordCredentialsRef.current = {
+        u: username,
+        p: password,
+        ...(totpCode?.trim() ? { totp: totpCode.trim() } : {}),
+      };
       setDeviceBackupCodeError(null);
-      setState((prev) => ({ ...prev, loading: true, error: null }));
+      // Do not set global loading: App unmounts login/signup when loading is true.
+      setState((prev) => ({ ...prev, error: null }));
       try {
         const res = await fetch('/api/login/', {
           method: 'POST',
@@ -658,6 +690,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
             username,
             password,
             ...(backupCode ? { backup_code: backupCode } : {}),
+            ...(totpCode?.trim() ? { totp_code: totpCode.trim() } : {}),
           }),
         });
         const data = (await res.json()) as Record<string, unknown>;
@@ -668,10 +701,16 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
           ) {
             setState((prev) => ({
               ...prev,
-              loading: false,
               error: tSync('login.emailNotVerified'),
             }));
-            return;
+            return 'email_not_verified';
+          }
+          if (res.status === 403 && data.error === 'totp_required') {
+            setPasswordLoginNeedsTotp(true);
+            return 'needs_totp';
+          }
+          if (data.error === 'invalid_totp') {
+            return 'invalid_totp';
           }
           if (backupCode && data.error === 'invalid_backup_code') {
             throw new Error('INVALID_BACKUP');
@@ -679,18 +718,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
           throw new Error(String(data.error || 'Login failed'));
         }
         const outcome = ingestSuccessfulAuthPayload(data, 'Login failed');
-        if (outcome === 'deferred') {
-          setState((prev) => ({ ...prev, loading: false }));
-        }
+        return outcome === 'deferred' ? 'deferred' : 'session';
       } catch (err) {
         if (err instanceof Error && err.message === 'INVALID_BACKUP') {
-          setState((prev) => ({ ...prev, loading: false }));
           throw err;
         }
         const message = err instanceof Error ? err.message : 'Login failed';
         setState((prev) => ({
           ...prev,
-          loading: false,
           error: message,
         }));
         throw err;
@@ -739,7 +774,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   const loginWithGoogle = useCallback(
-    async (idToken: string) => {
+    async (idToken: string, totpCode?: string) => {
       lastPasswordCredentialsRef.current = null;
       const res = await fetch('/api/google/', {
         method: 'POST',
@@ -747,10 +782,31 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ access_token: idToken }),
+        body: JSON.stringify({
+          access_token: idToken,
+          ...(totpCode?.trim() ? { totp_code: totpCode.trim() } : {}),
+        }),
       });
       const data = (await res.json()) as Record<string, unknown>;
       if (!res.ok) {
+        if (res.status === 403 && data.error === 'totp_required') {
+          pendingTotpSecondFactorRef.current = {
+            kind: 'google',
+            accessToken: idToken,
+          };
+          setPendingTotpSecondFactor({
+            kind: 'google',
+            accessToken: idToken,
+          });
+          return;
+        }
+        if (data.error === 'invalid_totp') {
+          setState((prev) => ({
+            ...prev,
+            error: tSync('login.invalidTotp'),
+          }));
+          return;
+        }
         throw new Error(String(data.error || 'Google login failed'));
       }
       ingestSuccessfulAuthPayload(data, 'Google login failed');
@@ -759,26 +815,74 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   const loginWithPasskey = useCallback(
-    async (passkeyData: unknown) => {
+    async (passkeyData: unknown, totpCode?: string) => {
       lastPasswordCredentialsRef.current = null;
+      const payload =
+        typeof passkeyData === 'object' && passkeyData !== null
+          ? {
+              ...(passkeyData as Record<string, unknown>),
+              ...(totpCode?.trim() ? { totp_code: totpCode.trim() } : {}),
+            }
+          : passkeyData;
       const res = await fetch('/api/passkey/auth/finish/', {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(passkeyData),
+        body: JSON.stringify(payload),
       });
       const data = (await res.json()) as Record<string, unknown>;
       if (!res.ok) {
         if (data.error === 'email_not_verified') {
           throw new Error(tSync('login.emailNotVerified'));
         }
+        if (res.status === 403 && data.error === 'totp_required') {
+          const b =
+            typeof passkeyData === 'object' && passkeyData !== null
+              ? { ...(passkeyData as Record<string, unknown>) }
+              : {};
+          pendingTotpSecondFactorRef.current = { kind: 'passkey', body: b };
+          setPendingTotpSecondFactor({ kind: 'passkey', body: b });
+          return;
+        }
+        if (data.error === 'invalid_totp') {
+          setState((prev) => ({
+            ...prev,
+            error: tSync('login.invalidTotp'),
+          }));
+          return;
+        }
         throw new Error(String(data.error || 'Passkey login failed'));
       }
       ingestSuccessfulAuthPayload(data, 'Passkey login failed');
     },
     [ingestSuccessfulAuthPayload],
+  );
+
+  const dismissPendingTotpSecondFactor = useCallback(() => {
+    pendingTotpSecondFactorRef.current = null;
+    setPendingTotpSecondFactor(null);
+  }, []);
+
+  const dismissPasswordLoginTotp = useCallback(() => {
+    setPasswordLoginNeedsTotp(false);
+  }, []);
+
+  const submitTotpSecondFactor = useCallback(
+    async (code: string) => {
+      const p = pendingTotpSecondFactorRef.current;
+      if (!p) return;
+      pendingTotpSecondFactorRef.current = null;
+      setPendingTotpSecondFactor(null);
+      setState((prev) => ({ ...prev, error: null }));
+      if (p.kind === 'google') {
+        await loginWithGoogle(p.accessToken, code);
+      } else {
+        await loginWithPasskey(p.body, code);
+      }
+    },
+    [loginWithGoogle, loginWithPasskey],
   );
 
   const dismissAuthError = useCallback(() => {
@@ -812,6 +916,11 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
       loginWithPasskey,
       logout,
       dismissAuthError,
+      pendingTotpSecondFactor,
+      submitTotpSecondFactor,
+      dismissPendingTotpSecondFactor,
+      passwordLoginNeedsTotp,
+      dismissPasswordLoginTotp,
       pendingDeviceLogin,
       dismissPendingDeviceLogin,
       applyDeviceChallenge,
@@ -829,6 +938,11 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
       loginWithPasskey,
       logout,
       dismissAuthError,
+      pendingTotpSecondFactor,
+      submitTotpSecondFactor,
+      dismissPendingTotpSecondFactor,
+      passwordLoginNeedsTotp,
+      dismissPasswordLoginTotp,
       pendingDeviceLogin,
       dismissPendingDeviceLogin,
       applyDeviceChallenge,
@@ -850,7 +964,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
         ) : null}
         {pendingDeviceLogin ? (
           <DeviceLoginPendingOverlay
-            requestDevice={pendingDeviceLogin.requestDevice}
+            trustedDeviceLabel={pendingDeviceLogin.trustedDeviceLabel}
             onCancel={dismissPendingDeviceLogin}
             onSubmitOtp={submitDeviceLoginOtp}
             otpBusy={deviceOtpBusy}

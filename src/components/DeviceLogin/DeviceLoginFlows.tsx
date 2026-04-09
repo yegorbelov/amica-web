@@ -3,38 +3,39 @@ import { useTranslation, tSync } from '@/contexts/languageCore';
 import warningStyles from '@/components/Warning/Warning.module.scss';
 import styles from './DeviceLoginFlows.module.scss';
 
-/** First step on trusted device: sign-in request details (no OTP yet). */
+/** Trusted device: sign-in attempt — browser/OS with versions, IP, approximate location. */
 export function TrustedDeviceLoginRequestBody({
-  ip,
-  city,
-  country,
   device,
+  requestIp,
+  requestCity,
+  requestCountry,
 }: {
-  ip: string;
-  city: string;
-  country: string;
   device: string;
+  requestIp?: string;
+  requestCity?: string;
+  requestCountry?: string;
 }) {
-  const hasLocation = Boolean(city || country);
-  const locationLine = `${city ? `${city}, ` : ''}${country || ''}`.trim();
-
+  const loc = [requestCity, requestCountry].filter(Boolean).join(', ');
+  const hasMeta = Boolean(device || requestIp || loc);
   return (
     <>
       <p style={{ margin: '0 0 12px', lineHeight: 1.45 }}>
         {tSync('login.trustedDeviceRequestIntro')}
       </p>
-      {ip || device || hasLocation ? (
+      {hasMeta ? (
         <div className={warningStyles.meta}>
           {device ? (
             <span className={warningStyles.deviceLine}>{device}</span>
           ) : null}
-          {ip ? (
+          {requestIp ? (
             <span className={warningStyles.subInfo}>
-              {tSync('sessions.ipAddress')} {ip}
+              {tSync('login.trustedDeviceIpLabel')}: {requestIp}
             </span>
           ) : null}
-          {hasLocation ? (
-            <span className={warningStyles.subInfo}>{locationLine}</span>
+          {loc ? (
+            <span className={warningStyles.subInfo}>
+              {tSync('login.trustedDeviceLocationLabel')}: {loc}
+            </span>
           ) : null}
         </div>
       ) : null}
@@ -44,38 +45,39 @@ export function TrustedDeviceLoginRequestBody({
 
 export function TrustedDeviceLoginWarningBody({
   code,
-  ip,
-  city,
-  country,
   device,
+  requestIp,
+  requestCity,
+  requestCountry,
 }: {
   code: string;
-  ip: string;
-  city: string;
-  country: string;
   device: string;
+  requestIp?: string;
+  requestCity?: string;
+  requestCountry?: string;
 }) {
-  const hasLocation = Boolean(city || country);
-  const locationLine = `${city ? `${city}, ` : ''}${country || ''}`.trim();
-
+  const loc = [requestCity, requestCountry].filter(Boolean).join(', ');
+  const hasMeta = Boolean(device || requestIp || loc);
   return (
     <>
       <p style={{ margin: '0 0 8px' }}>
         {tSync('login.trustedDeviceWarningIntro')}
       </p>
       <div className={warningStyles.codeBlock}>{code}</div>
-      {ip || device || hasLocation ? (
+      {hasMeta ? (
         <div className={warningStyles.meta}>
           {device ? (
             <span className={warningStyles.deviceLine}>{device}</span>
           ) : null}
-          {ip ? (
+          {requestIp ? (
             <span className={warningStyles.subInfo}>
-              {tSync('sessions.ipAddress')} {ip}
+              {tSync('login.trustedDeviceIpLabel')}: {requestIp}
             </span>
           ) : null}
-          {hasLocation ? (
-            <span className={warningStyles.subInfo}>{locationLine}</span>
+          {loc ? (
+            <span className={warningStyles.subInfo}>
+              {tSync('login.trustedDeviceLocationLabel')}: {loc}
+            </span>
           ) : null}
         </div>
       ) : null}
@@ -87,7 +89,7 @@ export function TrustedDeviceLoginWarningBody({
 }
 
 export function DeviceLoginPendingOverlay({
-  requestDevice,
+  trustedDeviceLabel,
   onCancel,
   onSubmitOtp,
   otpBusy,
@@ -96,8 +98,8 @@ export function DeviceLoginPendingOverlay({
   backupCodeBusy,
   backupCodeError,
 }: {
-  /** Parsed UA label (e.g. Safari on iOS) — same text as on the trusted-device alert. */
-  requestDevice?: string;
+  /** Trusted session’s browser/OS (no versions), from server; empty if unknown. */
+  trustedDeviceLabel?: string;
   onCancel: () => void;
   onSubmitOtp: (sixDigits: string) => void | Promise<void>;
   otpBusy?: boolean;
@@ -140,14 +142,20 @@ export function DeviceLoginPendingOverlay({
           <p className={styles.hint}>
             {t('login.deviceLoginTrustedWhereHint')}
           </p>
-          {requestDevice ? (
-            <div className={styles.requestDeviceBlock}>
+          <div className={styles.requestDeviceBlock}>
+            {trustedDeviceLabel ? (
+              <>
+                <p className={styles.requestDeviceIntro}>
+                  {t('login.deviceLoginTrustedDeviceIntro')}
+                </p>
+                <p className={styles.requestDeviceName}>{trustedDeviceLabel}</p>
+              </>
+            ) : (
               <p className={styles.requestDeviceIntro}>
-                {t('login.deviceLoginRequestDeviceIntro')}
+                {t('login.deviceLoginTrustedDeviceUnknown')}
               </p>
-              <p className={styles.requestDeviceName}>{requestDevice}</p>
-            </div>
-          ) : null}
+            )}
+          </div>
           <p className={styles.hint}>{t('login.deviceLoginHint')}</p>
           <form
             className={styles.otpIsolationForm}

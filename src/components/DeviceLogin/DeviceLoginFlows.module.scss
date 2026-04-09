@@ -143,7 +143,7 @@
 
   &:focus {
     outline: none;
-    border-color: #4d8ddb;
+    border-color: var(--mainColor);
   }
 
   &::placeholder {
@@ -196,8 +196,8 @@
 
 .btnPrimary {
   border: none;
-  background: #4d8ddb;
-  color: #fff;
+  background: var(--mainColor);
+  color: var(--input_submit_color, #fff);
   cursor: pointer;
 
   &:disabled {
@@ -209,7 +209,7 @@
 .btnLink {
   border: none;
   background: transparent;
-  color: #4d8ddb;
+  color: var(--mainColor);
   cursor: pointer;
   height: auto;
   min-height: 40px;

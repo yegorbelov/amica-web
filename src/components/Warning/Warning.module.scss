@@ -54,7 +54,7 @@
 
 .titleRow {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -64,7 +64,7 @@
   width: 26px;
   height: 26px;
   margin-top: 2px;
-  color: #4d8ddb;
+  color: var(--mainColor);
 }
 
 .title {
@@ -157,8 +157,8 @@
   padding: 0 16px;
   border-radius: 32px;
   border: none;
-  background: #4d8ddb;
-  color: #fff;
+  background: var(--mainColor);
+  color: var(--input_submit_color, #fff);
   font-family: 'SFProRounded', sans-serif;
   font-size: 1.125rem;
   font-weight: 500;

@@ -93,9 +93,9 @@ export default function PasskeyRegisterButton() {
       if (finishData.needs_device_confirmation && finishData.challenge_id) {
         applyDeviceChallenge({
           challenge_id: finishData.challenge_id as string,
-          ...(typeof finishData.request_device === 'string' &&
-          finishData.request_device.trim()
-            ? { request_device: finishData.request_device.trim() }
+          ...(typeof finishData.trusted_device === 'string' &&
+          finishData.trusted_device.trim()
+            ? { trusted_device: finishData.trusted_device.trim() }
             : {}),
         });
         return;

@@ -80,11 +80,36 @@ export default {
       blackAndWhite: 'Чёрно-белый',
       colourWash: 'Тонирование',
     },
+    totpTitle: 'Приложение-аутентификатор',
+    totpDescription:
+      'Второй шаг при входе через Google Authenticator или другое TOTP-приложение. Настройка только с доверенного устройства.',
+    totpEnable: 'Подключить аутентификатор',
+    totpOpenAuthenticatorLink: 'Открыть в приложении-аутентификаторе',
+    totpCodePlaceholder: '6-значный код',
+    totpConfirmEnable: 'Подтвердить и включить',
+    totpEnabledStatus: 'Аутентификатор включён для аккаунта.',
+    totpDisable: 'Отключить аутентификатор',
+    totpDisablePasswordPlaceholder: 'Текущий пароль',
+    totpTrustedDeviceRequired:
+      'Настраивайте только с доверенного устройства (см. активные сессии).',
+    totpSetupStartError: 'Не удалось начать настройку.',
+    totpConfirmError: 'Не удалось включить. Проверьте код.',
+    totpDisableError: 'Не удалось отключить.',
+    totpInvalidCode: 'Неверный код.',
+    totpWrongPassword: 'Неверный пароль.',
     trustedDeviceTitle: 'Доверенное устройство',
     trustedDeviceBodyHas:
       'Вход с нового браузера или устройства может потребовать подтверждения здесь. В активных сессиях доверенное устройство отмечено значком.',
     trustedDeviceBodyNone:
       'После первого успешного входа одно из устройств становится доверенным. Его можно увидеть в разделе активных сессий.',
+    trustedSessionsTitle: 'Доверенные сессии',
+    trustedSessionsDescription:
+      'Активные сессии, отпечаток которых совпадает с доверенным устройством аккаунта. Завершить можно здесь или в разделе активных сессий.',
+    trustedSessionsNotSet:
+      'Доверенное устройство ещё не задано. Оно появится после первого успешного входа.',
+    trustedSessionsEmpty:
+      'Сейчас нет активных сессий с меткой доверенной. Проверьте активные сессии или войдите с привычного браузера.',
+    trustedSessionsTerminateOthers: 'Завершить другие доверенные сессии',
   },
   privacy: {},
   sessions: {
@@ -141,8 +166,10 @@ export default {
     deviceLoginTitle: 'Вход с этого устройства',
     deviceLoginTrustedWhereHint:
       'Код показывается на том устройстве или во вкладке браузера, где вы уже вошли в Amica — откройте приложение и найдите предупреждение безопасности.',
-    deviceLoginRequestDeviceIntro:
-      'На другом устройстве эта попытка входа отображается так:',
+    deviceLoginTrustedDeviceIntro:
+      'Ваше доверенное устройство — откройте там Amica, чтобы подтвердить вход и увидеть код:',
+    deviceLoginTrustedDeviceUnknown:
+      'Не удалось показать название. Откройте Amica на том телефоне или в том браузере, которым обычно пользуетесь.',
     deviceLoginHint:
       'Введите ниже 6-значный код с того экрана.',
     deviceLoginSubmitCode: 'Отправить код',
@@ -167,6 +194,7 @@ export default {
       'Если вы не входили, смените пароль и проверьте безопасность аккаунта.',
     trustedDeviceWarningDismiss: 'Понятно',
     trustedDeviceIpLabel: 'Приблизительный IP нового устройства',
+    trustedDeviceLocationLabel: 'Приблизительное местоположение',
     trustedDeviceUaLabel: 'Браузер на новом устройстве',
     deviceOtpInvalid: 'Неверный или просроченный код.',
     deviceOtpWrongClient: 'Эта сессия не совпадает с устройством, с которого начали вход.',
@@ -191,6 +219,16 @@ export default {
     trustedConfirmHint: 'Введите 6-значный код с нового устройства.',
     trustedConfirmDismiss: 'Закрыть',
     trustedConfirmSubmit: 'Подтвердить',
+    totpModalTitle: 'Код аутентификатора',
+    totpModalBody:
+      'Откройте приложение-аутентификатор (например, Google Authenticator) и введите 6 цифр.',
+    totpRequiredHint:
+      'Введите 6-значный код из приложения-аутентификатора и войдите снова.',
+    invalidTotp: 'Неверный код аутентификатора.',
+    totpLabel: 'Код аутентификатора',
+    totpContinueOAuth: 'Продолжить с кодом',
+    totpOAuthHint:
+      'Для аккаунта включён аутентификатор. Введите текущий 6-значный код.',
   },
   signUp: {
     title: 'Регистрация',
