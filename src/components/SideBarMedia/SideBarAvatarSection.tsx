@@ -31,9 +31,10 @@ interface SideBarAvatarSectionProps {
   avatarContentType?: string;
   isAvatarEditable?: boolean;
   onAvatarChange?: (media: DisplayMedia) => void;
-  /** Long-press / right-click on a roller avatar opens a menu with delete. */
+  /** Long-press / right-click on a roller avatar opens a context menu. */
   rollerActionsEnabled?: boolean;
   onRollerMediaDelete?: (media: DisplayMedia) => Promise<void>;
+  onRollerMediaSetPrimary?: (media: DisplayMedia) => Promise<void>;
 }
 
 function useOpenRollerMediaMenu(
@@ -152,6 +153,7 @@ const SideBarAvatarSection: React.FC<SideBarAvatarSectionProps> = ({
   onAvatarChange = () => {},
   rollerActionsEnabled = false,
   onRollerMediaDelete,
+  onRollerMediaSetPrimary,
 }) => {
   const { t } = useTranslation();
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(
@@ -161,7 +163,7 @@ const SideBarAvatarSection: React.FC<SideBarAvatarSectionProps> = ({
 
   const showRollerMenu =
     rollerActionsEnabled &&
-    !!onRollerMediaDelete &&
+    !!(onRollerMediaDelete || onRollerMediaSetPrimary) &&
     isAvatarRollerOpen &&
     !interlocutorEditVisible;
 
@@ -181,10 +183,31 @@ const SideBarAvatarSection: React.FC<SideBarAvatarSectionProps> = ({
     primaryMedia ?? DUMMY_DISPLAY_MEDIA,
   );
 
-  const menuItems = useMemo((): MenuItem<'delete'>[] => {
+  const menuItems = useMemo((): MenuItem<'delete' | 'setPrimary'>[] => {
     if (!menuMedia) return [];
-    return [
-      {
+    const isAlreadyPrimary =
+      primaryMedia != null &&
+      String(primaryMedia.id) === String(menuMedia.id);
+    const items: MenuItem<'delete' | 'setPrimary'>[] = [];
+    if (!isAlreadyPrimary && onRollerMediaSetPrimary) {
+      items.push({
+        label: t('sidebar.setAsPrimaryRollerAvatar'),
+        icon: 'Photo',
+        value: 'setPrimary',
+        onClick: () => {
+          const m = menuMedia;
+          void (async () => {
+            try {
+              await onRollerMediaSetPrimary(m);
+            } catch {
+              /* parent shows toast */
+            }
+          })();
+        },
+      });
+    }
+    if (onRollerMediaDelete) {
+      items.push({
         label: t('sidebar.deleteRollerAvatar'),
         icon: 'Delete',
         value: 'delete',
@@ -193,15 +216,22 @@ const SideBarAvatarSection: React.FC<SideBarAvatarSectionProps> = ({
           const m = menuMedia;
           void (async () => {
             try {
-              await onRollerMediaDelete?.(m);
+              await onRollerMediaDelete(m);
             } catch {
               /* parent shows toast */
             }
           })();
         },
-      },
-    ];
-  }, [menuMedia, onRollerMediaDelete, t]);
+      });
+    }
+    return items;
+  }, [
+    menuMedia,
+    primaryMedia,
+    onRollerMediaDelete,
+    onRollerMediaSetPrimary,
+    t,
+  ]);
 
   return (
     <div
@@ -268,7 +298,7 @@ const SideBarAvatarSection: React.FC<SideBarAvatarSectionProps> = ({
         )}
       </div>
 
-      {menuPos && menuMedia && (
+      {menuPos && menuMedia && menuItems.length > 0 && (
         <Menu items={menuItems} position={menuPos} onClose={closeMenu} />
       )}
     </div>

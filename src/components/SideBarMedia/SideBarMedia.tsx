@@ -6,7 +6,10 @@ import React, {
   useLayoutEffect,
 } from 'react';
 import type { DisplayMedia } from '@/types';
-import { deleteDisplayMediaById } from '@/utils/deleteDisplayMedia';
+import {
+  deleteDisplayMediaById,
+  setDisplayMediaAsPrimary,
+} from '@/utils/deleteDisplayMedia';
 import {
   useChatMeta,
   useSelectedChat,
@@ -318,6 +321,27 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
     ],
   );
 
+  const handleRollerMediaSetPrimary = useCallback(
+    async (media: DisplayMedia) => {
+      if (!selectedChat) return;
+      try {
+        const updated = await setDisplayMediaAsPrimary(media.id);
+        setChats((prev) =>
+          prev.map((c) =>
+            c.id === selectedChat.id
+              ? { ...c, primary_media: updated }
+              : c,
+          ),
+        );
+        setRollPosition(0);
+        void fetchChat(selectedChat.id);
+      } catch {
+        showToast(t('toast.setPrimaryFailed'));
+      }
+    },
+    [selectedChat, setChats, setRollPosition, fetchChat, showToast, t],
+  );
+
   if (!selectedChat) return null;
 
   const showEditButton =
@@ -376,6 +400,7 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
             onAvatarRollerOpen={() => setIsAvatarRollerOpen(true)}
             rollerActionsEnabled={interlocutorEditVisible}
             onRollerMediaDelete={handleRollerMediaDelete}
+            onRollerMediaSetPrimary={handleRollerMediaSetPrimary}
           />
 
           <SideBarInfoSection

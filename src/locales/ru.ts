@@ -320,6 +320,7 @@ export default {
     joinGroupFailed: 'Не удалось вступить в группу.',
     createGroupTimeout: 'Не удалось создать группу. Попробуйте снова.',
     avatarDeleteFailed: 'Не удалось удалить аватар.',
+    setPrimaryFailed: 'Не удалось сделать аватар основным.',
   },
   sidebar: {
     members: 'Участники',
@@ -344,6 +345,7 @@ export default {
     createGroupButton: 'Создать',
     membersCount: 'участников',
     deleteRollerAvatar: 'Удалить',
+    setAsPrimaryRollerAvatar: 'Сделать основным',
   },
   aria: {
     tabSelector: 'Выбор вкладки',

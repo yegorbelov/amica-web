@@ -334,6 +334,7 @@ export default {
     joinGroupFailed: 'Could not join the group.',
     createGroupTimeout: 'Could not create the group. Try again.',
     avatarDeleteFailed: 'Could not delete this avatar.',
+    setPrimaryFailed: 'Could not set primary avatar.',
   },
   sidebar: {
     members: 'Members',
@@ -358,6 +359,7 @@ export default {
     createGroupButton: 'Create',
     membersCount: 'members',
     deleteRollerAvatar: 'Delete',
+    setAsPrimaryRollerAvatar: 'Set as primary',
   },
   aria: {
     tabSelector: 'Tab selector',

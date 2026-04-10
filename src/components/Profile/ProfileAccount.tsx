@@ -18,7 +18,10 @@ import { useAvatarRoller } from '@/components/SideBarMedia/hooks/useAvatarRoller
 import { websocketManager } from '@/utils/websocket-manager';
 import type { WebSocketMessage } from '@/utils/websocket-manager';
 import type { DisplayMedia, User, UserProfile } from '@/types';
-import { deleteDisplayMediaById } from '@/utils/deleteDisplayMedia';
+import {
+  deleteDisplayMediaById,
+  setDisplayMediaAsPrimary,
+} from '@/utils/deleteDisplayMedia';
 
 const logoutIcon = <Icon name='Logout' className={styles.logoutIcon} />;
 
@@ -179,6 +182,27 @@ export default function ProfileAccount() {
     [user, setUser, setRollPosition, refreshUser, showToast, t],
   );
 
+  const handleRollerMediaSetPrimary = useCallback(
+    async (media: DisplayMedia) => {
+      if (!user?.profile) return;
+      try {
+        const updated = await setDisplayMediaAsPrimary(media.id);
+        setUser({
+          ...user,
+          profile: {
+            ...user.profile,
+            primary_media: updated,
+          } as UserProfile,
+        });
+        setRollPosition(0);
+        void refreshUser();
+      } catch {
+        showToast(t('toast.setPrimaryFailed'));
+      }
+    },
+    [user, setUser, setRollPosition, refreshUser, showToast, t],
+  );
+
   return (
     <div className={styles.section}>
       <div ref={avatarLayoutRef} className={styles.accountAvatarOuter}>
@@ -207,6 +231,7 @@ export default function ProfileAccount() {
             onAvatarRollerOpen={() => setIsAvatarRollerOpen(true)}
             rollerActionsEnabled
             onRollerMediaDelete={handleRollerMediaDelete}
+            onRollerMediaSetPrimary={handleRollerMediaSetPrimary}
           />
         )}
       </div>

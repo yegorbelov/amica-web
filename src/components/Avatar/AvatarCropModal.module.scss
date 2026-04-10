@@ -15,11 +15,210 @@
   //   background: white;
   padding: 20px;
   border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  max-width: calc(100vw - 20px);
+  overflow-x: auto;
 }
 
-canvas {
-  //   border: 1px solid #ccc;
+.hiddenVideo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  clip: rect(0 0 0 0);
+}
+
+.canvasWrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.canvas {
+  display: block;
   cursor: grab;
+}
+
+.trimControls {
+  margin-top: 12px;
+  color: #fff;
+  font-size: 13px;
+  width: 100%;
+}
+
+.trimHint {
+  opacity: 0.85;
+  margin-bottom: 8px;
+}
+
+.trimRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.trimLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.trimRange {
+  width: 100%;
+  accent-color: rgb(0, 166, 255);
+  margin: 0;
+}
+
+.trimTimeline {
+  position: relative;
+  height: 28px;
+  margin-top: 2px;
+}
+
+.trimTimelineBase {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.trimTimelineSelected {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 4px;
+  border-radius: 999px;
+  background: rgb(0, 166, 255);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.trimTimelineDragHit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 6px;
+  z-index: 3;
+  cursor: grab;
+  touch-action: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.trimTimelinePlayhead {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  border-radius: 1px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  z-index: 6;
+  transform: translateX(-50%);
+}
+
+.trimThumbStart,
+.trimThumbEnd {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+  z-index: 4;
+
+  &::-webkit-slider-runnable-track {
+    height: 28px;
+    background: transparent;
+  }
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid #fff;
+    background: rgb(0, 166, 255);
+    margin-top: 7px;
+    pointer-events: auto;
+    cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+  }
+
+  &::-moz-range-track {
+    height: 28px;
+    background: transparent;
+    border: none;
+  }
+
+  &::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid #fff;
+    background: rgb(0, 166, 255);
+    pointer-events: auto;
+    cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+  }
+}
+
+.trimThumbStart {
+  z-index: 4;
+
+  &::-webkit-slider-thumb {
+    background: rgb(80, 190, 255);
+  }
+
+  &::-moz-range-thumb {
+    background: rgb(80, 190, 255);
+  }
+}
+
+.trimThumbEnd {
+  z-index: 5;
+}
+
+.videoPreviewActions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.previewPlayBtn {
+  border: 1px solid #fff;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 .buttons {

@@ -8,7 +8,14 @@ import React, {
 import ReactDOM from 'react-dom';
 import styles from './AvatarCropModal.module.scss';
 import { apiUpload } from '@/utils/apiFetch';
-import type { DisplayMedia, File } from '@/types';
+import type { DisplayMedia } from '@/types';
+
+const MAX_CLIP_SEC = 10;
+
+/** `captureStream` exists in browsers but may be missing from DOM typings. */
+type HTMLVideoElementWithCapture = HTMLVideoElement & {
+  captureStream?: () => MediaStream;
+};
 
 interface AvatarCropModalProps {
   file: globalThis.File;
@@ -38,6 +45,7 @@ export default function AvatarCropModal({
   contentType,
 }: AvatarCropModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasWrapRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(new Image());
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number>(0);
@@ -45,6 +53,7 @@ export default function AvatarCropModal({
   const imgPosRef = useRef({ x: 0, y: 0 });
   const imgScaleRef = useRef(1);
   const isDraggingRef = useRef(false);
+  const isTimelineWindowDraggingRef = useRef(false);
 
   const [selection, setSelection] = useState({ x: 150, y: 150, size: 200 });
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -72,18 +81,55 @@ export default function AvatarCropModal({
   const getRatio = useCallback(() => ratioRef.current, []);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const previewRafRef = useRef(0);
+  const segmentPreviewActiveRef = useRef(false);
+  const trimDefaultsAppliedRef = useRef(false);
 
-  useEffect(() => {
-    if (!isOpen || type === 'video' || !file) return;
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [trimStart, setTrimStart] = useState(0);
+  const [clipLength, setClipLength] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSegmentPlaying, setIsSegmentPlaying] = useState(false);
+  const [previewPlayheadTime, setPreviewPlayheadTime] = useState<number | null>(
+    null,
+  );
 
-    const url = URL.createObjectURL(file);
-    if (videoRef.current) {
-      videoRef.current.src = url;
-      videoRef.current.currentTime = 0;
-    }
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const videoDurationRef = useRef(0);
+  const trimWindowDragPointerIdRef = useRef<number | null>(null);
+  const trimWindowDragStartClientXRef = useRef(0);
+  const trimWindowDragInitialStartRef = useRef(0);
+  const trimWindowDragLengthRef = useRef(0);
 
-    return () => URL.revokeObjectURL(url);
-  }, [file, isOpen, type]);
+  const applyMediaLayout = useCallback(
+    (naturalWidth: number, naturalHeight: number) => {
+      const scale = CANVAS_HEIGHT / naturalHeight;
+      let width = naturalWidth * scale;
+
+      if (width < MIN_WIDTH) {
+        width = MIN_WIDTH;
+      }
+
+      const autoSize = Math.max(MIN_SIZE, Math.min(400, width, CANVAS_HEIGHT));
+
+      const x = (width - naturalWidth * scale) / 2;
+      const y = (CANVAS_HEIGHT - naturalHeight * scale) / 2;
+
+      imgScaleRef.current = scale;
+      imgPosRef.current = { x, y };
+      selectionRef.current = {
+        x: (width - autoSize) / 2,
+        y: (CANVAS_HEIGHT - autoSize) / 2,
+        size: autoSize,
+      };
+
+      setImgScale(scale);
+      setCanvasWidth(width);
+      setImgPos(imgPosRef.current);
+      setSelection(selectionRef.current);
+    },
+    [MIN_WIDTH],
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -110,41 +156,92 @@ export default function AvatarCropModal({
   }, [selection, offset, activeEdge, imgPos, imgScale]);
 
   useEffect(() => {
-    if (!isOpen || !file) return;
+    videoDurationRef.current = videoDuration;
+  }, [videoDuration]);
+
+  useEffect(() => {
+    if (!isOpen || !file || type !== 'photo') return;
 
     const url = URL.createObjectURL(file);
     const img = imageRef.current;
     img.src = url;
 
     img.onload = () => {
-      const scale = CANVAS_HEIGHT / img.height;
-      let width = img.width * scale;
-
-      if (width < MIN_WIDTH) {
-        width = MIN_WIDTH;
-      }
-
-      const autoSize = Math.max(MIN_SIZE, Math.min(400, width, CANVAS_HEIGHT));
-
-      const x = (width - img.width * scale) / 2;
-      const y = (CANVAS_HEIGHT - img.height * scale) / 2;
-
-      imgScaleRef.current = scale;
-      imgPosRef.current = { x, y };
-      selectionRef.current = {
-        x: (width - autoSize) / 2,
-        y: (CANVAS_HEIGHT - autoSize) / 2,
-        size: autoSize,
-      };
-
-      setImgScale(scale);
-      setCanvasWidth(width);
-      setImgPos(imgPosRef.current);
-      setSelection(selectionRef.current);
+      applyMediaLayout(img.width, img.height);
     };
 
-    return () => URL.revokeObjectURL(url);
-  }, [file, isOpen, MIN_WIDTH]);
+    return () => {
+      URL.revokeObjectURL(url);
+      img.onload = null;
+    };
+  }, [file, isOpen, type, applyMediaLayout]);
+
+  useEffect(() => {
+    if (!isOpen || type !== 'video') return;
+
+    trimDefaultsAppliedRef.current = false;
+    setVideoDuration(0);
+    setTrimStart(0);
+    setClipLength(0);
+    setPreviewPlayheadTime(null);
+  }, [isOpen, type, file]);
+
+  useEffect(() => {
+    if (!isOpen || !file || type !== 'video') return;
+
+    const v = videoRef.current;
+    if (!v) return;
+
+    const url = URL.createObjectURL(file);
+    v.src = url;
+    v.preload = 'auto';
+
+    const readDuration = () => {
+      const dur = v.duration;
+      return Number.isFinite(dur) && dur > 0 ? dur : 0;
+    };
+
+    const applyVideoTiming = () => {
+      const dur = readDuration();
+      if (dur <= 0) return;
+
+      setVideoDuration(dur);
+
+      if (!trimDefaultsAppliedRef.current) {
+        trimDefaultsAppliedRef.current = true;
+        setTrimStart(0);
+        setClipLength(Math.min(MAX_CLIP_SEC, dur));
+      }
+    };
+
+    const onLoaded = () => {
+      applyMediaLayout(v.videoWidth, v.videoHeight);
+      applyVideoTiming();
+    };
+
+    v.addEventListener('loadedmetadata', onLoaded);
+    v.addEventListener('durationchange', applyVideoTiming);
+
+    return () => {
+      v.removeEventListener('loadedmetadata', onLoaded);
+      v.removeEventListener('durationchange', applyVideoTiming);
+      URL.revokeObjectURL(url);
+      v.src = '';
+      v.load();
+      setVideoDuration(0);
+      setIsSegmentPlaying(false);
+      segmentPreviewActiveRef.current = false;
+    };
+  }, [file, isOpen, type, applyMediaLayout]);
+
+  const getNaturalMediaSize = useCallback(() => {
+    if (type === 'video' && videoRef.current) {
+      const v = videoRef.current;
+      return { w: v.videoWidth, h: v.videoHeight };
+    }
+    const img = imageRef.current;
+    return { w: img.width, h: img.height };
+  }, [type]);
 
   const createMask = useCallback(() => {
     const canvas = canvasRef.current;
@@ -164,9 +261,11 @@ export default function AvatarCropModal({
     maskCtx.clearRect(0, 0, totalWidth, totalHeight);
 
     maskCtx.fillStyle = 'rgba(0,0,0,0.6)';
-    const img = imageRef.current;
-    const imgWidth = img.width * imgScaleRef.current;
-    const imgHeight = img.height * imgScaleRef.current;
+    const { w: nw, h: nh } = getNaturalMediaSize();
+    if (nw === 0 || nh === 0) return;
+
+    const imgWidth = nw * imgScaleRef.current;
+    const imgHeight = nh * imgScaleRef.current;
 
     maskCtx.fillRect(
       FRAME + imgPosRef.current.x,
@@ -188,7 +287,7 @@ export default function AvatarCropModal({
     maskCtx.globalCompositeOperation = 'source-over';
 
     maskCanvasRef.current = maskCanvas;
-  }, [getRatio, FRAME]);
+  }, [getRatio, FRAME, getNaturalMediaSize]);
 
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -202,16 +301,25 @@ export default function AvatarCropModal({
 
     ctx.setTransform(ratio, 0, 0, ratio, FRAME * ratio, FRAME * ratio);
 
-    const img = imageRef.current;
-    const imgWidth = img.width * imgScaleRef.current;
-    const imgHeight = img.height * imgScaleRef.current;
-    ctx.drawImage(
-      img,
-      imgPosRef.current.x,
-      imgPosRef.current.y,
-      imgWidth,
-      imgHeight,
-    );
+    const { w: nw, h: nh } = getNaturalMediaSize();
+    if (nw > 0 && nh > 0) {
+      const imgWidth = nw * imgScaleRef.current;
+      const imgHeight = nh * imgScaleRef.current;
+      const dx = imgPosRef.current.x;
+      const dy = imgPosRef.current.y;
+
+      if (type === 'video' && videoRef.current) {
+        const v = videoRef.current;
+        if (v.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          ctx.drawImage(v, dx, dy, imgWidth, imgHeight);
+        }
+      } else {
+        const img = imageRef.current;
+        if (img.complete && img.naturalWidth > 0) {
+          ctx.drawImage(img, dx, dy, imgWidth, imgHeight);
+        }
+      }
+    }
 
     createMask();
     if (maskCanvasRef.current) {
@@ -296,7 +404,7 @@ export default function AvatarCropModal({
       cornerRadius,
     );
     ctx.fill();
-  }, [FRAME, createMask, getRatio, isOpen]);
+  }, [FRAME, createMask, getRatio, getNaturalMediaSize, isOpen, type]);
 
   const rafLoop = useCallback(
     function rafLoopInner() {
@@ -370,12 +478,96 @@ export default function AvatarCropModal({
     ) {
       canvas.width = totalWidth * ratio;
       canvas.height = totalHeight * ratio;
-      canvas.style.width = `${totalWidth}px`;
-      canvas.style.height = `${totalHeight}px`;
 
       requestAnimationFrame(() => drawCanvas());
     }
   }, [isOpen, canvasWidth, FRAME, drawCanvas, getRatio]);
+
+  useLayoutEffect(() => {
+    if (!isOpen || !canvasRef.current || !canvasWrapRef.current) return;
+
+    const canvas = canvasRef.current;
+    const wrap = canvasWrapRef.current;
+    const totalWidth = canvasWidth + FRAME * 2;
+    const totalHeight = CANVAS_HEIGHT + FRAME * 2;
+
+    const applyDisplayScale = () => {
+      const avail = wrap.clientWidth;
+      if (avail <= 0 || totalWidth <= 0) return;
+      const scale = Math.min(1, avail / totalWidth);
+      canvas.style.width = `${totalWidth * scale}px`;
+      canvas.style.height = `${totalHeight * scale}px`;
+    };
+
+    applyDisplayScale();
+    const ro = new ResizeObserver(applyDisplayScale);
+    ro.observe(wrap);
+    return () => ro.disconnect();
+  }, [isOpen, canvasWidth, FRAME]);
+
+  const canvasClientToLogical = useCallback(
+    (rect: DOMRect, clientX: number, clientY: number) => {
+      const totalW = canvasWidth + FRAME * 2;
+      const totalH = CANVAS_HEIGHT + FRAME * 2;
+      if (rect.width <= 0 || rect.height <= 0) {
+        return { x: -FRAME, y: -FRAME };
+      }
+      const sx = totalW / rect.width;
+      const sy = totalH / rect.height;
+      return {
+        x: (clientX - rect.left) * sx - FRAME,
+        y: (clientY - rect.top) * sy - FRAME,
+      };
+    },
+    [canvasWidth, FRAME],
+  );
+
+  useEffect(() => {
+    if (!isOpen || type !== 'video') return;
+
+    const tick = () => {
+      scheduleRedraw();
+      previewRafRef.current = requestAnimationFrame(tick);
+    };
+    previewRafRef.current = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(previewRafRef.current);
+      previewRafRef.current = 0;
+    };
+  }, [isOpen, type, scheduleRedraw]);
+
+  useEffect(() => {
+    if (!isSegmentPlaying || type !== 'video') return;
+
+    const v = videoRef.current;
+    let raf = 0;
+
+    const tick = () => {
+      if (v) setPreviewPlayheadTime(v.currentTime);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(raf);
+    };
+  }, [isSegmentPlaying, type]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || type !== 'video' || !isOpen) return;
+    if (segmentPreviewActiveRef.current || isExporting) return;
+
+    if (Math.abs(v.currentTime - trimStart) < 0.03) return;
+
+    v.pause();
+    const onSeeked = () => {
+      v.removeEventListener('seeked', onSeeked);
+      scheduleRedraw();
+    };
+    v.addEventListener('seeked', onSeeked);
+    v.currentTime = trimStart;
+  }, [trimStart, clipLength, type, isOpen, isExporting, scheduleRedraw]);
 
   useEffect(() => {
     return () => {
@@ -386,23 +578,284 @@ export default function AvatarCropModal({
     };
   }, []);
 
+  const trimEnd = Math.min(videoDuration, trimStart + clipLength);
+  const hasValidClip = trimEnd - trimStart > 0.01;
+
+  const endTrimWindowDrag = useCallback((e?: React.PointerEvent) => {
+    const pid = trimWindowDragPointerIdRef.current;
+    if (pid != null && timelineRef.current) {
+      try {
+        timelineRef.current.releasePointerCapture(pid);
+      } catch {
+        /* already released */
+      }
+    }
+    trimWindowDragPointerIdRef.current = null;
+    isTimelineWindowDraggingRef.current = false;
+    e?.stopPropagation();
+  }, []);
+
+  const onTrimWindowPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (isExporting || isSegmentPlaying || !hasValidClip) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const len = trimEnd - trimStart;
+      if (len <= 0.01) return;
+
+      const el = timelineRef.current;
+      if (!el) return;
+
+      trimWindowDragPointerIdRef.current = e.pointerId;
+      trimWindowDragStartClientXRef.current = e.clientX;
+      trimWindowDragInitialStartRef.current = trimStart;
+      trimWindowDragLengthRef.current = len;
+      isTimelineWindowDraggingRef.current = true;
+      el.setPointerCapture(e.pointerId);
+    },
+    [
+      isExporting,
+      isSegmentPlaying,
+      hasValidClip,
+      trimStart,
+      trimEnd,
+    ],
+  );
+
+  const onTrimWindowPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (trimWindowDragPointerIdRef.current !== e.pointerId) return;
+      e.stopPropagation();
+      const el = timelineRef.current;
+      if (!el) return;
+      const w = el.getBoundingClientRect().width;
+      if (w <= 0) return;
+
+      const dur = videoDurationRef.current;
+      const len = trimWindowDragLengthRef.current;
+      const deltaT =
+        ((e.clientX - trimWindowDragStartClientXRef.current) / w) * dur;
+      let newStart = trimWindowDragInitialStartRef.current + deltaT;
+      newStart = Math.max(0, Math.min(newStart, dur - len));
+      setTrimStart(newStart);
+      setClipLength(len);
+    },
+    [],
+  );
+
+  const trackStartPct =
+    videoDuration > 0 ? (Math.max(0, trimStart) / videoDuration) * 100 : 0;
+  const trackEndPct =
+    videoDuration > 0 ? (Math.max(0, trimEnd) / videoDuration) * 100 : 0;
+
+  const handleTrimStartChange = useCallback(
+    (rawStart: number) => {
+      const dur = videoDuration;
+      const currentEnd = Math.min(dur, trimStart + clipLength);
+      const t = Math.max(0, Math.min(rawStart, dur));
+      const maxStart = Math.min(currentEnd, dur);
+      const minStart = Math.max(0, currentEnd - MAX_CLIP_SEC);
+      const nextStart = Math.min(maxStart, Math.max(minStart, t));
+      setTrimStart(nextStart);
+      setClipLength(Math.max(0, currentEnd - nextStart));
+    },
+    [videoDuration, trimStart, clipLength],
+  );
+
+  const handleTrimEndChange = useCallback(
+    (rawEnd: number) => {
+      const dur = videoDuration;
+      const e = Math.max(0, Math.min(rawEnd, dur));
+      const minEnd = trimStart;
+      const maxEnd = Math.min(dur, trimStart + MAX_CLIP_SEC);
+      const nextEnd = Math.min(maxEnd, Math.max(minEnd, e));
+      setClipLength(nextEnd - trimStart);
+    },
+    [videoDuration, trimStart],
+  );
+
+  const stopInnerPointerEvent = useCallback(
+    (e: React.PointerEvent<HTMLElement>) => {
+      e.stopPropagation();
+    },
+    [],
+  );
+
+  const stopInnerClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+  }, []);
+
+  const exportTrimmedCroppedVideo = useCallback(async (): Promise<Blob> => {
+    const video = videoRef.current;
+    if (!video) throw new Error('No video');
+
+    const sel = selectionRef.current;
+    const sx = (sel.x - imgPosRef.current.x) / imgScaleRef.current;
+    const sy = (sel.y - imgPosRef.current.y) / imgScaleRef.current;
+    const sw = sel.size / imgScaleRef.current;
+    const outSize = Math.max(1, Math.round(sel.size));
+
+    const out = document.createElement('canvas');
+    out.width = outSize;
+    out.height = outSize;
+    const octx = out.getContext('2d')!;
+    if (!octx) throw new Error('No 2d context');
+
+    const fps = 30;
+    const canvasStream = out.captureStream(fps);
+    let audioStream: MediaStream | null;
+    try {
+      const cap = (video as HTMLVideoElementWithCapture).captureStream;
+      audioStream = typeof cap === 'function' ? cap.call(video) : null;
+    } catch {
+      audioStream = null;
+    }
+    const audioTrack = audioStream?.getAudioTracks()[0];
+    if (audioTrack) canvasStream.addTrack(audioTrack);
+
+    const mimeCandidates = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+    ];
+    const mime =
+      mimeCandidates.find((m) => MediaRecorder.isTypeSupported(m)) ??
+      'video/webm';
+
+    const wasMuted = video.muted;
+    video.muted = false;
+
+    await new Promise<void>((resolveSeek, rejectSeek) => {
+      if (Math.abs(video.currentTime - trimStart) < 0.03) {
+        resolveSeek();
+        return;
+      }
+
+      const onSeeked = () => {
+        video.removeEventListener('seeked', onSeeked);
+        video.removeEventListener('error', onError);
+        resolveSeek();
+      };
+      const onError = () => {
+        video.removeEventListener('seeked', onSeeked);
+        video.removeEventListener('error', onError);
+        rejectSeek(new Error('Video load error'));
+      };
+      video.addEventListener('seeked', onSeeked);
+      video.addEventListener('error', onError, { once: true });
+      try {
+        video.currentTime = trimStart;
+      } catch (e) {
+        video.removeEventListener('seeked', onSeeked);
+        video.removeEventListener('error', onError);
+        rejectSeek(e instanceof Error ? e : new Error(String(e)));
+      }
+    });
+
+    try {
+      octx.drawImage(video, sx, sy, sw, sw, 0, 0, outSize, outSize);
+    } catch (e) {
+      video.muted = wasMuted;
+      throw e instanceof Error ? e : new Error(String(e));
+    }
+
+    const chunks: Blob[] = [];
+    const recorder = new MediaRecorder(canvasStream, {
+      mimeType: mime,
+      videoBitsPerSecond: 2_500_000,
+    });
+
+    const endTime = trimEnd;
+
+    const blob = await new Promise<Blob>((resolveBlob, rejectBlob) => {
+      recorder.ondataavailable = (e) => {
+        if (e.data.size) chunks.push(e.data);
+      };
+      recorder.onerror = () => {
+        video.muted = wasMuted;
+        rejectBlob(new Error('MediaRecorder error'));
+      };
+      recorder.onstop = () => {
+        video.muted = wasMuted;
+        resolveBlob(new Blob(chunks, { type: mime }));
+      };
+
+      let raf = 0;
+
+      const finish = () => {
+        cancelAnimationFrame(raf);
+        video.pause();
+        try {
+          recorder.stop();
+        } catch {
+          /* already stopped */
+        }
+      };
+
+      const drawFrame = () => {
+        if (video.currentTime >= endTime - 0.04 || video.ended) {
+          finish();
+          return;
+        }
+        try {
+          octx.drawImage(video, sx, sy, sw, sw, 0, 0, outSize, outSize);
+        } catch {
+          finish();
+          return;
+        }
+        raf = requestAnimationFrame(drawFrame);
+      };
+
+      try {
+        recorder.start(100);
+      } catch (e) {
+        video.muted = wasMuted;
+        rejectBlob(e instanceof Error ? e : new Error(String(e)));
+        return;
+      }
+
+      video
+        .play()
+        .then(() => {
+          raf = requestAnimationFrame(drawFrame);
+        })
+        .catch((e) => {
+          video.muted = wasMuted;
+          rejectBlob(e instanceof Error ? e : new Error(String(e)));
+        });
+    });
+
+    return blob;
+  }, [trimStart, trimEnd]);
+
   const handleUpload = useCallback(async () => {
     if (type === 'video') {
-      const formData = new FormData();
-      formData.append('file', file);
+      setIsExporting(true);
       try {
+        const blob = await exportTrimmedCroppedVideo();
+        if (!blob.size) {
+          console.error('Video export produced an empty file');
+          return;
+        }
+        const base =
+          file.name.replace(/\.[^/.]+$/, '') || 'avatar-clip';
+        const outFile = new globalThis.File([blob], `${base}.webm`, {
+          type: blob.type || 'video/webm',
+        });
+        const formData = new FormData();
+        formData.append('file', outFile);
+
         const data = (await apiUpload(
           `/api/media_files/primary-media/?content_type=${contentType}&object_id=${objectId}`,
           formData,
         )) as DisplayMedia;
 
-        if (data) {
-          onUploadSuccess(data);
-        }
-
+        if (data) onUploadSuccess(data);
         onClose();
       } catch (e) {
-        console.error('Video upload failed:', e);
+        console.error('Video export/upload failed:', e);
+      } finally {
+        setIsExporting(false);
       }
 
       return;
@@ -428,7 +881,7 @@ export default function AvatarCropModal({
       const formData = new FormData();
       formData.append(
         'file',
-        new File([blob], file.name.replace(/\.[^/.]+$/, '.webp')),
+        new globalThis.File([blob], file.name.replace(/\.[^/.]+$/, '.webp')),
       );
 
       try {
@@ -445,13 +898,62 @@ export default function AvatarCropModal({
         console.error('Upload failed:', e);
       }
     }
-  }, [contentType, objectId, onUploadSuccess, onClose, type, file]);
+  }, [
+    contentType,
+    objectId,
+    onUploadSuccess,
+    onClose,
+    type,
+    file,
+    exportTrimmedCroppedVideo,
+  ]);
 
-  useEffect(() => {
-    if (isOpen && type === 'video') {
-      handleUpload();
+  const playSegmentPreview = useCallback(() => {
+    const v = videoRef.current;
+    if (!v || videoDuration <= 0) return;
+
+    segmentPreviewActiveRef.current = true;
+    setIsSegmentPlaying(true);
+    setPreviewPlayheadTime(trimStart);
+    v.pause();
+
+    const onTimeUpdate = () => {
+      if (v.currentTime >= trimEnd - 0.06) {
+        v.pause();
+        v.removeEventListener('timeupdate', onTimeUpdate);
+        segmentPreviewActiveRef.current = false;
+        setIsSegmentPlaying(false);
+        setPreviewPlayheadTime(null);
+        const onBackSeeked = () => {
+          v.removeEventListener('seeked', onBackSeeked);
+          scheduleRedraw();
+        };
+        v.addEventListener('seeked', onBackSeeked);
+        v.currentTime = trimStart;
+      }
+    };
+
+    const startPlayback = () => {
+      v.addEventListener('timeupdate', onTimeUpdate);
+      v.play().catch(() => {
+        v.removeEventListener('timeupdate', onTimeUpdate);
+        segmentPreviewActiveRef.current = false;
+        setIsSegmentPlaying(false);
+        setPreviewPlayheadTime(null);
+      });
+    };
+
+    if (Math.abs(v.currentTime - trimStart) < 0.03) {
+      startPlayback();
+    } else {
+      const onSeeked = () => {
+        v.removeEventListener('seeked', onSeeked);
+        startPlayback();
+      };
+      v.addEventListener('seeked', onSeeked);
+      v.currentTime = trimStart;
     }
-  }, [isOpen, type, handleUpload]);
+  }, [trimStart, trimEnd, videoDuration, scheduleRedraw]);
 
   const pointerIdRef = useRef<number | null>(null);
 
@@ -462,8 +964,7 @@ export default function AvatarCropModal({
       if (!canvasRef.current || isDraggingRef.current) return;
 
       const rect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left - FRAME;
-      const y = e.clientY - rect.top - FRAME;
+      const { x, y } = canvasClientToLogical(rect, e.clientX, e.clientY);
 
       const edge = detectEdge(x, y);
       if (!edge) return;
@@ -478,7 +979,7 @@ export default function AvatarCropModal({
       pointerIdRef.current = e.pointerId;
       canvasRef.current.setPointerCapture(e.pointerId);
     },
-    [detectEdge, FRAME],
+    [detectEdge, canvasClientToLogical],
   );
 
   const onCanvasPointerMove = useCallback(
@@ -486,8 +987,7 @@ export default function AvatarCropModal({
       if (!isDraggingRef.current || !canvasRef.current) return;
 
       const rect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left - FRAME;
-      const y = e.clientY - rect.top - FRAME;
+      const { x, y } = canvasClientToLogical(rect, e.clientX, e.clientY);
 
       const edge = activeEdgeRef.current;
       if (!edge) return;
@@ -564,14 +1064,13 @@ export default function AvatarCropModal({
       selectionRef.current = newSel;
       scheduleRedraw();
     },
-    [canvasWidth, scheduleRedraw, FRAME],
+    [canvasWidth, scheduleRedraw, canvasClientToLogical],
   );
   const onHoverMove = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
       if (!canvasRef.current) return;
       const rect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left - FRAME;
-      const y = e.clientY - rect.top - FRAME;
+      const { x, y } = canvasClientToLogical(rect, e.clientX, e.clientY);
 
       const edge = detectEdge(x, y);
 
@@ -584,7 +1083,7 @@ export default function AvatarCropModal({
       };
       setCursor(edge ? cursorMap[edge] : 'default');
     },
-    [detectEdge, FRAME],
+    [detectEdge, canvasClientToLogical],
   );
 
   const endDrag = useCallback(
@@ -614,29 +1113,166 @@ export default function AvatarCropModal({
     <div
       className={styles.modalOverlay}
       onClick={() => {
-        if (!isDraggingRef.current) {
+        if (
+          !isDraggingRef.current &&
+          !isTimelineWindowDraggingRef.current
+        ) {
           onClose();
         }
       }}
     >
-      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-        <canvas
-          ref={canvasRef}
-          onPointerDown={startDrag}
-          onPointerMove={(e) => {
-            onHoverMove(e);
-            onCanvasPointerMove(e);
-          }}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-          onPointerLeave={() => setCursor('default')}
-          className={styles.canvas}
-          style={{ cursor, touchAction: 'none' }}
-        />
+      <div
+        className={styles.modalContent}
+        onClick={(e) => e.stopPropagation()}
+        style={{ position: 'relative' }}
+      >
+        {type === 'video' && (
+          <video
+            ref={videoRef}
+            className={styles.hiddenVideo}
+            playsInline
+            muted
+            preload='auto'
+          />
+        )}
+        <div ref={canvasWrapRef} className={styles.canvasWrap}>
+          <canvas
+            ref={canvasRef}
+            onPointerDown={startDrag}
+            onPointerMove={(e) => {
+              onHoverMove(e);
+              onCanvasPointerMove(e);
+            }}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            onPointerLeave={() => setCursor('default')}
+            className={styles.canvas}
+            style={{
+              cursor,
+              touchAction: 'none',
+              ...(type === 'video' && isExporting
+                ? { pointerEvents: 'none', opacity: 0.65 }
+                : {}),
+            }}
+          />
+        </div>
+
+        {type === 'video' && videoDuration > 0 && (
+          <div
+            className={styles.trimControls}
+            onClick={stopInnerClick}
+            onPointerDown={stopInnerPointerEvent}
+          >
+            <p className={styles.trimHint}>
+              Full timeline = whole video. Clip length at most {MAX_CLIP_SEC}s.
+            </p>
+            <div className={styles.videoPreviewActions}>
+              <button
+                type='button'
+                className={styles.previewPlayBtn}
+                onClick={playSegmentPreview}
+                onPointerDown={stopInnerPointerEvent}
+                disabled={isExporting || isSegmentPlaying}
+              >
+                {isSegmentPlaying ? 'Playing…' : 'Preview clip'}
+              </button>
+            </div>
+            <div className={styles.trimRow}>
+              <div className={styles.trimLabel}>
+                <span>Clip range</span>
+                <span>
+                  {trimStart.toFixed(1)}s - {trimEnd.toFixed(1)}s (
+                  {Math.max(0, trimEnd - trimStart).toFixed(1)}s)
+                  {isSegmentPlaying && previewPlayheadTime != null && (
+                    <>
+                      {' '}
+                      · now {previewPlayheadTime.toFixed(1)}s /{' '}
+                      {videoDuration.toFixed(1)}s
+                    </>
+                  )}
+                </span>
+              </div>
+              <div
+                ref={timelineRef}
+                className={styles.trimTimeline}
+                onPointerMove={onTrimWindowPointerMove}
+                onPointerUp={endTrimWindowDrag}
+                onPointerCancel={endTrimWindowDrag}
+              >
+                <div className={styles.trimTimelineBase} />
+                <div
+                  className={styles.trimTimelineSelected}
+                  style={{
+                    left: `${trackStartPct}%`,
+                    width: `${Math.max(0, trackEndPct - trackStartPct)}%`,
+                  }}
+                />
+                {hasValidClip && (
+                  <div
+                    role='slider'
+                    aria-label='Move clip range'
+                    className={styles.trimTimelineDragHit}
+                    style={{
+                      left: `${trackStartPct}%`,
+                      width: `${Math.max(0, trackEndPct - trackStartPct)}%`,
+                    }}
+                    onPointerDown={onTrimWindowPointerDown}
+                  />
+                )}
+                {previewPlayheadTime != null &&
+                  videoDuration > 0 &&
+                  isSegmentPlaying && (
+                    <div
+                      className={styles.trimTimelinePlayhead}
+                      style={{
+                        left: `${Math.min(
+                          100,
+                          Math.max(
+                            0,
+                            (previewPlayheadTime / videoDuration) * 100,
+                          ),
+                        )}%`,
+                      }}
+                    />
+                  )}
+                <input
+                  type='range'
+                  className={`${styles.trimRange} ${styles.trimThumbStart}`}
+                  min={0}
+                  max={videoDuration}
+                  step={0.05}
+                  value={Math.min(Math.max(0, trimStart), videoDuration)}
+                  onPointerDown={stopInnerPointerEvent}
+                  onChange={(e) => handleTrimStartChange(Number(e.target.value))}
+                  disabled={isExporting}
+                />
+                <input
+                  type='range'
+                  className={`${styles.trimRange} ${styles.trimThumbEnd}`}
+                  min={0}
+                  max={videoDuration}
+                  step={0.05}
+                  value={Math.min(Math.max(0, trimEnd), videoDuration)}
+                  onPointerDown={stopInnerPointerEvent}
+                  onChange={(e) => handleTrimEndChange(Number(e.target.value))}
+                  disabled={isExporting}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className={styles.buttons}>
-          <button onClick={onClose}>Cancel</button>
-          <button onClick={handleUpload}>Save</button>
+          <button type='button' onClick={onClose} disabled={isExporting}>
+            Cancel
+          </button>
+          <button
+            type='button'
+            onClick={handleUpload}
+            disabled={isExporting || (type === 'video' && !hasValidClip)}
+          >
+            {isExporting ? 'Saving…' : 'Save'}
+          </button>
         </div>
       </div>
     </div>,
