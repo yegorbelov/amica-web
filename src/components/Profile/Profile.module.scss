@@ -17,9 +17,8 @@
     calc(var(--main-navigation-height) + var(--sab)) 10px;
 }
 .avatar {
-  width: 70px;
-  height: 70px;
-  cursor: pointer;
+  width: 65px;
+  height: 65px;
 }
 
 .tab {
@@ -43,17 +42,49 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    flex: 1;
+    min-width: 0;
     text-align: left;
     overflow: hidden;
     fill: var(--surface-text);
   }
 
-  &__label {
+  &__end {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+    margin-left: 6px;
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__title {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow-wrap: break-word;
     overflow: hidden;
+    font-weight: inherit;
+  }
+
+  &__title--account {
+    font-weight: 700;
+  }
+
+  &__subtitle {
+    display: block;
+    color: var(--color-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -69,6 +100,11 @@
 .tab.active {
   // color: var(--color-accent-text);
   background: rgba(127, 127, 127, 0.2);
+}
+
+.arrow {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
 }
 
 .section {

@@ -512,6 +512,7 @@ export default function Profile() {
       {
         id: 'account' as const,
         label: user?.username || '',
+        subtitle: user?.email || undefined,
         icon: (
           <Avatar
             className={styles.avatar}
@@ -522,11 +523,9 @@ export default function Profile() {
       },
       {
         id: 'language' as const,
-        label:
-          t('profileTabs.language') +
-          ' (' +
-          availableLanguages.find((l) => l.code === locale)?.name +
-          ')',
+        label: t('profileTabs.language'),
+        trailing:
+          availableLanguages.find((l) => l.code === locale)?.name ?? undefined,
         icon: languageIcon,
       },
       {
@@ -545,7 +544,7 @@ export default function Profile() {
         icon: sessionsIcon,
       },
     ],
-    [locale, t, user?.profile?.primary_media, user?.username],
+    [locale, t, user?.email, user?.profile?.primary_media, user?.username],
   );
 
   const targetStackLen = isAnimatingBack
@@ -606,9 +605,27 @@ export default function Profile() {
             >
               <div className={styles['tab__content']}>
                 {tab.icon}
-                <span>{tab.label}</span>
+                <div className={styles['tab__text']}>
+                  <span
+                    className={`${styles['tab__title']} ${
+                      tab.id === 'account' ? styles['tab__title--account'] : ''
+                    }`}
+                  >
+                    {tab.label}
+                  </span>
+                  {'subtitle' in tab && tab.subtitle ? (
+                    <span className={styles['tab__subtitle']}>
+                      {tab.subtitle}
+                    </span>
+                  ) : null}
+                </div>
               </div>
-              {arrowNavIcon}
+              <div className={styles['tab__end']}>
+                {'trailing' in tab && tab.trailing ? (
+                  <span className={styles['tab__subtitle']}>{tab.trailing}</span>
+                ) : null}
+                {arrowNavIcon}
+              </div>
             </button>
           ))}
         </nav>
@@ -650,9 +667,31 @@ export default function Profile() {
                   >
                     <div className={styles['tab__content']}>
                       {tab.icon}
-                      <span className={styles['tab__label']}>{tab.label}</span>
+                      <div className={styles['tab__text']}>
+                        <span
+                          className={`${styles['tab__title']} ${
+                            tab.id === 'account'
+                              ? styles['tab__title--account']
+                              : ''
+                          }`}
+                        >
+                          {tab.label}
+                        </span>
+                        {'subtitle' in tab && tab.subtitle ? (
+                          <span className={styles['tab__subtitle']}>
+                            {tab.subtitle}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
-                    {arrowNavIcon}
+                    <div className={styles['tab__end']}>
+                      {'trailing' in tab && tab.trailing ? (
+                        <span className={styles['tab__subtitle']}>
+                          {tab.trailing}
+                        </span>
+                      ) : null}
+                      {arrowNavIcon}
+                    </div>
                   </button>
                 ))}
               </nav>

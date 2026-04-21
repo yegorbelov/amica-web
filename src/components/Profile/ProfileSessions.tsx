@@ -211,8 +211,7 @@ export default function ProfileSessions() {
           <div className={styles.sessionsList}>
             {sessions.map((session) => (
               <div key={session.jti} className={styles.sessionItem}>
-                <button
-                  type='button'
+                <div
                   className={`${styles.sessionPreviewBtn} ${
                     session.is_current ? styles.currentSession : ''
                   }`}
@@ -236,7 +235,7 @@ export default function ProfileSessions() {
                   <span className={styles.subInfo}>
                     {t('sessions.lastActive')} {formatDate(session.last_active)}
                   </span>
-                </button>
+                </div>
                 {session.is_current && sessions.length > 1 ? (
                   <Button
                     className={styles.revokeBtn}
