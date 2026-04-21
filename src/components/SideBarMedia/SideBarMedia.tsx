@@ -52,8 +52,14 @@ const FILTER_LABEL_KEYS: Record<string, string> = {
 const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
   const { t } = useTranslation();
   const { formatLastSeen } = useFormatLastSeen();
-  const { addContact, deleteContact, saveContact, setChats, fetchChat } =
-    useChatMeta();
+  const {
+    addContact,
+    deleteContact,
+    saveContact,
+    setChats,
+    fetchChat,
+    deleteChat,
+  } = useChatMeta();
   const { selectedChat } = useSelectedChat();
   const { messages } = useChatMessages();
   const { showToast } = useToast();
@@ -85,6 +91,9 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
     messages,
     selectedChat?.type ?? 'D',
     selectedChat?.id,
+    selectedChat?.type !== 'C' ||
+      selectedChat?.my_role === 'owner' ||
+      selectedChat?.my_role === 'admin',
   );
 
   const {
@@ -154,6 +163,9 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
     if (selectedChat?.type === 'G') {
       return `${selectedChat?.info ?? ''} ${t('sidebar.membersCount')}`;
     }
+    if (selectedChat?.type === 'C') {
+      return `${selectedChat?.info ?? ''} ${t('sidebar.subscribersCount')}`;
+    }
     return formatLastSeen(selectedChat?.info ?? '');
   }, [selectedChat?.type, selectedChat?.info, t, formatLastSeen]);
 
@@ -168,6 +180,36 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
       console.error('Copy failed', err);
     }
   }, [interlocutor, showToast, t]);
+
+  const isChannelAdmin = useMemo(
+    () =>
+      selectedChat?.type === 'C' &&
+      (selectedChat.my_role === 'owner' || selectedChat.my_role === 'admin'),
+    [selectedChat?.type, selectedChat?.my_role],
+  );
+
+  const channelPublicUrl = useMemo(() => {
+    if (selectedChat?.id == null || selectedChat.type !== 'C') return '';
+    return `${window.location.origin}${window.location.pathname}#${selectedChat.id}`;
+  }, [selectedChat]);
+
+  const handleCopyChannelLink = useCallback(async () => {
+    if (!channelPublicUrl) return;
+    try {
+      await navigator.clipboard.writeText(channelPublicUrl);
+      showToast(t('toast.channelLinkCopied'));
+    } catch (err) {
+      console.error('Copy failed', err);
+      showToast(t('toast.wsSendFailed'));
+    }
+  }, [channelPublicUrl, showToast, t]);
+
+  const handleDeleteChannel = useCallback(() => {
+    if (selectedChat?.id == null || selectedChat.type !== 'C') return;
+    if (!window.confirm(t('sidebar.deleteChannelConfirm'))) return;
+    deleteChat(selectedChat.id);
+    onClose?.();
+  }, [selectedChat, deleteChat, onClose, t]);
 
   const handleBackOrClose = useCallback(() => {
     if (interlocutorEditVisible) {
@@ -188,7 +230,10 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
     if (interlocutorEditVisible) {
       const canSave = effectiveNameLength > 0 && effectiveNameLength <= 64;
       if (!canSave) return;
-      if (selectedChat?.type === 'G' && selectedChat.id != null) {
+      if (
+        (selectedChat?.type === 'G' || selectedChat?.type === 'C') &&
+        selectedChat.id != null
+      ) {
         const cid = selectedChat.id;
         const proposedName = editValue.trim();
         const handleResp = (
@@ -215,7 +260,7 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
       }
       handleSaveContact(interlocutor?.contact_id, editValue);
       setInterlocutorEditVisible(false);
-    } else if (selectedChat?.type === 'G') {
+    } else if (selectedChat?.type === 'G' || selectedChat?.type === 'C') {
       onInterlocutorEdit();
     } else if (selectedChat?.members?.[0]?.is_contact) {
       onInterlocutorEdit();
@@ -348,9 +393,10 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
     (selectedChat.type === 'D' &&
       selectedChat.members != null &&
       selectedChat.members.length > 0) ||
-    selectedChat.type === 'G';
+    selectedChat.type === 'G' ||
+    isChannelAdmin;
   const editLabel =
-    selectedChat.type === 'G'
+    selectedChat.type === 'G' || selectedChat.type === 'C'
       ? t('sidebar.edit')
       : selectedChat.members?.[0]?.is_contact
         ? t('sidebar.edit')
@@ -385,6 +431,8 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
             filterItems={filterItemsTranslated}
             effectiveFilterType={effectiveFilterTypeTranslated}
             onFilterChange={handleFilterChange}
+            showChannelAdminToolbar={isChannelAdmin}
+            onDeleteChannel={handleDeleteChannel}
           />
 
           <SideBarAvatarSection
@@ -416,6 +464,9 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
             showEmail={selectedChat.type === 'D'}
             email={interlocutor?.email}
             onCopyEmail={handleCopyEmail}
+            showChannelLink={selectedChat.type === 'C'}
+            channelLinkUrl={channelPublicUrl || undefined}
+            onCopyChannelLink={handleCopyChannelLink}
           />
 
           {availableTabs.length > 0 && (
@@ -438,10 +489,14 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
               />
 
               <div className={styles.content} ref={gridRef}>
-                {activeTab === 'members' && selectedChat.type === 'G' && (
+                {activeTab === 'members' &&
+                  (selectedChat.type === 'G' || selectedChat.type === 'C') && (
                   <MembersList
                     chatId={selectedChat.id}
+                    chatType={selectedChat.type}
+                    myRole={selectedChat.my_role}
                     members={selectedChat.members ?? []}
+                    onCloseSidebar={onClose}
                   />
                 )}
                 {activeTab === 'media' && mediaFiles.length > 0 && (

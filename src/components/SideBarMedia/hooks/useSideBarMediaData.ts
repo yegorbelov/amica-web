@@ -13,6 +13,8 @@ export function useSideBarMediaData(
   messages: Message[] | undefined,
   chatType: 'D' | 'G' | 'C',
   chatId: number | undefined,
+  /** Channel: show Subscribers tab only for owner/admin (not for subscribers). */
+  channelMembersTabVisible = true,
 ) {
   const mediaFiles = useMemo(
     () =>
@@ -83,10 +85,16 @@ export function useSideBarMediaData(
   const availableTabs = useMemo((): SideBarTab[] => {
     const tabs: SideBarTab[] = [];
     if (chatType === 'G') tabs.push('members');
+    if (chatType === 'C' && channelMembersTabVisible) tabs.push('members');
     if (mediaFiles.length > 0) tabs.push('media');
     if (audioFiles.length > 0) tabs.push('audio');
     return tabs;
-  }, [chatType, mediaFiles.length, audioFiles.length]);
+  }, [
+    chatType,
+    channelMembersTabVisible,
+    mediaFiles.length,
+    audioFiles.length,
+  ]);
 
   const [userSelectedTab, setActiveTab] = useState<SideBarTab | null>(null);
 

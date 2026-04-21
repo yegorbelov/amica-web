@@ -1,11 +1,12 @@
 import React from "react";
 
-export type IconName = "AddPlus" | "Appearance" | "Arrow" | "Attachment" | "Chats" | "Circle" | "ContactHeart" | "CopyText" | "Cross" | "Delete" | "Edit" | "File" | "Forward" | "Fullscreen" | "FullscreenExit" | "Language" | "Logout" | "Notification" | "Passkey" | "Pause" | "Photo" | "Play" | "Privacy" | "Read" | "Reply" | "SaveAs" | "Search" | "Select" | "Selfie" | "SendDestkop" | "SendMobile" | "Sessions" | "Sound" | "SoundMaxFill" | "SoundMinFill" | "SoundMuteFill" | "Unread" | "Video" | "Wallpaper" | "Spinner";
+export type IconName = "AccountEye" | "AddPlus" | "Appearance" | "Arrow" | "Attachment" | "Chats" | "Circle" | "ContactHeart" | "CopyText" | "Cross" | "Delete" | "Edit" | "File" | "Forward" | "Fullscreen" | "FullscreenExit" | "Language" | "Logout" | "Notification" | "Passkey" | "Pause" | "Photo" | "Play" | "Privacy" | "Read" | "Reply" | "SaveAs" | "Search" | "Select" | "Selfie" | "SendDestkop" | "SendMobile" | "Sessions" | "Sound" | "SoundMaxFill" | "SoundMinFill" | "SoundMuteFill" | "Unread" | "Video" | "Wallpaper" | "Spinner";
 export type IconProps = React.SVGProps<SVGSVGElement> & { name: IconName };
 
 
 export const IconsSprite = () => (
   <svg style={{ display: "none" }} xmlns="http://www.w3.org/2000/svg">
+    <symbol id="icon-AccountEye" viewBox="0 0 24 24"><title>Account-eye SVG Icon</title><path fill="currentColor" d="M6 8c0-2.21 1.79-4 4-4s4 1.79 4 4s-1.79 4-4 4s-4-1.79-4-4m3.14 11.75L8.85 19l.29-.75c.7-1.75 1.94-3.11 3.47-4.03c-.82-.14-1.69-.22-2.61-.22c-4.42 0-8 1.79-8 4v2h7.27c-.04-.09-.09-.17-.13-.25M17 18c-.56 0-1 .44-1 1s.44 1 1 1s1-.44 1-1s-.44-1-1-1m6 1c-.94 2.34-3.27 4-6 4s-5.06-1.66-6-4c.94-2.34 3.27-4 6-4s5.06 1.66 6 4m-3.5 0a2.5 2.5 0 0 0-5 0a2.5 2.5 0 0 0 5 0"/></symbol>
     <symbol id="icon-AddPlus" viewBox="0 0 24 24"><title>Add-plus SVG Icon</title><path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 12h6m0 0h6m-6 0v6m0-6V6"/></symbol>
     <symbol id="icon-Appearance" viewBox="0 0 16 16"><title>Appearance SVG Icon</title><path fill="currentColor" fillRule="evenodd" d="m14.489 8.388l-.001.006a.1.1 0 0 1-.027.028a.43.43 0 0 1-.264.082h-3.186c-3.118 0-4.68 3.77-2.476 5.974a6.5 6.5 0 1 1 5.953-6.09Zm-.292 1.616c.913 0 1.736-.618 1.79-1.529a8 8 0 1 0-7.032 7.468c1.243-.147 1.527-1.639.641-2.525c-1.26-1.26-.367-3.414 1.415-3.414zM10 5a1 1 0 1 1-2 0a1 1 0 0 1 2 0M6 7a1 1 0 1 0 0-2a1 1 0 0 0 0 2m0 2a1 1 0 1 1-2 0a1 1 0 0 1 2 0" clipRule="evenodd"/></symbol>
     <symbol id="icon-Arrow" viewBox="0 0 24 24"><title>Arrow-ios-forward-outline SVG Icon</title><path fill="currentColor" d="M10 19a1 1 0 0 1-.64-.23a1 1 0 0 1-.13-1.41L13.71 12L9.39 6.63a1 1 0 0 1 .15-1.41a1 1 0 0 1 1.46.15l4.83 6a1 1 0 0 1 0 1.27l-5 6A1 1 0 0 1 10 19"/></symbol>
@@ -73,6 +74,7 @@ export const IconsSprite = () => (
 );
 
 const staticViewBoxes: Record<string, string> = {
+  "AccountEye": "0 0 24 24",
   "AddPlus": "0 0 24 24",
   "Appearance": "0 0 16 16",
   "Arrow": "0 0 24 24",

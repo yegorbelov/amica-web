@@ -17,6 +17,7 @@ import {
   useSelectedChat,
   useMessagesActions,
   useEditing,
+  useChatMeta,
 } from '../../contexts/ChatContextCore';
 import styles from './SendArea.module.scss';
 import { useUser } from '../../contexts/UserContextCore';
@@ -36,6 +37,8 @@ import {
   compressRasterImage,
   shouldTryRasterCompress,
 } from '@/lib/image-compress/compressImageWasm';
+import { chatUserCanPost } from '@/utils/chatPermissions';
+import { useToast } from '@/contexts/toast/ToastContextCore';
 
 interface SendAreaProps {
   isSelectionMode?: boolean;
@@ -87,13 +90,32 @@ const MessageInput: React.FC<SendAreaProps> = ({
   const editingChatIdRef = useRef<number | undefined>(undefined);
 
   const { selectedChat } = useSelectedChat();
+  const { subscribeToPreviewedChannel, leaveChannelToPreview } = useChatMeta();
   const { updateMessageInChat } = useMessagesActions();
   const { editingMessage, setEditingMessage } = useEditing();
   const { user } = useUser();
   const { setTerm, setResults } = useSearchContext();
+  const { showToast } = useToast();
 
   const chatId = selectedChat?.id;
   const chatIdRef = useRef(chatId);
+  const canPost = chatUserCanPost(selectedChat ?? undefined);
+  const isChannelPreview = useMemo(
+    () =>
+      selectedChat?.type === 'C' &&
+      selectedChat.preview_of_chat_id != null &&
+      selectedChat.id < 0,
+    [selectedChat],
+  );
+  const isChannelSubscriber = useMemo(
+    () =>
+      selectedChat?.type === 'C' &&
+      selectedChat.my_role === 'subscriber' &&
+      selectedChat.id > 0,
+    [selectedChat],
+  );
+  const [subscribing, setSubscribing] = useState(false);
+  const [unsubscribing, setUnsubscribing] = useState(false);
 
   useLayoutEffect(() => {
     fileSendPhaseRef.current = fileSendPhase;
@@ -566,6 +588,8 @@ const MessageInput: React.FC<SendAreaProps> = ({
     async (e: React.FormEvent) => {
       e.preventDefault();
 
+      if (!canPost && !editingMessage) return;
+
       if (editingMessage && chatId) {
         if (!message.trim()) return;
         setTerm('');
@@ -636,6 +660,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
       editingMessage,
       updateMessageInChat,
       cancelEdit,
+      canPost,
     ],
   );
 
@@ -643,6 +668,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
 
   const handleFileUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!canPost) return;
       const fileList = e.target.files;
       if (!fileList || fileList.length === 0) return;
 
@@ -677,7 +703,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
 
       e.target.value = '';
     },
-    [MAX_FILE_SIZE],
+    [MAX_FILE_SIZE, canPost],
   );
 
   const handleKeyDown = useCallback(
@@ -689,6 +715,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
         return;
       }
       if (e.key === 'Enter' && !e.shiftKey) {
+        if (!canPost && !editingMessage) return;
         const isMobile = window.innerWidth < 768 || 'ontouchstart' in window;
         if (!isMobile) {
           e.preventDefault();
@@ -696,11 +723,12 @@ const MessageInput: React.FC<SendAreaProps> = ({
         }
       }
     },
-    [handleSubmit, editingMessage, cancelEdit],
+    [handleSubmit, editingMessage, cancelEdit, canPost],
   );
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLDivElement>) => {
+      if (!canPost && !editingMessage) return;
       e.preventDefault();
 
       const text = e.clipboardData.getData('text/plain');
@@ -734,7 +762,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
 
       handleInput();
     },
-    [handleInput],
+    [handleInput, canPost, editingMessage],
   );
 
   const handleFileClick = useCallback(() => {
@@ -745,9 +773,13 @@ const MessageInput: React.FC<SendAreaProps> = ({
     setFiles((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const handleFiles = useCallback((newFiles: File[]) => {
-    setFiles((prev) => [...prev, ...newFiles]);
-  }, []);
+  const handleFiles = useCallback(
+    (newFiles: File[]) => {
+      if (!canPost) return;
+      setFiles((prev) => [...prev, ...newFiles]);
+    },
+    [canPost],
+  );
 
   const attachmentIcon = useMemo(
     () => <Icon name='Attachment' className={styles['input_attach']} />,
@@ -799,36 +831,86 @@ const MessageInput: React.FC<SendAreaProps> = ({
     editableRef.current?.blur();
   }, []);
 
+  useEffect(() => {
+    if (!canPost && !isChannelPreview && !isChannelSubscriber) {
+      setFiles([]);
+      setMessage('');
+      if (editableRef.current) editableRef.current.innerText = '';
+    }
+  }, [canPost, chatId, isChannelPreview, isChannelSubscriber]);
+
+  const handleSubscribeChannel = useCallback(async () => {
+    if (subscribing) return;
+    setSubscribing(true);
+    try {
+      const ok = await subscribeToPreviewedChannel();
+      if (!ok) showToast(t('toast.joinGroupFailed'));
+    } finally {
+      setSubscribing(false);
+    }
+  }, [subscribing, subscribeToPreviewedChannel, showToast, t]);
+
+  const handleUnsubscribeChannel = useCallback(async () => {
+    if (unsubscribing || chatId == null || chatId <= 0) return;
+    setUnsubscribing(true);
+    try {
+      const ok = await leaveChannelToPreview(chatId);
+      if (!ok) showToast(t('toast.joinGroupFailed'));
+    } finally {
+      setUnsubscribing(false);
+    }
+  }, [unsubscribing, chatId, leaveChannelToPreview, showToast, t]);
+
   return (
     <>
-      <DropZone onFiles={handleFiles} />
+      {canPost && !isChannelPreview && !isChannelSubscriber ? (
+        <DropZone onFiles={handleFiles} />
+      ) : null}
       <div className='send_area'>
         <JumpToBottom />
-        {/* <Button className={styles['send_area_button']}> */}
-        <div className={styles['send_div_container']}>
-          {isSelectionMode ? (
-            <div className={styles['selection-bar']}>
-              <Button
-                className={styles['selection-bar-cancel']}
-                onClick={onExitSelectionMode}
-                aria-label={t('sendArea.cancelSelection')}
-              >
-                {t('buttons.cancel')}
-              </Button>
-              <span className={styles['selection-bar-count']}>
-                {t('sendArea.selected')} {selectedMessagesCount}
-              </span>
-              <Button
-                className={styles['selection-bar-delete']}
-                onClick={onDeleteSelectedMessages}
-                disabled={selectedMessagesCount === 0}
-                aria-label={t('sendArea.deleteSelected')}
-              >
-                {deleteIcon}
-              </Button>
-            </div>
-          ) : (
-            <>
+        {!isSelectionMode && (isChannelPreview || isChannelSubscriber) ? (
+          <div className={styles['channel-preview-bar']}>
+            <Button
+              type='button'
+              className={styles['channel-preview-subscribe']}
+              onClick={() =>
+                void (isChannelPreview
+                  ? handleSubscribeChannel()
+                  : handleUnsubscribeChannel())
+              }
+              disabled={isChannelPreview ? subscribing : unsubscribing}
+            >
+              {isChannelPreview
+                ? t('sendArea.channelPreviewSubscribe')
+                : t('sendArea.channelUnsubscribe')}
+            </Button>
+          </div>
+        ) : null}
+        {(isSelectionMode || (!isChannelPreview && !isChannelSubscriber)) && (
+          <div className={styles['send_div_container']}>
+            {isSelectionMode ? (
+              <div className={styles['selection-bar']}>
+                <Button
+                  className={styles['selection-bar-cancel']}
+                  onClick={onExitSelectionMode}
+                  aria-label={t('sendArea.cancelSelection')}
+                >
+                  {t('buttons.cancel')}
+                </Button>
+                <span className={styles['selection-bar-count']}>
+                  {t('sendArea.selected')} {selectedMessagesCount}
+                </span>
+                <Button
+                  className={styles['selection-bar-delete']}
+                  onClick={onDeleteSelectedMessages}
+                  disabled={selectedMessagesCount === 0}
+                  aria-label={t('sendArea.deleteSelected')}
+                >
+                  {deleteIcon}
+                </Button>
+              </div>
+            ) : (
+              <>
               {files.length > 0 && (
                 <FilesPreview
                   files={files}
@@ -853,18 +935,20 @@ const MessageInput: React.FC<SendAreaProps> = ({
                 </div>
               )}
               <form
-                className={styles['send_div']}
+                className={`${styles['send_div']} ${!canPost ? styles['send_div--readonly'] : ''}`}
                 encType='multipart/form-data'
                 onSubmit={handleSubmit}
                 ref={formRef}
               >
-                <Button
-                  className={styles['file_div']}
-                  onClick={handleFileClick}
-                  onKeyDown={(e) => e.key === 'Enter' && handleFileClick()}
-                >
-                  {fileButtonContent}
-                </Button>
+                {canPost ? (
+                  <Button
+                    className={styles['file_div']}
+                    onClick={handleFileClick}
+                    onKeyDown={(e) => e.key === 'Enter' && handleFileClick()}
+                  >
+                    {fileButtonContent}
+                  </Button>
+                ) : null}
 
                 <div className={styles['textarea_container']}>
                   {editingMessage && (
@@ -893,13 +977,13 @@ const MessageInput: React.FC<SendAreaProps> = ({
                         onKeyDown={handleKeyDown}
                         onPaste={handlePaste}
                         className={styles['textarea']}
-                        contentEditable
+                        contentEditable={canPost || !!editingMessage}
                         suppressContentEditableWarning
                         spellCheck={false}
                         autoFocus={false}
                       />
                       <span
-                        className={`${styles['textarea_placeholder']} ${message.trim() ? styles.hidden : ''}`}
+                        className={`${styles['textarea_placeholder']} ${message.trim() || !canPost ? styles.hidden : ''}`}
                       >
                         {t('sendArea.messagePlaceholder')}
                       </span>
@@ -911,6 +995,7 @@ const MessageInput: React.FC<SendAreaProps> = ({
                       onClick={handleSubmit}
                       className={`${styles['input_submit']} ${!message.trim() && files.length === 0 ? styles['input_submit--hidden'] : ''}`}
                       disabled={
+                        !canPost ||
                         (!message.trim() && files.length === 0) ||
                         fileSendPhase !== 'idle'
                       }
@@ -921,9 +1006,10 @@ const MessageInput: React.FC<SendAreaProps> = ({
                   </div>
                 </div>
               </form>
-            </>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+        )}
         {/* </Button> */}
       </div>
     </>

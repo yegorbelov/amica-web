@@ -72,6 +72,12 @@
       text-overflow: ellipsis;
       text-align: left;
     }
+
+    &__item--url {
+      white-space: normal;
+      word-break: break-all;
+      line-height: 1.35;
+    }
   }
 
   &__media {
@@ -102,6 +108,19 @@
     font-size: 1rem;
     font-weight: 600;
   }
+}
+
+.headerTrailing {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.buttonDestructive {
+  color: var(--dangerColor, #c62828);
 }
 
 :root {
@@ -747,4 +766,55 @@
 
 .membersPickerRowSelected {
   background: color-mix(in srgb, var(--mainColor) 20%, transparent);
+}
+
+.soleAdminLeaveModal {
+  max-height: min(85vh, 520px);
+  height: auto;
+  padding: 20px 16px 16px;
+  gap: 10px;
+
+  .membersPickerTitle {
+    position: static;
+    transform: none;
+    text-align: center;
+    width: 100%;
+  }
+
+  .membersPickerList {
+    flex: 1;
+    min-height: 100px;
+    max-height: 200px;
+    padding: 8px 0;
+    mask-image: none;
+  }
+}
+
+.soleAdminWarning {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: color-mix(
+    in srgb,
+    var(--snackbar-warning-bg, #f59e0b) 14%,
+    transparent
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--snackbar-warning-border, #d97706) 40%, transparent);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--messageMainColor, inherit);
+}
+
+.soleAdminPickHint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--secondaryColor);
+}
+
+.soleAdminActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 4px;
 }

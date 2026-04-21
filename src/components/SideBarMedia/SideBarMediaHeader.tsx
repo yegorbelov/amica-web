@@ -18,6 +18,9 @@ interface SideBarMediaHeaderProps {
   filterItems: DropdownItem<number>[];
   effectiveFilterType: string;
   onFilterChange: (label: string) => void;
+  /** Channel owner/admin: delete channel */
+  showChannelAdminToolbar?: boolean;
+  onDeleteChannel?: () => void;
 }
 
 const SideBarMediaHeader: React.FC<SideBarMediaHeaderProps> = ({
@@ -32,6 +35,8 @@ const SideBarMediaHeader: React.FC<SideBarMediaHeaderProps> = ({
   filterItems,
   effectiveFilterType,
   onFilterChange,
+  showChannelAdminToolbar = false,
+  onDeleteChannel,
 }) => {
   const { t } = useTranslation();
   const backButtonIcon = React.useMemo(
@@ -48,19 +53,30 @@ const SideBarMediaHeader: React.FC<SideBarMediaHeaderProps> = ({
         {backButtonIcon}
       </Button>
 
-      {showEditButton && !attachmentsActive && (
-        <Button
-          key='sidebar-header-button-edit'
-          className={`${styles.button}`}
-          onClick={onEditClick}
-          disabled={interlocutorEditVisible && saveDisabled}
-        >
-          {interlocutorEditVisible ? t('buttons.save') : editLabel}
-        </Button>
-      )}
+      <div className={styles.headerTrailing}>
+        {showChannelAdminToolbar && !attachmentsActive && onDeleteChannel && (
+          <Button
+            type='button'
+            className={`${styles.button} ${styles.buttonDestructive}`}
+            onClick={onDeleteChannel}
+            aria-label={t('sidebar.deleteChannel')}
+          >
+            <Icon name='Delete' />
+          </Button>
+        )}
 
-      {attachmentsActive && showFilterDropdown && (
-        <>
+        {showEditButton && !attachmentsActive && (
+          <Button
+            key='sidebar-header-button-edit'
+            className={`${styles.button}`}
+            onClick={onEditClick}
+            disabled={interlocutorEditVisible && saveDisabled}
+          >
+            {interlocutorEditVisible ? t('buttons.save') : editLabel}
+          </Button>
+        )}
+
+        {attachmentsActive && showFilterDropdown && (
           <Dropdown
             items={filterItems}
             placeholder=''
@@ -76,8 +92,8 @@ const SideBarMediaHeader: React.FC<SideBarMediaHeaderProps> = ({
               }
             }}
           />
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 };

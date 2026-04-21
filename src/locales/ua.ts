@@ -315,6 +315,10 @@ export default {
     leftGroup: "Ви вийшли з групи",
   },
   sendArea: {
+    channelPreviewHint:
+      "Підпишіться, щоб читати повідомлення й додати канал до списку чатів.",
+    channelPreviewSubscribe: "Підписатися",
+    channelUnsubscribe: 'Відписатися',
     cancelSelection: "Скасувати вибір",
     deleteSelected: "Видалити вибране",
     cancelEdit: "Скасувати редагування",
@@ -330,6 +334,8 @@ export default {
     fileItemUploading: "Надсилання…",
     fileItemCompressing: "Обробка…",
     removeFile: "Прибрати файл",
+    channelReadOnly:
+      "Писати в каналі можуть лише адміністратори. Ви можете читати повідомлення.",
   },
   dateGroup: {
     today: "Сьогодні",
@@ -375,11 +381,13 @@ export default {
     wsSendFailed: "Не вдалося надіслати. Перевірте з’єднання.",
     joinGroupFailed: "Не вдалося приєднатися до групи.",
     createGroupTimeout: "Не вдалося створити групу. Спробуйте ще раз.",
+    createChannelTimeout: "Не вдалося створити канал. Спробуйте ще раз.",
     avatarDeleteFailed: "Не вдалося видалити цей аватар.",
     setPrimaryFailed: "Не вдалося встановити основний аватар.",
   },
   sidebar: {
     members: "Учасники",
+    subscribers: "Підписники",
     media: "Медіа",
     audio: "Аудіо",
     contactName: "Ім'я контакту",
@@ -399,6 +407,14 @@ export default {
     newGroupTitle: "Нова група",
     newGroupNamePlaceholder: "Назва групи",
     createGroupButton: "Створити",
+    newChannelTitle: "Новий канал",
+    newChannelNamePlaceholder: "Назва каналу",
+    createChannelButton: "Створити канал",
+    chatKindGroup: "Група",
+    chatKindChannel: "Канал",
+    channelBadge: "Канал",
+    subscribersCount: "підписників",
+    createChatMenuAria: "Створити групу або канал",
     membersCount: "учасників",
     deleteRollerAvatar: "Видалити",
     setAsPrimaryRollerAvatar: "Визначити як основний",

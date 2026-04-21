@@ -27,7 +27,9 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   const subtitle =
     selectedChat?.type === 'G'
       ? `${selectedChat?.info || ''} ${t('sidebar.membersCount')}`
-      : formatLastSeen(selectedChat?.info || '');
+      : selectedChat?.type === 'C'
+        ? `${selectedChat?.info || ''} ${t('sidebar.subscribersCount')}`
+        : formatLastSeen(selectedChat?.info || '');
 
   if (!selectedChat) return;
 

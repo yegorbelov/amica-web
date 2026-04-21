@@ -115,6 +115,8 @@ export interface MessageContentProps {
   isOwn: boolean;
   hasOnlyMediaFiles: boolean;
   onReactionClick?: (reactionType: string) => void;
+  /** When true, show aggregate view count instead of DM read receipts. */
+  isChannel?: boolean;
 }
 
 interface RenderedReaction {
@@ -128,7 +130,14 @@ interface RenderedReaction {
 const MessageContent = memo(
   forwardRef<HTMLDivElement, MessageContentProps>(
     (
-      { message, reelItems, isOwn, hasOnlyMediaFiles, onReactionClick },
+      {
+        message,
+        reelItems,
+        isOwn,
+        hasOnlyMediaFiles,
+        onReactionClick,
+        isChannel = false,
+      },
       ref,
     ) => {
       const rootRef = useRef<HTMLDivElement | null>(null);
@@ -641,20 +650,39 @@ const MessageContent = memo(
                   <span className={styles.edited}>edited</span>
                 )}
                 <MessageTime date={message.date} />
-                <span id='viewed_span' className='viewed-status'>
-                  {isOwn &&
-                    (isViewed ? (
+                {isChannel ? (
+                  message.view_count != null ? (
+                    <span
+                      className={styles.message_view_count}
+                      title={String(message.view_count)}
+                      aria-label={String(message.view_count)}
+                    >
                       <Icon
-                        name='Read'
-                        className={styles['viewed-status__icon']}
+                        name='AccountEye'
+                        className={styles.message_view_count__icon}
+                        aria-hidden
                       />
-                    ) : (
-                      <Icon
-                        name='Unread'
-                        className={styles['viewed-status__icon']}
-                      />
-                    ))}
-                </span>
+                      <span className={styles.message_view_count__num}>
+                        {message.view_count}
+                      </span>
+                    </span>
+                  ) : null
+                ) : (
+                  <span id='viewed_span' className='viewed-status'>
+                    {isOwn &&
+                      (isViewed ? (
+                        <Icon
+                          name='Read'
+                          className={styles['viewed-status__icon']}
+                        />
+                      ) : (
+                        <Icon
+                          name='Unread'
+                          className={styles['viewed-status__icon']}
+                        />
+                      ))}
+                  </span>
+                )}
               </div>
             </div>
           </div>

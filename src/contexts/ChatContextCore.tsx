@@ -8,9 +8,16 @@ export interface ChatMetaContextType {
   loading: boolean;
   error: string | null;
   fetchChats: () => Promise<void>;
-  fetchChat: (chatId: number) => Promise<void>;
+  fetchChat: (
+    chatId: number,
+    channelPreviewPid?: number | null,
+  ) => Promise<void>;
   handleChatClick: (chatId: number) => void;
   handleCreateTemporaryChat: (user: User) => void;
+  handleCreateTemporaryChannelPreview: (chat: Chat) => void;
+  subscribeToPreviewedChannel: () => Promise<boolean>;
+  /** After REST leave: channel becomes preview (temp id), user stays in the view. */
+  leaveChannelToPreview: (realChatId: number) => Promise<boolean>;
   deleteChat: (chatId: number) => void;
   addContact: (userId: number) => void;
   deleteContact: (contactId: number) => void;

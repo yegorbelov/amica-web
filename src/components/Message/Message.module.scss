@@ -44,6 +44,27 @@
     margin-top: 8px;
   }
 
+  .message_view_count {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.75em;
+    opacity: 0.85;
+    white-space: nowrap;
+    margin-left: 4px;
+  }
+
+  .message_view_count__num {
+    line-height: 1;
+  }
+
+  .message_view_count__icon {
+    width: 0.95em;
+    height: 0.95em;
+    flex-shrink: 0;
+    opacity: 0.95;
+  }
+
   .message_div_subdata__with_reactions {
     margin-left: 0;
     width: 100%;

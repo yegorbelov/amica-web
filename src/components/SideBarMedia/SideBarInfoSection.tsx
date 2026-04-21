@@ -14,6 +14,10 @@ interface SideBarInfoSectionProps {
   showEmail: boolean;
   email: string | undefined;
   onCopyEmail: () => void;
+  showChannelLink?: boolean;
+  /** Full URL shown in the row; tap copies it */
+  channelLinkUrl?: string;
+  onCopyChannelLink?: () => void;
 }
 
 const SideBarInfoSection: React.FC<SideBarInfoSectionProps> = ({
@@ -29,6 +33,9 @@ const SideBarInfoSection: React.FC<SideBarInfoSectionProps> = ({
   showEmail,
   email,
   onCopyEmail,
+  showChannelLink = false,
+  channelLinkUrl,
+  onCopyChannelLink,
 }) => (
   <>
     <div className={styles['sidebar__info']} ref={tabsRef}>
@@ -70,6 +77,20 @@ const SideBarInfoSection: React.FC<SideBarInfoSectionProps> = ({
         </button>
       </div>
     )}
+    {!interlocutorEditVisible &&
+      showChannelLink &&
+      channelLinkUrl &&
+      onCopyChannelLink && (
+        <div className={styles['sidebar__info-secondary']}>
+          <button
+            className={`${styles['sidebar__info-secondary__item']} ${styles['sidebar__info-secondary__item--url']}`}
+            type='button'
+            onClick={onCopyChannelLink}
+          >
+            {channelLinkUrl}
+          </button>
+        </div>
+      )}
   </>
 );
 

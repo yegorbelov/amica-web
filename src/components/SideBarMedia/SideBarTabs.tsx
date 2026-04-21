@@ -57,7 +57,8 @@ const SideBarTabs: React.FC<SideBarTabsProps> = ({
             width: `${indicatorWidth - 4}px`,
           }}
         />
-        {hasMembers && selectedChatType === 'G' && (
+        {hasMembers &&
+          (selectedChatType === 'G' || selectedChatType === 'C') && (
           <button
             ref={membersRef}
             type="button"
@@ -66,7 +67,9 @@ const SideBarTabs: React.FC<SideBarTabsProps> = ({
             }`}
             onClick={() => onTabChange('members')}
           >
-            {t('sidebar.members')}
+            {selectedChatType === 'C'
+              ? t('sidebar.subscribers')
+              : t('sidebar.members')}
           </button>
         )}
         {mediaFilesCount > 0 && (

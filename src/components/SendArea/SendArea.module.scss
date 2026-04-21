@@ -312,6 +312,19 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.channel-preview-bar {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.channel-preview-subscribe {
+  min-width: 160px;
+}
+
 .send_div {
   height: fit-content;
   max-width: 100%;
@@ -327,6 +340,12 @@
   position: relative;
   gap: 4px;
   width: 100%;
+}
+
+.send_div--readonly {
+  opacity: 0.55;
+  pointer-events: none;
+  user-select: none;
 }
 
 :global(.send_area) {

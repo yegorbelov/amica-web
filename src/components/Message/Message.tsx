@@ -11,6 +11,7 @@ import { useMessageDimensions } from './useMessageDimensions';
 import MessageContent from './MessageContent';
 import { Icon } from '../Icons/AutoIcons';
 import { useSettings } from '@/contexts/settings/context';
+import { useSelectedChat } from '@/contexts/ChatContextCore';
 
 export interface MessageProps {
   message: MessageType;
@@ -46,6 +47,8 @@ const Message: React.FC<MessageProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const suppressSelectionClickRef = useRef(false);
   const { liteModeEnabled } = useSettings();
+  const { selectedChat } = useSelectedChat();
+  const isChannel = selectedChat?.type === 'C';
   const lastPointerTapRef = useRef<{
     ts: number;
     x: number;
@@ -202,6 +205,7 @@ const Message: React.FC<MessageProps> = ({
           isOwn={isOwn}
           hasOnlyMediaFiles={hasOnlyMediaFiles}
           onReactionClick={handleContentReactionClick}
+          isChannel={isChannel}
         />
       </div>
     </div>

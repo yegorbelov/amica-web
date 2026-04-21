@@ -31,6 +31,8 @@ export interface Message {
   edit_date: string | null;
   date: string;
   user: number;
+  /** Channel: subscribers who have read the message */
+  view_count?: number | null;
   viewers?: Viewer[];
   liked: number;
   files: File[];
@@ -50,6 +52,10 @@ export interface Chat {
   peer_user_id?: number | null;
   /** Group global search: whether current user is already in the group */
   is_member?: boolean;
+  /** Preview from search (negative id): real server chat id to subscribe / open */
+  preview_of_chat_id?: number;
+  /** Group / channel: membership role from server (channels: owner & admin may post) */
+  my_role?: 'owner' | 'admin' | 'member' | 'subscriber' | null;
   type: 'D' | 'G' | 'C';
   primary_media: DisplayMedia;
   last_message: Message | null;
@@ -97,6 +103,8 @@ export interface User {
   id: number;
   email?: string;
   username?: string;
+  /** Group/channel membership role (from get_chat members) */
+  chat_role?: 'owner' | 'admin' | 'member' | 'subscriber';
   profile?: UserProfile;
   preferred_session_lifetime_days?: number;
   active_wallpaper?: WallpaperSetting | null;

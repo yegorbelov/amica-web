@@ -311,6 +311,10 @@ export default {
     leftGroup: "그룹에서 나갔습니다",
   },
   sendArea: {
+    channelPreviewHint:
+      "구독하면 메시지를 읽고 채팅 목록에 채널이 추가됩니다.",
+    channelPreviewSubscribe: "구독",
+    channelUnsubscribe: '구독 취소',
     cancelSelection: "선택 취소",
     deleteSelected: "선택 항목 삭제",
     cancelEdit: "편집 취소",
@@ -326,6 +330,8 @@ export default {
     fileItemUploading: "전송 중…",
     fileItemCompressing: "처리 중…",
     removeFile: "파일 제거",
+    channelReadOnly:
+      "채널 관리자만 글을 쓸 수 있습니다. 메시지는 읽을 수 있습니다.",
   },
   dateGroup: {
     today: "오늘",
@@ -371,11 +377,13 @@ export default {
     wsSendFailed: "전송할 수 없습니다. 연결을 확인하세요.",
     joinGroupFailed: "그룹에 참여할 수 없습니다.",
     createGroupTimeout: "그룹을 만들 수 없습니다. 다시 시도하세요.",
+    createChannelTimeout: "채널을 만들 수 없습니다. 다시 시도하세요.",
     avatarDeleteFailed: "이 아바타를 삭제할 수 없습니다.",
     setPrimaryFailed: "기본 아바타를 설정할 수 없습니다.",
   },
   sidebar: {
     members: "멤버",
+    subscribers: "구독자",
     media: "미디어",
     audio: "오디오",
     contactName: "연락처 이름",
@@ -395,6 +403,14 @@ export default {
     newGroupTitle: "새 그룹",
     newGroupNamePlaceholder: "그룹 이름",
     createGroupButton: "만들기",
+    newChannelTitle: "새 채널",
+    newChannelNamePlaceholder: "채널 이름",
+    createChannelButton: "채널 만들기",
+    chatKindGroup: "그룹",
+    chatKindChannel: "채널",
+    channelBadge: "채널",
+    subscribersCount: "명 구독",
+    createChatMenuAria: "그룹 또는 채널 만들기",
     membersCount: "명",
     deleteRollerAvatar: "삭제",
     setAsPrimaryRollerAvatar: "기본값으로 설정",

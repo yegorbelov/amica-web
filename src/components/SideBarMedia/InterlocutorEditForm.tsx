@@ -44,9 +44,13 @@ const InterlocutorEditForm: React.FC<InterlocutorEditFormProps> = ({
             notes={notes}
           />
         )}
-        {chatType === 'G' && (
+        {(chatType === 'G' || chatType === 'C') && (
           <Input
-            placeholder={t('sidebar.groupName')}
+            placeholder={
+              chatType === 'C'
+                ? t('sidebar.channelName')
+                : t('sidebar.groupName')
+            }
             isRequired
             value={editValue}
             onChange={onValueChange}

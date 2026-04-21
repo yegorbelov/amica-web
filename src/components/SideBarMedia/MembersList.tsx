@@ -28,15 +28,25 @@ import SearchInput from '../ui/searchInput/SearchInput';
 
 interface MembersListProps {
   chatId: number;
+  chatType: 'G' | 'C';
+  myRole?: 'owner' | 'admin' | 'member' | 'subscriber' | null;
   members: User[];
+  onCloseSidebar?: () => void;
 }
 
-const MembersList: React.FC<MembersListProps> = ({ chatId, members }) => {
+const MembersList: React.FC<MembersListProps> = ({
+  chatId,
+  chatType,
+  myRole,
+  members,
+  onCloseSidebar,
+}) => {
   const { t } = useTranslation();
   const { formatLastSeen } = useFormatLastSeen();
   const { showToast } = useToast();
   const { showSnackbar } = useSnackbar();
-  const { fetchChats, handleChatClick } = useChatMeta();
+  const { fetchChats, handleChatClick, leaveChannelToPreview } =
+    useChatMeta();
   const { contacts } = useContacts();
   const { user: me } = useUser();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -50,6 +60,47 @@ const MembersList: React.FC<MembersListProps> = ({ chatId, members }) => {
   );
   const leaveGroupSnackPendingRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [soleAdminModalOpen, setSoleAdminModalOpen] = useState(false);
+  const [soleAdminSearchQuery, setSoleAdminSearchQuery] = useState('');
+
+  const isSoleAdmin = useMemo(() => {
+    if (chatType !== 'C' || myRole !== 'admin' || me?.id == null) return false;
+    const admins = members.filter((m) => m.chat_role === 'admin');
+    return admins.length === 1 && admins[0]?.id === me.id;
+  }, [chatType, myRole, members, me?.id]);
+
+  const subscriberMemberIds = useMemo(() => {
+    const s = new Set<number>();
+    for (const m of members) {
+      if (m.id === me?.id) continue;
+      if (m.chat_role === 'owner' || m.chat_role === 'admin') continue;
+      s.add(m.id);
+    }
+    return s;
+  }, [members, me?.id]);
+
+  const successorCandidates = useMemo(() => {
+    return contacts.filter((c: Contact) => {
+      if (c.user_id == null) return false;
+      return subscriberMemberIds.has(c.user_id);
+    });
+  }, [contacts, subscriberMemberIds]);
+
+  const filteredSuccessorContacts = useMemo(() => {
+    const q = soleAdminSearchQuery.toLowerCase();
+    return successorCandidates.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.email?.toLowerCase().includes(q) ?? false),
+    );
+  }, [successorCandidates, soleAdminSearchQuery]);
+
+  const showAddMember = chatType === 'G';
+  const showLeave =
+    (chatType === 'G' || chatType === 'C') && me?.id != null;
+  const canModerateChannel =
+    chatType === 'C' &&
+    (myRole === 'owner' || myRole === 'admin');
 
   useEffect(() => {
     return () => {
@@ -197,6 +248,53 @@ const MembersList: React.FC<MembersListProps> = ({ chatId, members }) => {
     ],
   );
 
+  const sendChannelRoleChange = useCallback(
+    (targetUserId: number, role: 'admin' | 'subscriber') => {
+      clearPendingWs();
+      const onMessage = (data: WebSocketMessage) => {
+        if (data.type === 'error' && typeof data.message === 'string') {
+          showToast(data.message);
+          clearPendingWs();
+          return;
+        }
+        if (data.type === 'group_members_updated' && data.chat_id === chatId) {
+          clearPendingWs();
+        }
+      };
+      pendingWsListenerRef.current = onMessage;
+      websocketManager.on('message', onMessage);
+      if (!websocketManager.sendSetChannelMemberRole(chatId, targetUserId, role)) {
+        clearPendingWs();
+        showToast(t('toast.wsSendFailed'));
+      }
+    },
+    [chatId, clearPendingWs, showToast, t],
+  );
+
+  const removeMemberRef = useRef(removeMember);
+  const sendChannelRoleChangeRef = useRef(sendChannelRoleChange);
+  useEffect(() => {
+    removeMemberRef.current = removeMember;
+    sendChannelRoleChangeRef.current = sendChannelRoleChange;
+  }, [removeMember, sendChannelRoleChange]);
+
+  const onMembersMenuAction = useCallback(
+    (
+      action: 'remove' | 'promote' | 'demote',
+      targetUserId: number,
+    ) => {
+      setContextMenuUserId(null);
+      if (action === 'remove') {
+        removeMemberRef.current(targetUserId);
+      } else if (action === 'promote') {
+        sendChannelRoleChangeRef.current(targetUserId, 'admin');
+      } else {
+        sendChannelRoleChangeRef.current(targetUserId, 'subscriber');
+      }
+    },
+    [],
+  );
+
   const handleMemberContextMenu = useCallback(
     (userId: number, position: { x: number; y: number }) => {
       setContextMenuUserId(userId);
@@ -206,42 +304,149 @@ const MembersList: React.FC<MembersListProps> = ({ chatId, members }) => {
     [],
   );
 
-  const contextMenuItems = useMemo<MenuItem<string>[]>(() => {
-    if (contextMenuUserId == null) return [];
+  /* eslint-disable react-hooks/refs -- item onClick runs on user gesture; stable handler uses refs updated in useEffect */
+  let contextMenuItems: MenuItem<string>[] = [];
+  if (contextMenuUserId != null) {
     const targetId = contextMenuUserId;
-    return [
-      {
-        label: t('sidebar.removeMember'),
-        icon: 'Delete',
-        destructive: true,
-        onClick: () => {
-          setContextMenuUserId(null);
-          removeMember(targetId);
-        },
-      },
-    ];
-  }, [contextMenuUserId, removeMember, t]);
+    const target = members.find((m) => m.id === targetId);
+    if (target && me?.id !== targetId) {
+      if (chatType === 'G') {
+        contextMenuItems = [
+          {
+            label: t('sidebar.removeMember'),
+            icon: 'Delete',
+            destructive: true,
+            onClick: () => onMembersMenuAction('remove', targetId),
+          },
+        ];
+      } else if (canModerateChannel) {
+        const role = target.chat_role;
+        if (role !== 'owner') {
+          const items: MenuItem<string>[] = [];
+
+          if (role === 'subscriber' || role === undefined) {
+            items.push({
+              label: t('sidebar.promoteToAdmin'),
+              icon: 'Edit',
+              onClick: () => onMembersMenuAction('promote', targetId),
+            });
+          }
+
+          if (role === 'admin' && myRole === 'owner') {
+            items.push({
+              label: t('sidebar.demoteToSubscriber'),
+              onClick: () => onMembersMenuAction('demote', targetId),
+            });
+          }
+
+          items.push({
+            label: t('sidebar.removeMember'),
+            icon: 'Delete',
+            destructive: true,
+            onClick: () => onMembersMenuAction('remove', targetId),
+          });
+
+          contextMenuItems = items;
+        }
+      }
+    }
+  }
+  /* eslint-enable react-hooks/refs */
+
+  const handleAppointSuccessorAndLeave = useCallback(
+    (contact: Contact) => {
+      const uid = contact.user_id;
+      if (uid == null) return;
+      clearPendingWs();
+      const onMessage = (data: WebSocketMessage) => {
+        if (data.type === 'error' && typeof data.message === 'string') {
+          showToast(data.message);
+          clearPendingWs();
+          return;
+        }
+        if (data.type === 'group_members_updated' && data.chat_id === chatId) {
+          clearPendingWs();
+          setSoleAdminModalOpen(false);
+          setSoleAdminSearchQuery('');
+          void leaveChannelToPreview(chatId).then((ok) => {
+            if (ok) onCloseSidebar?.();
+            else showToast(t('toast.wsSendFailed'));
+          });
+        }
+      };
+      pendingWsListenerRef.current = onMessage;
+      websocketManager.on('message', onMessage);
+      if (!websocketManager.sendSetChannelMemberRole(chatId, uid, 'admin')) {
+        clearPendingWs();
+        showToast(t('toast.wsSendFailed'));
+      }
+    },
+    [
+      chatId,
+      clearPendingWs,
+      leaveChannelToPreview,
+      onCloseSidebar,
+      showToast,
+      t,
+    ],
+  );
+
+  const handleSoleAdminLeaveAnyway = useCallback(() => {
+    setSoleAdminModalOpen(false);
+    setSoleAdminSearchQuery('');
+    void leaveChannelToPreview(chatId).then((ok) => {
+      if (ok) onCloseSidebar?.();
+      else showToast(t('toast.wsSendFailed'));
+    });
+  }, [chatId, leaveChannelToPreview, onCloseSidebar, showToast, t]);
 
   const handleLeaveGroup = useCallback(() => {
     if (me?.id == null) return;
-    leaveGroupSnackPendingRef.current = true;
-    removeMember(me.id);
-  }, [me, removeMember]);
+    if (chatType === 'G') {
+      leaveGroupSnackPendingRef.current = true;
+      removeMember(me.id);
+      return;
+    }
+    if (chatType === 'C') {
+      if (isSoleAdmin) {
+        setSoleAdminModalOpen(true);
+        return;
+      }
+      void leaveChannelToPreview(chatId).then((ok) => {
+        if (ok) onCloseSidebar?.();
+        else showToast(t('toast.wsSendFailed'));
+      });
+    }
+  }, [
+    chatId,
+    chatType,
+    isSoleAdmin,
+    leaveChannelToPreview,
+    me,
+    onCloseSidebar,
+    removeMember,
+    showToast,
+    t,
+  ]);
 
   return (
     <div className={styles.membersList}>
-      <Button className={styles.membersListButton} onClick={handleAddMember}>
-        {t('sidebar.addMember')}
-      </Button>
-      {me?.id != null && (
+      {showAddMember ? (
+        <Button className={styles.membersListButton} onClick={handleAddMember}>
+          {t('sidebar.addMember')}
+        </Button>
+      ) : null}
+      {showLeave ? (
         <Button
           variant='secondary'
           className={styles.membersListLeaveButton}
           onClick={handleLeaveGroup}
         >
-          {t('sidebar.leaveGroup')}
+          {chatType === 'C'
+            ? t('sidebar.leaveChannel')
+            : t('sidebar.leaveGroup')}
         </Button>
-      )}
+      ) : null}
       {contextMenuUserId != null && (
         <Menu
           key={`members-context-menu-${contextMenuInstanceKey}`}
@@ -256,6 +461,16 @@ const MembersList: React.FC<MembersListProps> = ({ chatId, members }) => {
           key={member.id}
           className={styles.memberItem}
           onContextMenu={(e) => {
+            if (chatType === 'G') {
+              e.preventDefault();
+              handleMemberContextMenu(member.id, {
+                x: e.clientX,
+                y: e.clientY,
+              });
+              return;
+            }
+            if (!canModerateChannel) return;
+            if (member.chat_role === 'owner') return;
             e.preventDefault();
             handleMemberContextMenu(member.id, {
               x: e.clientX,
@@ -358,6 +573,97 @@ const MembersList: React.FC<MembersListProps> = ({ chatId, members }) => {
                 </li>
               ))}
             </ul>
+          </div>
+        </div>
+      )}
+
+      {soleAdminModalOpen && (
+        <div
+          className={styles.membersPickerOverlay}
+          role='presentation'
+          onClick={() => {
+            setSoleAdminModalOpen(false);
+            setSoleAdminSearchQuery('');
+          }}
+        >
+          <div
+            className={`${styles.membersPickerModal} ${styles.soleAdminLeaveModal}`}
+            role='alertdialog'
+            aria-labelledby='sole-admin-leave-title'
+            aria-describedby='sole-admin-leave-desc'
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              id='sole-admin-leave-title'
+              className={styles.membersPickerTitle}
+            >
+              {t('sidebar.soleAdminLeaveTitle')}
+            </h2>
+            <div
+              id='sole-admin-leave-desc'
+              className={styles.soleAdminWarning}
+            >
+              {t('sidebar.soleAdminLeaveWarning')}
+            </div>
+            <p className={styles.soleAdminPickHint}>
+              {t('sidebar.soleAdminPickHint')}
+            </p>
+            <SearchInput
+              value={soleAdminSearchQuery}
+              onChange={setSoleAdminSearchQuery}
+              placeholder={t('sidebar.soleAdminSearchPlaceholder')}
+            />
+            <ul className={styles.membersPickerList}>
+              {filteredSuccessorContacts.length === 0 && (
+                <li className={styles.membersPickerEmpty}>
+                  {successorCandidates.length === 0
+                    ? t('sidebar.soleAdminNoSubscribersInContacts')
+                    : t('sidebar.soleAdminNoSearchResults')}
+                </li>
+              )}
+              {filteredSuccessorContacts.map((contact: Contact) => (
+                <li key={contact.id}>
+                  <button
+                    type='button'
+                    className={styles.membersPickerRow}
+                    onClick={() => handleAppointSuccessorAndLeave(contact)}
+                  >
+                    <Avatar
+                      className={styles.membersPickerAvatar}
+                      displayName={contact.name}
+                      displayMedia={contact.primary_media}
+                    />
+                    <div className={styles.membersPickerInfoContainer}>
+                      <span className={styles.membersPickerName}>
+                        {contact.name}
+                      </span>
+                      <span className={styles.membersPickerInfo}>
+                        {formatLastSeenShort(contact.last_seen)}
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className={styles.soleAdminActions}>
+              <Button
+                type='button'
+                variant='secondary'
+                onClick={() => {
+                  setSoleAdminModalOpen(false);
+                  setSoleAdminSearchQuery('');
+                }}
+              >
+                {t('buttons.cancel')}
+              </Button>
+              <Button
+                type='button'
+                variant='secondary'
+                onClick={handleSoleAdminLeaveAnyway}
+              >
+                {t('sidebar.soleAdminLeaveAnyway')}
+              </Button>
+            </div>
           </div>
         </div>
       )}

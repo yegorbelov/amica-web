@@ -48,6 +48,8 @@ export interface WebSocketMessageData {
   first_message?: string;
   /** create_group */
   name?: string;
+  /** set_channel_member_role */
+  role?: 'admin' | 'subscriber';
   session?: Session;
   url?: string;
 }
@@ -632,6 +634,18 @@ class WebSocketManager {
       type: 'remove_group_member',
       chat_id: chatId,
       data: { user_id: userId },
+    });
+  }
+
+  public sendSetChannelMemberRole(
+    chatId: number,
+    userId: number,
+    role: 'admin' | 'subscriber',
+  ) {
+    return this.sendMessage({
+      type: 'set_channel_member_role',
+      chat_id: chatId,
+      data: { user_id: userId, role },
     });
   }
 

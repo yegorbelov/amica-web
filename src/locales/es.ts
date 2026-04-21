@@ -314,6 +314,10 @@ export default {
     leftGroup: "Saliste del grupo",
   },
   sendArea: {
+    channelPreviewHint:
+      "Suscríbete para leer mensajes y añadir este canal a tu lista.",
+    channelPreviewSubscribe: "Suscribirse",
+    channelUnsubscribe: 'Cancelar suscripción',
     cancelSelection: "Cancelar selección",
     deleteSelected: "Eliminar seleccionados",
     cancelEdit: "Cancelar edición",
@@ -329,6 +333,8 @@ export default {
     fileItemUploading: "Enviando…",
     fileItemCompressing: "Procesando…",
     removeFile: "Quitar archivo",
+    channelReadOnly:
+      "Solo los administradores del canal pueden publicar. Puedes leer los mensajes.",
   },
   dateGroup: {
     today: "Hoy",
@@ -374,11 +380,13 @@ export default {
     wsSendFailed: "No se pudo enviar. Comprueba la conexión.",
     joinGroupFailed: "No se pudo unir al grupo.",
     createGroupTimeout: "No se pudo crear el grupo. Inténtalo de nuevo.",
+    createChannelTimeout: "No se pudo crear el canal. Inténtalo de nuevo.",
     avatarDeleteFailed: "No se ha podido eliminar este avatar.",
     setPrimaryFailed: "No se ha podido establecer el avatar principal.",
   },
   sidebar: {
     members: "Miembros",
+    subscribers: "Suscriptores",
     media: "Medios",
     audio: "Audio",
     contactName: "Nombre del contacto",
@@ -398,6 +406,14 @@ export default {
     newGroupTitle: "Nuevo grupo",
     newGroupNamePlaceholder: "Nombre del grupo",
     createGroupButton: "Crear",
+    newChannelTitle: "Nuevo canal",
+    newChannelNamePlaceholder: "Nombre del canal",
+    createChannelButton: "Crear canal",
+    chatKindGroup: "Grupo",
+    chatKindChannel: "Canal",
+    channelBadge: "Canal",
+    subscribersCount: "suscriptores",
+    createChatMenuAria: "Crear grupo o canal",
     membersCount: "miembros",
     deleteRollerAvatar: "Eliminar",
     setAsPrimaryRollerAvatar: "Establecer como principal",

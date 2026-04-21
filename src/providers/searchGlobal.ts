@@ -13,7 +13,7 @@ export const searchGlobal = async (query: string): Promise<User[]> => {
 type GroupSearchRow = {
   id: number;
   name?: string | null;
-  type?: string;
+  type?: 'D' | 'G' | 'C';
   primary_media?: Chat['primary_media'] | null;
   last_message?: Message | null;
   unread_count?: number;
@@ -23,10 +23,12 @@ type GroupSearchRow = {
 };
 
 export function groupSearchRowToChat(row: GroupSearchRow): Chat {
+  const chatType: Chat['type'] =
+    row.type === 'C' ? 'C' : row.type === 'D' ? 'D' : 'G';
   return {
     id: row.id,
     name: row.name ?? null,
-    type: 'G',
+    type: chatType,
     members: [],
     primary_media: row.primary_media,
     last_message: row.last_message ?? null,
@@ -52,6 +54,15 @@ export async function searchGlobalGroups(
 
 export async function joinGroup(chatId: number): Promise<boolean> {
   const res = await apiFetch(`/api/groups/${chatId}/join/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  return res.ok;
+}
+
+export async function leaveGroup(chatId: number): Promise<boolean> {
+  const res = await apiFetch(`/api/groups/${chatId}/leave/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: '{}',

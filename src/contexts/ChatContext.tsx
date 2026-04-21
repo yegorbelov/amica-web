@@ -18,6 +18,7 @@ import {
 } from '@/utils/chatStateStorage';
 import { useSnackbar } from '@/contexts/snackbar/SnackbarContextCore';
 import { useTranslation } from '@/contexts/languageCore';
+import { joinGroup, leaveGroup } from '@/providers/searchGlobal';
 import {
   ChatMetaContext,
   ChatMessagesContext,
@@ -42,6 +43,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [temporaryChat, setTemporaryChat] = useState<Chat | null>(null);
+  /** Real server chat id when viewing a channel preview (selected id is negative). */
+  const previewRealChatIdRef = useRef<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingChatId, setLoadingChatId] = useState<number | null>(null);
@@ -116,6 +119,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     return chats.find((c) => c.id === selectedChatId) ?? null;
   }, [chats, selectedChatId, temporaryChat]);
 
+  useEffect(() => {
+    const t = temporaryChat;
+    previewRealChatIdRef.current =
+      t && t.id < 0 && t.preview_of_chat_id != null
+        ? t.preview_of_chat_id
+        : null;
+  }, [temporaryChat]);
+
   const requestChatViaWs = useCallback(
     async (
       chatId: number,
@@ -134,6 +145,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
         messages?: Message[];
         next_cursor?: number | null;
         next_newer_cursor?: number | null;
+        my_role?: Chat['my_role'];
       }>((resolve, reject) => {
         const timeoutId = window.setTimeout(() => {
           cleanup();
@@ -153,6 +165,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
             messages?: unknown[];
             next_cursor?: number | null;
             next_newer_cursor?: number | null;
+            my_role?: Chat['my_role'];
           },
         ) => {
           if (data.chat_id !== chatId) return;
@@ -164,6 +177,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
             messages: data.messages as Message[] | undefined,
             next_cursor: data.next_cursor ?? null,
             next_newer_cursor: data.next_newer_cursor ?? null,
+            my_role: data.my_role,
           });
         };
 
@@ -186,11 +200,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
 
   const loadOlderMessages = useCallback(
     async (chatId: number): Promise<boolean> => {
+      const wsId =
+        chatId < 0 ? previewRealChatIdRef.current : chatId;
+      if (wsId == null || wsId <= 0) return false;
       const cursor = nextCursorByChatRef.current[chatId];
       if (cursor === null || cursor === undefined) return false;
       setLoadingOlderChatId(chatId);
       try {
-        const data = (await requestChatViaWs(chatId, {
+        const data = (await requestChatViaWs(wsId, {
           cursor,
           page_size: 25,
         })) as {
@@ -216,6 +233,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
 
   const loadNewerMessages = useCallback(
     async (chatId: number): Promise<boolean> => {
+      const wsId =
+        chatId < 0 ? previewRealChatIdRef.current : chatId;
+      if (wsId == null || wsId <= 0) return false;
       const cached = getCachedMessages(chatId);
       const newestId = cached?.length
         ? (cached[cached.length - 1]?.id as number)
@@ -223,7 +243,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       if (newestId == null) return false;
       setLoadingNewerChatId(chatId);
       try {
-        const data = (await requestChatViaWs(chatId, {
+        const data = (await requestChatViaWs(wsId, {
           cursor_newer: newestId,
           page_size: 25,
         })) as {
@@ -342,7 +362,22 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   const fetchChat = useCallback(
-    async (chatId: number) => {
+    async (chatId: number, channelPreviewPid?: number | null) => {
+      let wsChatId = chatId;
+      if (chatId < 0) {
+        const pid =
+          channelPreviewPid != null && channelPreviewPid > 0
+            ? channelPreviewPid
+            : previewRealChatIdRef.current;
+        if (pid == null || pid <= 0) {
+          setLoadingChatId(null);
+          return;
+        }
+        wsChatId = pid;
+        if (channelPreviewPid != null) {
+          previewRealChatIdRef.current = pid;
+        }
+      }
       setLoadingChatId(chatId);
       const applyChatData = (
         data: {
@@ -350,23 +385,42 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
           members?: Chat['members'];
           messages?: Message[];
           next_cursor?: number | null;
+          my_role?: Chat['my_role'];
         },
         isPrepend = false,
       ) => {
         setLoadingChatId((prev) => (prev === chatId ? null : prev));
         if (selectedChatIdRef.current !== chatId) return;
-        if (data.media) {
-          setChats((prevChats) =>
-            prevChats.map((chat) =>
-              chat.id === chatId
+        if (data.media || data.my_role !== undefined) {
+          if (chatId < 0) {
+            setTemporaryChat((prev) =>
+              prev && prev.id === chatId
                 ? {
-                    ...chat,
-                    media: data.media!,
-                    members: data.members ?? chat.members,
+                    ...prev,
+                    ...(data.media ? { media: data.media } : {}),
+                    members: data.members ?? prev.members,
+                    ...(data.my_role !== undefined
+                      ? { my_role: data.my_role }
+                      : {}),
                   }
-                : chat,
-            ),
-          );
+                : prev,
+            );
+          } else {
+            setChats((prevChats) =>
+              prevChats.map((chat) =>
+                chat.id === chatId
+                  ? {
+                      ...chat,
+                      ...(data.media ? { media: data.media } : {}),
+                      members: data.members ?? chat.members,
+                      ...(data.my_role !== undefined
+                        ? { my_role: data.my_role }
+                        : {}),
+                    }
+                  : chat,
+              ),
+            );
+          }
         }
         if (isPrepend && data.messages?.length) {
           prependMessages(data.messages, chatId);
@@ -411,7 +465,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
           }
         }
 
-        const data = await requestChatViaWs(chatId, { page_size: 25 });
+        const data = await requestChatViaWs(wsChatId, { page_size: 25 });
         applyChatData(data);
       } catch (err) {
         console.error(err);
@@ -906,6 +960,29 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     ],
   );
 
+  const handleCreateTemporaryChannelPreview = useCallback(
+    (row: Chat) => {
+      if (row.type !== 'C' || row.is_member) return;
+      const tempId = Math.min(...chats.map((c) => c.id), 0) - 1;
+      const tempChat: Chat = {
+        ...row,
+        id: tempId,
+        preview_of_chat_id: row.id,
+        is_member: false,
+        unread_count: 0,
+        last_message: row.last_message ?? null,
+        info: row.info != null ? String(row.info) : '',
+        media: row.media ?? [],
+        members: row.members ?? [],
+      };
+      setTemporaryChat(tempChat);
+      window.history.pushState({}, '', `#${tempId}`);
+      selectChat(tempId);
+      void fetchChat(tempId, row.id);
+    },
+    [chats, fetchChat, selectChat],
+  );
+
   const deleteChat = useCallback(
     (chatId: number) => {
       if (chatId < 0) {
@@ -977,6 +1054,59 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     ],
   );
 
+  const leaveChannelToPreview = useCallback(
+    async (realChatId: number): Promise<boolean> => {
+      const snapshot = chats.find((c) => c.id === realChatId);
+      if (!snapshot || snapshot.type !== 'C') return false;
+
+      const ok = await leaveGroup(realChatId);
+      if (!ok) return false;
+
+      let created: { tempId: number; tempChat: Chat } | null = null;
+      setChats((prev) => {
+        const current = prev.find((c) => c.id === realChatId);
+        if (!current || current.type !== 'C') return prev;
+        const tempId = Math.min(...prev.map((c) => c.id), 0) - 1;
+        created = {
+          tempId,
+          tempChat: {
+            ...current,
+            id: tempId,
+            preview_of_chat_id: realChatId,
+            is_member: false,
+            unread_count: 0,
+            members: [],
+            my_role: undefined,
+          },
+        };
+        return prev.filter((c) => c.id !== realChatId);
+      });
+
+      if (!created) {
+        void fetchChats();
+        return true;
+      }
+
+      const { tempId, tempChat } = created;
+      moveMessagesToChat(realChatId, tempId);
+      const nc = nextCursorByChatRef.current[realChatId];
+      if (nc !== undefined) {
+        nextCursorByChatRef.current[tempId] = nc;
+        delete nextCursorByChatRef.current[realChatId];
+      }
+      delete wsGetChatRequestedOnceRef.current[realChatId];
+      delete wsInitialAnimationPendingRef.current[realChatId];
+
+      setTemporaryChat(tempChat);
+      window.history.pushState({}, '', `#${tempId}`);
+      selectChat(tempId);
+      void fetchChat(tempId, realChatId);
+      void fetchChats();
+      return true;
+    },
+    [chats, moveMessagesToChat, selectChat, fetchChat, fetchChats],
+  );
+
   const handleChatClick = useCallback(
     (chatId: number) => {
       if (selectedChatIdRef.current === chatId) return;
@@ -992,6 +1122,23 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     [chats, fetchChat, getCachedMessages, selectChat, updateMessages],
   );
 
+  const subscribeToPreviewedChannel = useCallback(async (): Promise<boolean> => {
+    const pid = temporaryChat?.preview_of_chat_id;
+    if (
+      pid == null ||
+      temporaryChat?.type !== 'C' ||
+      temporaryChat.id >= 0
+    ) {
+      return false;
+    }
+    const ok = await joinGroup(pid);
+    if (!ok) return false;
+    void fetchChats();
+    window.history.pushState({}, '', `#${pid}`);
+    handleChatClick(pid);
+    return true;
+  }, [temporaryChat, fetchChats, handleChatClick]);
+
   const valueMeta: ChatMetaContextType = useMemo(
     () => ({
       chats,
@@ -1001,6 +1148,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       fetchChat,
       handleChatClick,
       handleCreateTemporaryChat,
+      handleCreateTemporaryChannelPreview,
+      subscribeToPreviewedChannel,
+      leaveChannelToPreview,
       deleteChat,
       addContact,
       deleteContact,
@@ -1016,6 +1166,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
       fetchChat,
       handleChatClick,
       handleCreateTemporaryChat,
+      handleCreateTemporaryChannelPreview,
+      subscribeToPreviewedChannel,
+      leaveChannelToPreview,
       deleteChat,
       addContact,
       deleteContact,

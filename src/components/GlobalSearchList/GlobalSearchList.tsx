@@ -13,8 +13,12 @@ import { joinGroup } from '@/providers/searchGlobal';
 
 const GlobalSearchList: React.FC = () => {
   const { results, clear, term } = useSearchContext<GlobalSearchItem>();
-  const { handleCreateTemporaryChat, handleChatClick, fetchChats } =
-    useChatMeta();
+  const {
+    handleCreateTemporaryChat,
+    handleChatClick,
+    fetchChats,
+    handleCreateTemporaryChannelPreview,
+  } = useChatMeta();
   const { setActiveProfileTab } = useSettings();
   const { setActiveTab } = useTabs();
   const { t } = useTranslation();
@@ -38,10 +42,16 @@ const GlobalSearchList: React.FC = () => {
       return;
     }
     if (item.type === 'group') {
-      const chatId = item.data.id;
-      if (item.data.is_member) {
+      const row = item.data;
+      const chatId = row.id;
+      if (row.is_member) {
         window.history.pushState({}, '', `#${chatId}`);
         handleChatClick(chatId);
+        clear();
+        return;
+      }
+      if (row.type === 'C') {
+        handleCreateTemporaryChannelPreview(row);
         clear();
         return;
       }
@@ -142,7 +152,9 @@ const GlobalSearchList: React.FC = () => {
           <div className={styles.info}>
             <span className={styles.name}>{item.data.name ?? ''}</span>
             <span className={styles.meta}>
-              {`${item.data.info ?? ''} ${t('sidebar.membersCount')}`.trim()}
+              {item.data.type === 'C'
+                ? `${t('sidebar.channelBadge')} · ${item.data.info ?? ''} ${t('sidebar.subscribersCount')}`.trim()
+                : `${item.data.info ?? ''} ${t('sidebar.membersCount')}`.trim()}
             </span>
           </div>
         </>

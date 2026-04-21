@@ -309,6 +309,10 @@ export default {
     leftGroup: "لقد غادرت المجموعة",
   },
   sendArea: {
+    channelPreviewHint:
+      "اشترك لقراءة الرسائل وإضافة القناة إلى قائمة الدردشة.",
+    channelPreviewSubscribe: "اشتراك",
+    channelUnsubscribe: 'إلغاء الاشتراك',
     cancelSelection: "إلغاء التحديد",
     deleteSelected: "حذف المحدد",
     cancelEdit: "إلغاء التعديل",
@@ -324,6 +328,8 @@ export default {
     fileItemUploading: "جاري الإرسال…",
     fileItemCompressing: "جاري المعالجة…",
     removeFile: "إزالة الملف",
+    channelReadOnly:
+      "يمكن لمسؤولي القناة فقط النشر. يمكنك قراءة الرسائل.",
   },
   dateGroup: {
     today: "اليوم",
@@ -369,11 +375,13 @@ export default {
     wsSendFailed: "تعذر الإرسال. تحقق من الاتصال.",
     joinGroupFailed: "تعذر الانضمام إلى المجموعة.",
     createGroupTimeout: "تعذر إنشاء المجموعة. حاول مرة أخرى.",
+    createChannelTimeout: "تعذر إنشاء القناة. حاول مرة أخرى.",
     avatarDeleteFailed: "تعذر حذف هذه الصورة الرمزية.",
     setPrimaryFailed: "تعذر تعيين الصورة الرمزية الأساسية.",
   },
   sidebar: {
     members: "الأعضاء",
+    subscribers: "المشتركون",
     media: "الوسائط",
     audio: "الصوت",
     contactName: "اسم جهة الاتصال",
@@ -393,6 +401,14 @@ export default {
     newGroupTitle: "مجموعة جديدة",
     newGroupNamePlaceholder: "اسم المجموعة",
     createGroupButton: "إنشاء",
+    newChannelTitle: "قناة جديدة",
+    newChannelNamePlaceholder: "اسم القناة",
+    createChannelButton: "إنشاء قناة",
+    chatKindGroup: "مجموعة",
+    chatKindChannel: "قناة",
+    channelBadge: "قناة",
+    subscribersCount: "مشترك",
+    createChatMenuAria: "إنشاء مجموعة أو قناة",
     membersCount: "أعضاء",
     deleteRollerAvatar: "حذف",
     setAsPrimaryRollerAvatar: "تعيين كأساسي",

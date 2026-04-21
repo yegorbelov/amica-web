@@ -314,6 +314,10 @@ export default {
     leftGroup: 'グループを退出しました',
   },
   sendArea: {
+    channelPreviewHint:
+      'チャンネルを購読してメッセージを読み、リストに追加します。',
+    channelPreviewSubscribe: 'チャンネルを購読',
+    channelUnsubscribe: '購読を解除',
     cancelSelection: '選択をキャンセル',
     deleteSelected: '選択を削除',
     cancelEdit: '編集をキャンセル',
@@ -329,6 +333,8 @@ export default {
     fileItemUploading: '送信中…',
     fileItemCompressing: '処理中…',
     removeFile: 'ファイルを削除',
+    channelReadOnly:
+      'チャンネル管理者のみが投稿できます。メッセージは閲覧できます。',
   },
   dateGroup: {
     today: '今日',
@@ -375,11 +381,14 @@ export default {
     joinGroupFailed: 'グループに参加できませんでした。',
     createGroupTimeout:
       'グループを作成できませんでした。もう一度お試しください。',
+    createChannelTimeout:
+      'チャンネルを作成できませんでした。もう一度お試しください。',
     avatarDeleteFailed: 'このアバターを削除できませんでした。',
     setPrimaryFailed: 'メインのアバターを設定できませんでした。',
   },
   sidebar: {
     members: 'メンバー',
+    subscribers: '購読者',
     media: 'メディア',
     audio: 'オーディオ',
     contactName: '連絡先名',
@@ -399,6 +408,14 @@ export default {
     newGroupTitle: '新しいグループ',
     newGroupNamePlaceholder: 'グループ名',
     createGroupButton: '作成',
+    newChannelTitle: '新しいチャンネル',
+    newChannelNamePlaceholder: 'チャンネル名',
+    createChannelButton: 'チャンネルを作成',
+    chatKindGroup: 'グループ',
+    chatKindChannel: 'チャンネル',
+    channelBadge: 'チャンネル',
+    subscribersCount: '人が購読',
+    createChatMenuAria: 'グループまたはチャンネルを作成',
     membersCount: 'メンバー',
     deleteRollerAvatar: '削除',
     setAsPrimaryRollerAvatar: 'メインに設定',

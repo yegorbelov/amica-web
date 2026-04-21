@@ -220,3 +220,14 @@
   align-items: center;
   margin-bottom: 16px;
 }
+
+.createGroupKindRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.createGroupKindBtn {
+  flex: 1;
+  justify-content: center;
+}
