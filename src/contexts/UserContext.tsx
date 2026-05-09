@@ -97,6 +97,14 @@ function getPlaceholderUser(): User {
   };
 }
 
+function getInitialUserState(): UserState {
+  const cached = getCachedUser();
+  if (cached) {
+    return { user: cached, loading: false, error: null };
+  }
+  return { user: null, loading: false, error: null };
+}
+
 export const UserProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
@@ -120,11 +128,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   );
   const { showWarning } = useWarning();
 
-  const [state, setState] = useState<UserState>({
-    user: null,
-    loading: true,
-    error: null,
-  });
+  const [state, setState] = useState<UserState>(getInitialUserState);
   const [pendingDeviceLogin, setPendingDeviceLogin] = useState<{
     challengeId: string;
     trustedDeviceLabel?: string;
@@ -262,8 +266,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
     (async () => {
       const cachedUser = getCachedUser();
       if (cachedUser) {
-        // Avoid flashing RoomPage before we know the refresh cookie is still valid.
-        setState({ user: null, loading: true, error: null });
         if (!websocketManager.isConnected()) {
           websocketManager.connect();
         }
@@ -274,7 +276,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
           setState({ user: null, loading: false, error: null });
           return;
         }
-        setState({ user: cachedUser, loading: false, error: null });
         if (websocketManager.isConnected()) {
           fetchUser().catch(() => {});
         }

@@ -32,7 +32,7 @@ const StrokeGradientSvg = React.memo(() => (
 ));
 StrokeGradientSvg.displayName = 'StrokeGradientSvg';
 const App: React.FC = () => {
-  const { isAuthenticated, loading } = useUser();
+  const { isAuthenticated } = useUser();
   const [currentView, setCurrentView] = useState<AppView>('login');
   const { wideScreenModeEnabled } = useSettings();
   const showSignup = useCallback(() => setCurrentView('signup'), []);
@@ -55,9 +55,6 @@ const App: React.FC = () => {
     return <SignUpPage onShowLogin={showLogin} />;
   }, [isAuthenticated, currentView, showSignup, showLogin]);
 
-  if (loading) {
-    return <div className='loader'></div>;
-  }
   return (
     <>
       <StrokeGradientSvg />
