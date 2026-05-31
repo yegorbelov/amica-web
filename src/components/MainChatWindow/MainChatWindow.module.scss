@@ -88,6 +88,10 @@
   overflow-x: hidden;
   overscroll-behavior-y: contain;
   overflow-anchor: none;
+
+  &:has(:global(.video-layout--floating)) {
+    mask-image: none;
+  }
 }
 
 :global(.room_wrapper) {

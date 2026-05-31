@@ -91,7 +91,6 @@
 // Outer: horizontal position via translate (compositor-friendly). Inner: scale /
 // shadows so drag can update X with 0ms while scale still eases over 0.2s.
 .drag-indicator {
-  contain: content;
   position: absolute;
   left: 0;
   top: 50%;

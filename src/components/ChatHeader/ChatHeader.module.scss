@@ -101,17 +101,96 @@
 }
 
 .media-header {
-  height: 50px;
   position: relative;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
+  flex-direction: column;
+  width: calc(100% - 20px);
+  margin: 0 10px 6px;
+  border-radius: 24px;
+  overflow: visible;
+  cursor: pointer;
+  padding-bottom: 3px;
+  box-sizing: border-box;
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: var(--glass-shadow);
+
+  &__seekHit {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    z-index: 0;
+    cursor: pointer;
+  }
+
+  &__clip {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  &__progressBg {
+    position: absolute;
+    inset: 0;
+    background: var(--surface-bg-muted, rgba(0, 0, 0, 0.4));
+    pointer-events: none;
+  }
+
+  &__progressFill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 0;
+    background: var(--surface-bg, rgba(0, 0, 0, 0.6));
+    pointer-events: none;
+  }
+
+  &__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    height: 50px;
+    overflow: visible;
+    pointer-events: none;
+  }
 
   &__close {
     width: 45px !important;
     height: 45px !important;
+  }
+
+  &__mute {
+    width: 45px !important;
+    height: 45px !important;
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  &__speed {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 8px;
+    line-height: 1;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
   }
 
   &__cover {
@@ -132,6 +211,46 @@
     width: 45px;
     padding: 11px;
     position: relative;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  &__nav {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+    pointer-events: auto;
+  }
+
+  &__navButton {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    opacity: 0.9;
+    pointer-events: auto;
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+  }
+
+  &__navIcon {
+    width: 100%;
+    height: 100%;
+
+    &--prev {
+      transform: rotate(180deg);
+    }
   }
 
   &__leftside {
@@ -141,30 +260,279 @@
     height: 100%;
     margin-left: 10px;
     gap: 10px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__playlist-mask {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    pointer-events: none;
+    --playlist-mask-fade: 5px;
+
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      black var(--playlist-mask-fade),
+      black calc(100% - var(--playlist-mask-fade)),
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      black var(--playlist-mask-fade),
+      black calc(100% - var(--playlist-mask-fade)),
+      transparent 100%
+    );
+    mask-size: 100% 100%;
+    -webkit-mask-size: 100% 100%;
+    mask-repeat: no-repeat;
+    -webkit-mask-repeat: no-repeat;
+  }
+
+  &__playlist {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: auto;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    cursor: pointer;
+    pointer-events: auto;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    @supports (overflow: clip) {
+      overflow-y: clip;
+    }
+  }
+
+  &__playlist-track {
+    display: flex;
+    min-width: 0;
+  }
+
+  &__playlist-slide {
+    flex: 0 0 100%;
+    min-width: 0;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    touch-action: inherit;
+    padding-left: 5px;
+    box-sizing: border-box;
   }
 
   &__current {
+    min-width: 0;
     overflow: hidden;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    line-height: 1.2;
+    color: #fff;
+  }
+
+  &__titleViewport {
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  &__titleText {
+    display: block;
     white-space: nowrap;
+    overflow: hidden;
     text-overflow: ellipsis;
+
+    &--scroll {
+      display: inline-block;
+      overflow: visible;
+      text-overflow: unset;
+      animation: media-header-title-marquee var(--title-scroll-duration, 8s)
+        ease-in-out infinite;
+    }
+  }
+
+  @keyframes media-header-title-marquee {
+    0%,
+    12% {
+      transform: translateX(0);
+    }
+
+    45%,
+    55% {
+      transform: translateX(var(--title-scroll-distance, 0));
+    }
+
+    88%,
+    100% {
+      transform: translateX(0);
+    }
+  }
+
+  &__time {
+    font-size: 0.75rem;
+    line-height: 1.2;
+    color: #d5eaff;
+    white-space: nowrap;
+    opacity: 0.85;
   }
 
   &__rightside {
     flex-shrink: 0;
     display: flex;
+    align-items: center;
     height: 100%;
-    margin-right: 20px;
+    margin-right: 10px;
     gap: 10px;
+    overflow: visible;
+    pointer-events: auto;
   }
+
+  &__progressBar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+  }
+
+  &__progressBarTrack {
+    height: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+  }
+
+  &__progressBarFill {
+    height: 100%;
+    background: #fff;
+    width: 0;
+  }
+
   svg {
     width: 100%;
     height: 100%;
   }
 }
 
+@media screen and (max-width: 768px) {
+  .media-header {
+    width: calc(100% - 20px);
+    margin: 0 10px;
+    // border-radius: 0 0 20px 20px;
+    border-left: none;
+    border-right: none;
+  }
+}
+
 .icon {
   height: 24px;
   width: auto;
+}
+
+.audio-equalizer-control {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  height: 45px;
+  overflow: visible;
+
+  &__button {
+    align-items: flex-start !important;
+
+    > span {
+      align-items: flex-start !important;
+      width: 100%;
+    }
+  }
+
+  &__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 45px;
+    flex-shrink: 0;
+  }
+
+  &__button--open {
+    height: auto !important;
+    overflow: visible !important;
+    z-index: 100;
+  }
+
+  &__volume {
+    width: 100%;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    transition:
+      max-height 0.25s ease,
+      opacity 0.2s ease,
+      padding 0.25s ease;
+    padding: 0;
+    pointer-events: none;
+
+    &--open {
+      max-height: 88px;
+      opacity: 1;
+      padding: 2px 0 10px;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+  }
+
+  &__volumeHit {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    cursor: pointer;
+  }
+
+  &__volumeTrack {
+    width: 6px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  &__volumeFill {
+    width: 100%;
+    background: #fff;
+    border-radius: 4px;
+  }
 }
 
 .audio-equalizer {

@@ -42,12 +42,7 @@ const MediaGrid = memo(
                 dominant_color={file.dominant_color ?? undefined}
               />
             )}
-            {isLikelyVideoFile(file) && (
-              <VideoLayout
-                full={(file.file_url ?? '') as string}
-                has_audio={!!file.has_audio}
-              />
-            )}
+            {isLikelyVideoFile(file) && <VideoLayout file={file} />}
           </div>
         ))}
       </div>

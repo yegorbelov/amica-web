@@ -1,56 +1,189 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useCallback,
+} from 'react';
 import { Icon } from '../Icons/AutoIcons';
 import { JWTVideo } from './JWTVideo';
 import { useSettings } from '@/contexts/settings/context';
+import { useAudio } from '@/contexts/audioContext';
+import { useSelectedChat, useChatMessages } from '@/contexts/ChatContextCore';
+import { isLikelyVideoFile } from '@/utils/mediaAttachmentKind';
+import {
+  getScrollRoot,
+  getVisibleAreaRatio,
+  resolveInlineVisibility,
+} from '@/utils/videoPip';
+import type { File } from '@/types';
 import styles from './SmartMediaLayout.module.scss';
 
-export default function VideoLayout({
-  full,
-  has_audio,
-}: {
-  full: string;
-  has_audio: boolean;
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+export default function VideoLayout({ file }: { file: File }) {
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const layoutRef = useRef<HTMLDivElement>(null);
   const [playIconVisible, setPlayIconVisible] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [buffered, setBuffered] = useState(0);
 
   const { autoplayVideos } = useSettings();
   const [playing, setPlaying] = useState(autoplayVideos);
-  const [muted, setMuted] = useState(autoplayVideos);
-  const [buffered, setBuffered] = useState(0);
+  const [muted, setMutedLocal] = useState(autoplayVideos);
+
+  const {
+    currentMediaId,
+    mediaType,
+    isPlaying,
+    currentChatId,
+    currentTime,
+    duration,
+    setPlaylist,
+    togglePlay,
+    registerInlineVideo,
+    detachInlineVideo,
+    setCurrentTime,
+    setScrubbing,
+    setInlineVideoVisible,
+    setVideoResumeTime,
+    showVideoPiP,
+  } = useAudio();
+  const { selectedChat } = useSelectedChat();
+  const { messages } = useChatMessages();
+
+  const isActiveInHeader = mediaType === 'video' && currentMediaId === file.id;
+  const isHeaderVideoActive = mediaType === 'video' && currentMediaId != null;
+  const mountVideoElement = isActiveInHeader || !isHeaderVideoActive;
+  const posterUrl =
+    file.thumbnail_medium_url || file.thumbnail_small_url || file.cover_url;
+  const hasAudio = file.has_audio || false;
 
   const progressRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const wasPlayingBeforeDrag = useRef(false);
 
   const soundIcon = useMemo(
-    () => (
-      <Icon name={muted ? 'SoundMuteFill' : 'SoundMaxFill'} />
-    ),
+    () => <Icon name={muted ? 'SoundMuteFill' : 'SoundMaxFill'} />,
     [muted],
   );
 
+  const videoPlaylist = useMemo(
+    () =>
+      messages.flatMap((m) =>
+        (m.files ?? []).filter((item) => isLikelyVideoFile(item)),
+      ),
+    [messages],
+  );
+
+  const blockedByHeader = isHeaderVideoActive && !isActiveInHeader;
+
+  const effectivePlaying = blockedByHeader
+    ? false
+    : isHeaderVideoActive
+      ? isActiveInHeader && isPlaying
+      : playing;
+
+  useLayoutEffect(() => {
+    if (!blockedByHeader) return;
+    localVideoRef.current?.pause();
+  }, [blockedByHeader]);
+
+  const activateInHeader = () => {
+    setPlaying(false);
+    setVideoResumeTime(localVideoRef.current?.currentTime ?? 0);
+    localVideoRef.current?.pause();
+
+    if (currentChatId !== selectedChat?.id || mediaType !== 'video') {
+      setPlaylist(videoPlaylist, selectedChat?.id ?? null, {
+        autoPlayId: file.id,
+        mediaType: 'video',
+      });
+      return;
+    }
+
+    void togglePlay(file.id!);
+  };
+
+  const effectiveDuration = duration || file.duration || 0;
+
+  const headerProgress =
+    effectiveDuration > 0 ? (currentTime / effectiveDuration) * 100 : 0;
+
+  const seekHeaderToClientX = useCallback(
+    (clientX: number) => {
+      if (!effectiveDuration) return;
+
+      const rect = progressRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const percent = (clientX - rect.left) / rect.width;
+      const clamped = Math.max(0, Math.min(1, percent));
+      setCurrentTime(clamped * effectiveDuration);
+    },
+    [effectiveDuration, setCurrentTime],
+  );
+
   const seekByClientX = (clientX: number) => {
-    const video = videoRef.current;
     const bar = progressRef.current;
-    if (!video || !bar || !video.duration) return;
+    const trackDuration =
+      isActiveInHeader && effectiveDuration > 0
+        ? effectiveDuration
+        : localVideoRef.current?.duration;
+    if (!bar || !trackDuration) return;
 
     const rect = bar.getBoundingClientRect();
     const pos = (clientX - rect.left) / rect.width;
     const clamped = Math.max(0, Math.min(pos, 1));
+    const time = clamped * trackDuration;
 
-    video.currentTime = clamped * video.duration;
-    setProgress(clamped * 100);
+    if (isActiveInHeader) {
+      setCurrentTime(time);
+    } else if (localVideoRef.current) {
+      localVideoRef.current.currentTime = time;
+      setProgress(clamped * 100);
+    }
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
-    const video = videoRef.current;
-    if (!video) return;
+
+    if (isActiveInHeader) {
+      if (!effectiveDuration) return;
+      e.preventDefault();
+
+      setScrubbing(true);
+      seekHeaderToClientX(e.clientX);
+
+      const onMove = (moveEvent: MouseEvent | TouchEvent) => {
+        moveEvent.preventDefault();
+        const x =
+          'touches' in moveEvent
+            ? moveEvent.touches[0]?.clientX ?? 0
+            : moveEvent.clientX;
+        seekHeaderToClientX(x);
+      };
+
+      const onUp = () => {
+        setScrubbing(false);
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onMove as EventListener);
+        document.removeEventListener('touchend', onUp);
+      };
+
+      document.addEventListener('mousemove', onMove, { passive: false });
+      document.addEventListener('mouseup', onUp);
+      document.addEventListener('touchmove', onMove as EventListener, {
+        passive: false,
+      });
+      document.addEventListener('touchend', onUp);
+      return;
+    }
+
+    if (!localVideoRef.current) return;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 
-    wasPlayingBeforeDrag.current = playing;
+    wasPlayingBeforeDrag.current = effectivePlaying;
     setPlaying(false);
     isDragging.current = true;
     seekByClientX(e.clientX);
@@ -61,96 +194,171 @@ export default function VideoLayout({
     seekByClientX(e.clientX);
   };
 
-  const handlePointerUp = (e: React.PointerEvent) => {
-    e.stopPropagation();
+  const finishDrag = () => {
     if (!isDragging.current) return;
     isDragging.current = false;
-    if (wasPlayingBeforeDrag.current) {
-      setPlaying(true);
-    }
+    if (!wasPlayingBeforeDrag.current) return;
+    setPlaying(true);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    finishDrag();
   };
 
   const handlePointerCancel = () => {
-    if (!isDragging.current) return;
-    isDragging.current = false;
-    if (wasPlayingBeforeDrag.current) {
-      setPlaying(true);
-    }
+    finishDrag();
   };
 
+  useLayoutEffect(() => {
+    if (!isActiveInHeader) return;
+    const video = localVideoRef.current;
+    if (video) registerInlineVideo(video, file.id);
+    return () => detachInlineVideo();
+  }, [isActiveInHeader, file.id, registerInlineVideo, detachInlineVideo]);
+
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    if (!isActiveInHeader) return;
 
-    const updateBufferedPlayable = () => {
-      if (video.duration > 0 && video.buffered.length > 0) {
-        let playableEnd = 0;
+    const layout = layoutRef.current;
+    if (!layout) return;
 
-        for (let i = 0; i < video.buffered.length; i++) {
-          if (video.buffered.start(i) <= video.currentTime) {
-            playableEnd = video.buffered.end(i);
-          }
-        }
+    setInlineVideoVisible(true);
 
-        setBuffered(Math.min((playableEnd / video.duration) * 100, 100));
-      }
+    const scrollRoot = getScrollRoot(layout);
+
+    const updateVisibility = () => {
+      const decision = resolveInlineVisibility(
+        getVisibleAreaRatio(layout, scrollRoot),
+        true,
+      );
+      if (decision === 'inline') setInlineVideoVisible(true);
+      else if (decision === 'pip') setInlineVideoVisible(false);
     };
 
-    const updateProgress = () => {
-      if (video.duration > 0) {
-        setProgress((video.currentTime / video.duration) * 100);
-        requestAnimationFrame(updateProgress);
-      }
-    };
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry) return;
+        const decision = resolveInlineVisibility(
+          entry.intersectionRatio,
+          entry.isIntersecting,
+        );
+        if (decision === 'inline') setInlineVideoVisible(true);
+        else if (decision === 'pip') setInlineVideoVisible(false);
+      },
+      {
+        root: scrollRoot,
+        threshold: [0, 0.12, 0.35, 0.6, 1],
+        rootMargin: '0px',
+      },
+    );
+    observer.observe(layout);
 
-    video.addEventListener('progress', updateBufferedPlayable);
-    requestAnimationFrame(updateProgress);
+    let rafId = requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(updateVisibility);
+    });
+
+    scrollRoot?.addEventListener('scroll', updateVisibility, { passive: true });
+    window.addEventListener('resize', updateVisibility);
 
     return () => {
-      video.removeEventListener('progress', updateBufferedPlayable);
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+      scrollRoot?.removeEventListener('scroll', updateVisibility);
+      window.removeEventListener('resize', updateVisibility);
     };
-  }, []);
+  }, [isActiveInHeader, setInlineVideoVisible]);
 
   useEffect(() => {
-    const video = videoRef.current;
+    const video = localVideoRef.current;
+    if (!video || isActiveInHeader) return;
+
+    const update = () => {
+      if (video.duration > 0 && video.buffered.length > 0) {
+        let end = 0;
+        for (let i = 0; i < video.buffered.length; i++) {
+          if (video.buffered.start(i) <= video.currentTime) {
+            end = video.buffered.end(i);
+          }
+        }
+        setBuffered(Math.min((end / video.duration) * 100, 100));
+      }
+    };
+
+    video.addEventListener('progress', update);
+    return () => video.removeEventListener('progress', update);
+  }, [isActiveInHeader]);
+
+  useEffect(() => {
+    if (isActiveInHeader) return;
+    const video = localVideoRef.current;
     if (!video) return;
 
     let rafId: number;
-
-    const updateProgress = () => {
-      if (video.duration) {
-        setProgress((video.currentTime / video.duration) * 100);
-      }
-      rafId = requestAnimationFrame(updateProgress);
+    const tick = () => {
+      if (video.duration) setProgress((video.currentTime / video.duration) * 100);
+      rafId = requestAnimationFrame(tick);
     };
-
-    rafId = requestAnimationFrame(updateProgress);
+    rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, []);
+  }, [isActiveInHeader]);
 
   useEffect(() => {
-    const showTimeout = window.setTimeout(() => setPlayIconVisible(true), 0);
-    const hideTimeout = window.setTimeout(() => setPlayIconVisible(false), 700);
+    const show = window.setTimeout(() => setPlayIconVisible(true), 0);
+    const hide = window.setTimeout(() => setPlayIconVisible(false), 700);
     return () => {
-      clearTimeout(showTimeout);
-      clearTimeout(hideTimeout);
+      clearTimeout(show);
+      clearTimeout(hide);
     };
-  }, [playing]);
+  }, [effectivePlaying]);
 
   const handleClick = () => {
     if (isDragging.current) return;
-    setPlaying((prev) => !prev);
+    if (isActiveInHeader) {
+      void togglePlay(file.id!);
+      return;
+    }
+    activateInHeader();
   };
 
+  const jwtVideo = (
+    <JWTVideo
+      ref={localVideoRef}
+      url={file.file_url ?? ''}
+      muted={isActiveInHeader ? true : muted}
+      autoPlay={autoplayVideos && !isHeaderVideoActive && !isActiveInHeader}
+      playing={isActiveInHeader ? false : playing}
+      loop={!isActiveInHeader}
+      externallyControlled={isActiveInHeader}
+      playbackFromContext={isActiveInHeader}
+    />
+  );
+
+  const shellContent = mountVideoElement
+    ? jwtVideo
+    : posterUrl
+      ? <img src={posterUrl} className={styles['video-layout__poster']} alt='' />
+      : <div className={styles['video-layout__posterFallback']} />;
+
   return (
-    <div onClick={handleClick} className={styles['video-layout']}>
-      <JWTVideo
-        ref={videoRef}
-        url={full}
-        muted={muted}
-        autoPlay={autoplayVideos}
-        playing={playing}
-      />
+    <div
+      ref={layoutRef}
+      onClick={handleClick}
+      className={[
+        styles['video-layout'],
+        isActiveInHeader && styles['video-layout--playerActive'],
+        isActiveInHeader && showVideoPiP && styles['video-layout--floating'],
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div className={styles['video-shell-slot']}>
+        {isActiveInHeader && showVideoPiP && (
+          <div className={styles['video-shell-placeholder']} aria-hidden />
+        )}
+
+        <div className={styles['video-shell']}>{shellContent}</div>
+      </div>
 
       <div
         ref={progressRef}
@@ -173,10 +381,9 @@ export default function VideoLayout({
               transition: 'width 0.3s ease-in-out',
             }}
           />
-
           <div
             style={{
-              width: `${progress}%`,
+              width: `${isActiveInHeader ? headerProgress : progress}%`,
               height: '100%',
               background: '#fff',
               position: 'absolute',
@@ -188,7 +395,7 @@ export default function VideoLayout({
       </div>
 
       <Icon
-        name={playing ? 'Pause' : 'Play'}
+        name={effectivePlaying ? 'Pause' : 'Play'}
         style={{
           position: 'absolute',
           top: '50%',
@@ -196,16 +403,17 @@ export default function VideoLayout({
           transform: 'translate(-50%, -50%)',
           width: 50,
           height: 50,
-          opacity: playIconVisible || !playing ? 1 : 0,
+          opacity: playIconVisible || !effectivePlaying ? 1 : 0,
           transition: 'opacity 0.3s ease-in-out',
           pointerEvents: 'none',
         }}
       />
-      {has_audio && (
+
+      {hasAudio && !isActiveInHeader && (
         <div
           onClick={(e) => {
             e.stopPropagation();
-            setMuted((prev) => !prev);
+            setMutedLocal((prev) => !prev);
           }}
           style={{
             position: 'absolute',

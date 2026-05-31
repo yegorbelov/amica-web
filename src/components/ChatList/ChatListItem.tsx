@@ -81,6 +81,10 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
       )
       .slice(0, 3);
 
+    const attachmentsAreAudioOnly =
+      lastMessageFiles.length > 0 &&
+      lastMessageFiles.every((file) => file.category === 'audio');
+
     const readIcon = useMemo(
       () => <Icon name='Read' className={styles['chat-list-item__read']} />,
       [],
@@ -277,7 +281,13 @@ const ChatListItem = forwardRef<HTMLDivElement, ChatListItemProps>(
             <div className={styles['chat-list-item__message-row']}>
               <div className={styles['chat-list-item__message-text']}>
                 {lastMessageFiles.length > 0 && (
-                  <span className={styles['chat-list-item__attachments']}>
+                  <span
+                    className={`${styles['chat-list-item__attachments']} ${
+                      attachmentsAreAudioOnly
+                        ? styles['chat-list-item__attachments--audio']
+                        : ''
+                    }`}
+                  >
                     {lastMessageFiles.map((file: File, index: number) => (
                       <AttachmentPreview key={file.id || index} file={file} />
                     ))}

@@ -145,12 +145,7 @@ function SmartMediaLayoutInner({ files, items }: InnerProps) {
                   height: item.height,
                 }}
               >
-                {isLikelyVideoFile(item.file) && (
-                  <VideoLayout
-                    full={item.file.file_url ?? ''}
-                    has_audio={item.file.has_audio || false}
-                  />
-                )}
+                {isLikelyVideoFile(item.file) && <VideoLayout file={item.file} />}
 
                 {isLikelyImageFile(item.file) && (
                   <ProgressiveImage

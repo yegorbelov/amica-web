@@ -17,6 +17,11 @@
   width: 100%;
   overflow: hidden;
   contain: content;
+
+  &:has(.video-layout--playerActive) {
+    overflow: visible;
+    contain: none;
+  }
 }
 
 .item {
@@ -24,6 +29,10 @@
   overflow: hidden;
   border-radius: 5px;
   background: #222;
+
+  &:has(.video-layout--playerActive) {
+    overflow: visible;
+  }
 }
 
 .media {
@@ -305,7 +314,69 @@ $progressive-image-spinner-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www
   background: #000;
   color: #fff;
   fill: #fff;
-  contain: content;
+
+  &--playerActive {
+    isolation: isolate;
+    overflow: visible;
+  }
+
+  &--floating {
+    z-index: 1200;
+    overflow: visible;
+  }
+
+  &__poster,
+  &__posterFallback {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  &__posterFallback {
+    background: #111;
+  }
+}
+
+.video-mount {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-shell-slot {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.video-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+
+  .video-layout--playerActive &:not(.video-shell--pip) {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  &--pipDragging {
+    cursor: grabbing !important;
+    transition: none !important;
+  }
+}
+
+.video-shell-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: #000;
+  pointer-events: none;
 }
 
 .progress-bar {

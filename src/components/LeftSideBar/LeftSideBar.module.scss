@@ -34,6 +34,11 @@
     }
   }
 
+  &__media-header {
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
   &__tab-panels {
     flex: 1;
   }
@@ -60,6 +65,11 @@
 }
 
 @media screen and (max-width: 768px) {
+  .left-side-bar__media-header {
+    margin-top: 0;
+    margin-right: 0;
+  }
+
   .left-side-bar {
     border-radius: 0;
     margin: 0;

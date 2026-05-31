@@ -15,10 +15,27 @@ interface JWTVideoProps {
   className?: string;
   muted?: boolean;
   playing?: boolean;
+  loop?: boolean;
+  /** Play/pause driven by AudioContext (pip) or playing prop */
+  externallyControlled?: boolean;
+  /** With externallyControlled: only src sync, play/pause via AudioContext DOM */
+  playbackFromContext?: boolean;
 }
 
 const JWTVideoInner = forwardRef<HTMLVideoElement, JWTVideoProps>(
-  ({ url, className, muted = false, autoPlay = true, playing = true }, ref) => {
+  (
+    {
+      url,
+      className,
+      muted = false,
+      autoPlay = true,
+      playing = true,
+      loop = true,
+      externallyControlled = false,
+      playbackFromContext = false,
+    },
+    ref,
+  ) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [signedUrl, setSignedUrl] = useState<string | null>(null);
 
@@ -48,19 +65,38 @@ const JWTVideoInner = forwardRef<HTMLVideoElement, JWTVideoProps>(
     }, [url]);
 
     useEffect(() => {
+      if (externallyControlled) return;
       const video = videoRef.current;
       if (!video || !signedUrl) return;
       if (video.src !== signedUrl) video.src = signedUrl;
-    }, [signedUrl]);
+    }, [signedUrl, externallyControlled]);
 
     useEffect(() => {
+      if (!externallyControlled || !playbackFromContext) return;
       const video = videoRef.current;
       if (!video || !signedUrl) return;
-      if (playing && video.paused) video.play().catch(() => {});
-      if (!playing && !video.paused) video.pause();
-    }, [playing, signedUrl]);
+      if (!video.src) video.src = signedUrl;
+    }, [signedUrl, externallyControlled, playbackFromContext]);
 
     useEffect(() => {
+      if (!externallyControlled || playbackFromContext) return;
+      const video = videoRef.current;
+      if (!video || !signedUrl) return;
+      if (!video.src) video.src = signedUrl;
+      if (playing && video.paused) void video.play().catch(() => {});
+      if (!playing && !video.paused) video.pause();
+    }, [playing, signedUrl, externallyControlled, playbackFromContext]);
+
+    useEffect(() => {
+      if (externallyControlled) return;
+      const video = videoRef.current;
+      if (!video || !signedUrl) return;
+      if (playing && video.paused) void video.play().catch(() => {});
+      if (!playing && !video.paused) video.pause();
+    }, [playing, signedUrl, externallyControlled]);
+
+    useEffect(() => {
+      if (externallyControlled) return;
       const video = videoRef.current;
       if (!video || !signedUrl) return;
       const nudgeFirstFrame = () => {
@@ -73,17 +109,17 @@ const JWTVideoInner = forwardRef<HTMLVideoElement, JWTVideoProps>(
       };
       video.addEventListener('loadeddata', nudgeFirstFrame);
       return () => video.removeEventListener('loadeddata', nudgeFirstFrame);
-    }, [signedUrl, playing]);
+    }, [signedUrl, playing, externallyControlled]);
 
     return (
       <video
         ref={videoRef}
         playsInline
-        autoPlay={autoPlay}
+        autoPlay={autoPlay && !externallyControlled}
         muted={muted}
         controlsList='nodownload'
-        loop
-        preload='metadata'
+        loop={loop}
+        preload={externallyControlled ? 'auto' : 'metadata'}
         style={{
           width: '100%',
           height: '100%',

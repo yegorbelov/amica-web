@@ -167,6 +167,13 @@
   overflow: hidden;
   position: relative;
 
+  // backdrop-filter creates a containing block for position:fixed in Safari;
+  // remove it so the PiP shell can escape to the viewport without a portal.
+  &:has(:global(.video-layout--playerActive)) {
+    backdrop-filter: none;
+    overflow: visible;
+  }
+
   &.right {
     margin-left: auto;
   }
@@ -296,6 +303,11 @@
   max-width: min(432px, calc(100cqw - 60px));
   flex-shrink: 0;
   contain: content;
+
+  &:has(:global(.video-layout--playerActive)) {
+    contain: none;
+    overflow: visible;
+  }
 }
 
 .avatar {

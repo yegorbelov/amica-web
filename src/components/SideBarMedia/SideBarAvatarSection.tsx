@@ -1,10 +1,4 @@
-import React, {
-  memo,
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
 import EditableAvatar from '@/components/Avatar/EditableAvatar';
 import Avatar from '@/components/Avatar/Avatar';
 import type { DisplayMedia } from '@/types';
@@ -14,6 +8,31 @@ import { useTranslation } from '@/contexts/languageCore';
 
 const LONG_PRESS_MS = 520;
 const MOVE_CANCEL_PX = 14;
+const MAX_ROLLER_DOTS = 5;
+const ROLLER_DOT_SIZE_PX = 6;
+const ROLLER_DOT_GAP_PX = 5;
+const ROLLER_DOT_STEP_PX = ROLLER_DOT_SIZE_PX + ROLLER_DOT_GAP_PX;
+
+function getRollerDotsWindow(active: number, total: number) {
+  if (total <= MAX_ROLLER_DOTS) {
+    return { start: 0, offsetPx: 0, viewportWidthPx: total * ROLLER_DOT_STEP_PX - ROLLER_DOT_GAP_PX };
+  }
+
+  const half = Math.floor(MAX_ROLLER_DOTS / 2);
+  let start = Math.max(0, active - half);
+  const end = start + MAX_ROLLER_DOTS;
+
+  if (end > total) {
+    start = total - MAX_ROLLER_DOTS;
+  }
+
+  return {
+    start,
+    offsetPx: start * ROLLER_DOT_STEP_PX,
+    viewportWidthPx:
+      MAX_ROLLER_DOTS * ROLLER_DOT_STEP_PX - ROLLER_DOT_GAP_PX,
+  };
+}
 
 const DUMMY_DISPLAY_MEDIA: DisplayMedia = { id: -1, type: 'photo' };
 
@@ -26,8 +45,9 @@ interface SideBarAvatarSectionProps {
   isAvatarRollerOpen: boolean;
   interlocutorEditVisible: boolean;
   effectiveRollPosition: number;
-  onRollPositionChange: () => void;
+  onRollPositionChange: (clickX?: number, containerWidth?: number) => void;
   onAvatarRollerOpen: () => void;
+  rollerScrollRef?: React.RefObject<HTMLDivElement | null>;
   avatarContentType?: string;
   isAvatarEditable?: boolean;
   onAvatarChange?: (media: DisplayMedia) => void;
@@ -106,6 +126,7 @@ const SecondaryRollerAvatar = memo(function SecondaryRollerAvatar({
   interlocutorEditVisible,
   showRollerMenu,
   openMenu,
+  slotIndex,
 }: {
   chatName: string;
   displayMedia: DisplayMedia;
@@ -113,6 +134,7 @@ const SecondaryRollerAvatar = memo(function SecondaryRollerAvatar({
   interlocutorEditVisible: boolean;
   showRollerMenu: boolean;
   openMenu: (x: number, y: number, media: DisplayMedia) => void;
+  slotIndex: number;
 }) {
   const handlers = useOpenRollerMediaMenu(
     showRollerMenu,
@@ -123,6 +145,7 @@ const SecondaryRollerAvatar = memo(function SecondaryRollerAvatar({
   return (
     <div
       className={styles['sidebar__avatar-slot']}
+      data-roller-slot={slotIndex}
       {...(showRollerMenu ? handlers : {})}
     >
       <Avatar
@@ -148,6 +171,7 @@ const SideBarAvatarSection: React.FC<SideBarAvatarSectionProps> = ({
   effectiveRollPosition,
   onRollPositionChange,
   onAvatarRollerOpen,
+  rollerScrollRef,
   avatarContentType = 'contact',
   isAvatarEditable = false,
   onAvatarChange = () => {},
@@ -156,9 +180,7 @@ const SideBarAvatarSection: React.FC<SideBarAvatarSectionProps> = ({
   onRollerMediaSetPrimary,
 }) => {
   const { t } = useTranslation();
-  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(
-    null,
-  );
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [menuMedia, setMenuMedia] = useState<DisplayMedia | null>(null);
 
   const showRollerMenu =
@@ -183,11 +205,28 @@ const SideBarAvatarSection: React.FC<SideBarAvatarSectionProps> = ({
     primaryMedia ?? DUMMY_DISPLAY_MEDIA,
   );
 
+  const totalRollerSlides = 1 + (media?.length ?? 0);
+  const showRollerDots =
+    isAvatarRollerOpen && !interlocutorEditVisible && totalRollerSlides > 1;
+
+  const rollerDotsWindow = useMemo(
+    () => getRollerDotsWindow(effectiveRollPosition, totalRollerSlides),
+    [effectiveRollPosition, totalRollerSlides],
+  );
+
+  const handleRollerClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!isAvatarRollerOpen || interlocutorEditVisible) return;
+      const { left, width } = e.currentTarget.getBoundingClientRect();
+      onRollPositionChange(e.clientX - left, width);
+    },
+    [interlocutorEditVisible, isAvatarRollerOpen, onRollPositionChange],
+  );
+
   const menuItems = useMemo((): MenuItem<'delete' | 'setPrimary'>[] => {
     if (!menuMedia) return [];
     const isAlreadyPrimary =
-      primaryMedia != null &&
-      String(primaryMedia.id) === String(menuMedia.id);
+      primaryMedia != null && String(primaryMedia.id) === String(menuMedia.id);
     const items: MenuItem<'delete' | 'setPrimary'>[] = [];
     if (!isAlreadyPrimary && onRollerMediaSetPrimary) {
       items.push({
@@ -249,52 +288,108 @@ const SideBarAvatarSection: React.FC<SideBarAvatarSectionProps> = ({
             ? styles['sidebar__avatar-wrapper--roller']
             : ''
         }`}
-        style={{
-          transform: `translateX(${effectiveRollPosition * -100}%)`,
-        }}
-        onClick={onRollPositionChange}
+        onClick={isAvatarRollerOpen ? handleRollerClick : undefined}
       >
         <div
-          className={styles['sidebar__avatar-slot']}
-          {...(showRollerMenu && primaryMedia ? primaryHandlers : {})}
+          ref={rollerScrollRef}
+          className={`${styles['sidebar__avatar-roller-viewport']} ${
+            isAvatarRollerOpen && !interlocutorEditVisible
+              ? styles['sidebar__avatar-roller-viewport--active']
+              : ''
+          }`}
         >
-          <EditableAvatar
-            key={chatId}
-            displayName={chatName}
-            avatar={primaryMedia}
-            objectId={interlocutorContactId ?? 0}
-            contentType={avatarContentType}
-            className={styles['sidebar__avatar']}
-            classNameAvatar={styles['sidebar__editable-avatar']}
-            isAvatarRollerOpen={isAvatarRollerOpen}
-            onClick={
-              primaryMedia && !interlocutorEditVisible
-                ? (e) => {
-                    if (!isAvatarRollerOpen) {
-                      e.stopPropagation();
-                      onAvatarRollerOpen();
-                    }
-                  }
-                : undefined
-            }
-            onAvatarChange={onAvatarChange}
-            isEditable={isAvatarEditable || interlocutorEditVisible}
-          />
-        </div>
-        {media && media.length > 0 && (
-          <>
-            {media.map((m: DisplayMedia) => (
-              <SecondaryRollerAvatar
-                key={m.id}
-                chatName={chatName}
-                displayMedia={m}
+          <div className={styles['sidebar__avatar-roller-track']}>
+            <div
+              className={styles['sidebar__avatar-slot']}
+              data-roller-slot={0}
+              {...(showRollerMenu && primaryMedia ? primaryHandlers : {})}
+            >
+              <EditableAvatar
+                key={chatId}
+                displayName={chatName}
+                avatar={primaryMedia}
+                objectId={interlocutorContactId ?? 0}
+                contentType={avatarContentType}
+                className={styles['sidebar__avatar']}
+                classNameAvatar={styles['sidebar__editable-avatar']}
                 isAvatarRollerOpen={isAvatarRollerOpen}
-                interlocutorEditVisible={interlocutorEditVisible}
-                showRollerMenu={showRollerMenu}
-                openMenu={openMenu}
+                onClick={
+                  primaryMedia && !interlocutorEditVisible
+                    ? (e) => {
+                        if (!isAvatarRollerOpen) {
+                          e.stopPropagation();
+                          onAvatarRollerOpen();
+                        }
+                      }
+                    : undefined
+                }
+                onAvatarChange={onAvatarChange}
+                isEditable={isAvatarEditable || interlocutorEditVisible}
               />
-            ))}
-          </>
+            </div>
+            {media && media.length > 0 && (
+              <>
+                {media.map((m: DisplayMedia, index: number) => (
+                  <SecondaryRollerAvatar
+                    key={m.id}
+                    chatName={chatName}
+                    displayMedia={m}
+                    isAvatarRollerOpen={isAvatarRollerOpen}
+                    interlocutorEditVisible={interlocutorEditVisible}
+                    showRollerMenu={showRollerMenu}
+                    openMenu={openMenu}
+                    slotIndex={index + 1}
+                  />
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+
+        {showRollerDots && (
+          <div
+            className={styles['sidebar__avatar-roller-dots']}
+            aria-hidden
+          >
+            <div
+              className={styles['sidebar__avatar-roller-dots-viewport']}
+              style={{ width: rollerDotsWindow.viewportWidthPx }}
+            >
+              <div
+                className={styles['sidebar__avatar-roller-dots-track']}
+                style={{ transform: `translateX(-${rollerDotsWindow.offsetPx}px)` }}
+              >
+                {Array.from({ length: totalRollerSlides }, (_, index) => {
+                  const isActive = index === effectiveRollPosition;
+                  const isEdgeLeft =
+                    !isActive &&
+                    totalRollerSlides > MAX_ROLLER_DOTS &&
+                    index === rollerDotsWindow.start &&
+                    rollerDotsWindow.start > 0;
+                  const isEdgeRight =
+                    !isActive &&
+                    totalRollerSlides > MAX_ROLLER_DOTS &&
+                    index === rollerDotsWindow.start + MAX_ROLLER_DOTS - 1 &&
+                    rollerDotsWindow.start + MAX_ROLLER_DOTS < totalRollerSlides;
+
+                  return (
+                    <span
+                      key={index}
+                      className={`${styles['sidebar__avatar-roller-dot']} ${
+                        isActive
+                          ? styles['sidebar__avatar-roller-dot--active']
+                          : ''
+                      } ${
+                        isEdgeLeft || isEdgeRight
+                          ? styles['sidebar__avatar-roller-dot--edge']
+                          : ''
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         )}
       </div>
 

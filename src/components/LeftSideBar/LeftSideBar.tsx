@@ -23,6 +23,9 @@ import {
   readChatsSidebarWidthFromSessionStorageSync,
   setChatsSidebarWidthInIdb,
 } from '@/utils/chatStateStorage';
+import { useSelectedChat } from '@/contexts/ChatContextCore';
+import { useAudio } from '@/contexts/audioContext';
+import { MediaHeaderShell } from '@/components/ChatHeader/MediaHeaderShell';
 
 const DEFAULT_SIDEBAR_WIDTH_PX = 384;
 const CHATS_MAX_WIDTH_PX = 500;
@@ -51,6 +54,8 @@ interface ChooseListProps {
 const LeftSideBar: React.FC<ChooseListProps> = () => {
   const { activeProfileTab } = useSettings();
   const { activeTab } = useTabs();
+  const { selectedChat } = useSelectedChat();
+  const { currentMediaId } = useAudio();
   const [chatsSidebarWidth, setChatsSidebarWidth] = useState(
     getInitialChatsSidebarWidthPx,
   );
@@ -63,6 +68,8 @@ const LeftSideBar: React.FC<ChooseListProps> = () => {
     () =>
       typeof window !== 'undefined' && window.innerWidth > MOBILE_MAX_WIDTH_PX,
   );
+  const showStandaloneMediaHeader =
+    !isDesktop && !selectedChat && !!currentMediaId;
   const resizePointerIdRef = useRef<number | null>(null);
   const resizeStartXRef = useRef(0);
   const resizeStartWidthRef = useRef(0);
@@ -283,6 +290,11 @@ const LeftSideBar: React.FC<ChooseListProps> = () => {
           />
         )}
         <div className={styles['left-side-bar__inner']}>
+          {showStandaloneMediaHeader && (
+            <MediaHeaderShell
+              className={styles['left-side-bar__media-header']}
+            />
+          )}
           <div className={styles['left-side-bar__tab-panels']}>
             <Tab id='contacts'>
               <div className={`${styles['tab-content']}`}>

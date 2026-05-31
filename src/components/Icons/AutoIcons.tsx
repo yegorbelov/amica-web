@@ -1,6 +1,6 @@
 import React from "react";
 
-export type IconName = "AccountEye" | "AddPlus" | "Appearance" | "Arrow" | "Attachment" | "Chats" | "Circle" | "ContactHeart" | "CopyText" | "Cross" | "Delete" | "Edit" | "File" | "Forward" | "Fullscreen" | "FullscreenExit" | "Language" | "Logout" | "Notification" | "Passkey" | "Pause" | "Photo" | "Play" | "Privacy" | "Read" | "Reply" | "SaveAs" | "Search" | "Select" | "Selfie" | "SendDestkop" | "SendMobile" | "Sessions" | "Sound" | "SoundMaxFill" | "SoundMinFill" | "SoundMuteFill" | "Unread" | "Video" | "Wallpaper" | "Spinner";
+export type IconName = "AccountEye" | "AddPlus" | "Appearance" | "Arrow" | "Attachment" | "Chats" | "Circle" | "ContactHeart" | "CopyText" | "Cross" | "Delete" | "Edit" | "File" | "Forward" | "Fullscreen" | "FullscreenExit" | "Language" | "Logout" | "Notification" | "Passkey" | "Pause" | "Photo" | "Play" | "Privacy" | "Read" | "Reply" | "SaveAs" | "Search" | "Select" | "Selfie" | "SendDestkop" | "SendMobile" | "Sessions" | "Sound" | "SoundMaxFill" | "SoundMinFill" | "SoundMuteFill" | "Unread" | "Video" | "Wallpaper" | "note" | "Spinner";
 export type IconProps = React.SVGProps<SVGSVGElement> & { name: IconName };
 
 
@@ -70,6 +70,9 @@ export const IconsSprite = () => (
     <symbol id="icon-Unread" viewBox="0 0 12 11"><title>msg-check</title><path d="M11.1549 0.652832C11.0745 0.585124 10.9729 0.55127 10.8502 0.55127C10.7021 0.55127 10.5751 0.610514 10.4693 0.729004L4.28038 8.36523L1.87461 6.09277C1.8323 6.04622 1.78151 6.01025 1.72227 5.98486C1.66303 5.95947 1.60166 5.94678 1.53819 5.94678C1.407 5.94678 1.29275 5.99544 1.19541 6.09277L0.884379 6.40381C0.79128 6.49268 0.744731 6.60482 0.744731 6.74023C0.744731 6.87565 0.79128 6.98991 0.884379 7.08301L3.88047 10.0791C4.02859 10.2145 4.19574 10.2822 4.38194 10.2822C4.48773 10.2822 4.58929 10.259 4.68663 10.2124C4.78396 10.1659 4.86436 10.1003 4.92784 10.0156L11.5738 1.59863C11.6458 1.5013 11.6817 1.40186 11.6817 1.30029C11.6817 1.14372 11.6183 1.01888 11.4913 0.925781L11.1549 0.652832Z"></path></symbol>
     <symbol id="icon-Video" viewBox="0 0 24 24"><title>Video SVG Icon</title><g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><rect width="20" height="16" x="2" y="4" rx="4"/><path d="m15 12l-5-3v6z"/></g></symbol>
     <symbol id="icon-Wallpaper" viewBox="0 0 20 20"><title>Wallpaper-20-regular SVG Icon</title><path fill="#ffffff" d="M3 6a3 3 0 0 1 3-3h2.5a.5.5 0 0 1 0 1H6a2 2 0 0 0-2 2v2.5a.5.5 0 0 1-1 0zm8-2.5a.5.5 0 0 1 .5-.5H14a3 3 0 0 1 3 3v2.5a.5.5 0 0 1-1 0V6a2 2 0 0 0-2-2h-2.5a.5.5 0 0 1-.5-.5M3.5 11a.5.5 0 0 1 .5.5V14c0 .37.101.718.277 1.016l4.486-4.486a1.75 1.75 0 0 1 2.474 0l4.486 4.486C15.9 14.718 16 14.371 16 14v-2.5a.5.5 0 0 1 1 0V14a3 3 0 0 1-3 3h-2.5a.5.5 0 0 1 0-1H14c.37 0 .718-.101 1.016-.277l-4.486-4.486a.75.75 0 0 0-1.06 0l-4.486 4.486C5.282 15.9 5.629 16 6 16h2.5a.5.5 0 0 1 0 1H6a3 3 0 0 1-3-3v-2.5a.5.5 0 0 1 .5-.5m9-4a.5.5 0 1 0 0 1a.5.5 0 0 0 0-1m-1.5.5a1.5 1.5 0 1 1 3 0a1.5 1.5 0 0 1-3 0"/></symbol>
+    <symbol id="icon-note" viewBox="0 0 14 14">
+<path d="M3.52595 12.9831C3.08305 13.0381 2.71626 12.959 2.42561 12.746C2.14187 12.5261 2 12.2134 2 11.8079C2 10.9627 2.52249 10.3579 3.56747 9.99371L4.37716 9.72569C4.55709 9.65697 4.64706 9.51609 4.64706 9.30306L4.6263 3.52016C4.6263 3.1903 4.81661 2.96008 5.19723 2.82951L10.1384 1.09774C10.436 0.987783 10.654 0.970603 10.7924 1.0462C10.9308 1.11492 11 1.28328 11 1.5513V8.69488C11 9.20341 10.8927 9.62261 10.6782 9.95247C10.4637 10.2823 10.2042 10.5366 9.89965 10.7153C9.60208 10.894 9.32526 11.0005 9.0692 11.0348C8.61938 11.1036 8.24914 11.028 7.95848 10.8081C7.66782 10.5881 7.52249 10.2755 7.52249 9.87001C7.52249 9.07284 8.0519 8.48528 9.11073 8.10731L9.87889 7.81868C10.1003 7.74309 10.2111 7.5919 10.2111 7.36512L10.1799 4.13865C10.1799 3.98747 10.083 3.9428 9.88927 4.00465L5.70588 5.47872C5.60208 5.51308 5.53633 5.54744 5.50865 5.5818C5.48789 5.60929 5.47751 5.68145 5.47751 5.79827V10.6019C5.47751 11.1036 5.36678 11.5262 5.14533 11.8698C4.9308 12.2065 4.66782 12.4677 4.3564 12.6532C4.0519 12.8319 3.77509 12.9419 3.52595 12.9831Z" fill="currentColor"/>
+</symbol>
   </svg>
 );
 
@@ -113,7 +116,8 @@ const staticViewBoxes: Record<string, string> = {
   "SoundMuteFill": "0 0 24 24",
   "Unread": "0 0 12 11",
   "Video": "0 0 24 24",
-  "Wallpaper": "0 0 20 20"
+  "Wallpaper": "0 0 20 20",
+  "note": "0 0 14 14"
 };
 
 

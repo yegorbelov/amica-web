@@ -1,4 +1,5 @@
 import { usePrivateMedia } from '@/hooks/usePrivateMedia';
+import { Icon } from '../Icons/AutoIcons';
 import styles from './ChatListItem.module.scss';
 // import { useSettings } from '@/contexts/settings/context';
 import type { File } from '@/types';
@@ -57,24 +58,26 @@ function AttachmentPreview({ file }: { file: File }) {
 
     case 'audio':
       return (
-        <>
-          {file.cover_url && (
-            <span
+        <span
+          className={styles['chat-list-item__attachment--audio-cover']}
+          style={{
+            backgroundColor: file.dominant_color,
+          }}
+        >
+          {file.cover_url && objectUrl ? (
+            <img
               className={styles['chat-list-item__attachment--audio-cover']}
-              style={{
-                backgroundColor: file.dominant_color,
-              }}
-            >
-              {objectUrl && (
-                <img
-                  className={styles['chat-list-item__attachment--audio-cover']}
-                  src={objectUrl}
-                  alt={file.original_name}
-                />
-              )}
-            </span>
+              src={objectUrl}
+              alt={file.original_name}
+            />
+          ) : (
+            <Icon
+              name='note'
+              className={styles['chat-list-item__attachment--audio-note']}
+              aria-hidden
+            />
           )}
-        </>
+        </span>
       );
 
     default:

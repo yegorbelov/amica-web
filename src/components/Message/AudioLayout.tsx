@@ -11,8 +11,7 @@ import styles from './SmartMediaLayout.module.scss';
 import { Icon } from '../Icons/AutoIcons';
 import { useAudio } from '@/contexts/audioContext';
 import { useSelectedChat, useChatMessages } from '@/contexts/ChatContextCore';
-
-const SPEEDS = [0.5, 1, 1.5, 2];
+import { getVolumeIconName } from '@/utils/audio';
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -56,7 +55,15 @@ export default function AudioLayout({
     togglePlay: toggleAudio,
     isPlaying: isAudioPlaying,
     currentAudioId,
+    mediaType,
     setCurrentTime,
+    audioRef,
+    volume,
+    setVolume,
+    canChangeVolume,
+    playbackSpeed,
+    cyclePlaybackSpeed,
+    toggleVolumeMute,
   } = useAudio();
   const { selectedChat } = useSelectedChat();
   const { messages } = useChatMessages();
@@ -82,10 +89,8 @@ export default function AudioLayout({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const volumeRef = useRef<HTMLDivElement | null>(null);
   const currentTimeRef = useRef(0);
-  const [visualTime] = useState(0);
-
-  const [volume, setVolume] = useState(1);
-  const [speed, setSpeed] = useState(1);
+  const [visualTime, setVisualTime] = useState(0);
+  const isActiveTrack = currentAudioId === id;
 
   const [isControlsOpen, setIsControlsOpen] = useState(false);
 
@@ -98,44 +103,32 @@ export default function AudioLayout({
   ) => ('touches' in e ? e.touches?.[0]?.clientX || 0 : e.clientX || 0);
 
   useEffect(() => {
-    const animationFrameId: number | null = null;
+    if (!isActiveTrack) return;
 
-    // const onPlay = () => {
-    //   setIsPlaying(true);
-    // };
+    const audio = audioRef?.current;
+    if (!audio) return;
 
-    // const onPause = () => {
-    //   setIsPlaying(false);
-    // };
+    let animationFrameId: number;
 
-    // const onEnded = () => setIsPlaying(false);
-
-    // const onLoaded = () => setDurationState(audio.duration);
-
-    // const animate = () => {
-    //   setVisualTime((prev) => prev + (audio.currentTime - prev) * 0.2);
-
-    //   animationFrameId = requestAnimationFrame(animate);
-    // };
-
-    // animate();
-
-    return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
+    const animate = () => {
+      setVisualTime((prev) => prev + (audio.currentTime - prev) * 0.2);
+      animationFrameId = requestAnimationFrame(animate);
     };
-  }, []);
+
+    animationFrameId = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [isActiveTrack, audioRef]);
 
   const togglePlay = useCallback(() => {
     const coverOpt = cover ?? undefined;
-    if (currentChatId !== selectedChat?.id) {
+    if (currentChatId !== selectedChat?.id || mediaType !== 'audio') {
       const newPlaylist = messages.flatMap((message) =>
         (message.files ?? []).filter((file) => file.category === 'audio'),
       );
       setPlaylist(newPlaylist, selectedChat?.id || 0, {
         autoPlayId: id,
-        coverUrl: coverOpt,
+        mediaType: 'audio',
       });
     } else {
       toggleAudio(id, { coverUrl: coverOpt });
@@ -144,19 +137,12 @@ export default function AudioLayout({
     messages,
     selectedChat?.id,
     currentChatId,
+    mediaType,
     id,
     setPlaylist,
     toggleAudio,
     cover,
   ]);
-
-  const cycleSpeed = useCallback(() => {
-    const currentIndex = SPEEDS.indexOf(speed);
-    const nextIndex = (currentIndex + 1) % SPEEDS.length;
-    const nextSpeed = SPEEDS[nextIndex];
-
-    setSpeed(nextSpeed);
-  }, [speed]);
 
   const startSeek = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
@@ -168,6 +154,7 @@ export default function AudioLayout({
       const time = clampedPercent * durationState;
 
       currentTimeRef.current = time;
+      setVisualTime(time);
       setCurrentTime(time);
     };
 
@@ -194,46 +181,6 @@ export default function AudioLayout({
     document.addEventListener('touchend', onMouseUp);
   };
 
-  // function isVolumeSupported(audio: HTMLAudioElement) {
-  //   const initial = audio.volume;
-
-  //   try {
-  //     audio.volume = initial === 1 ? 0.5 : 1;
-  //     const supported = audio.volume !== initial;
-  //     audio.volume = initial;
-  //     return supported;
-  //   } catch {
-  //     return false;
-  //   }
-  // }
-
-  const [canChangeVolume] = useState(false);
-
-  // useEffect(() => {
-  //   const checkVolumeSupport = () => {
-  //     if (
-  //       !('volume' in audio) ||
-  //       audio.volume === undefined ||
-  //       audio.volume === null
-  //     ) {
-  //       return false;
-  //     }
-
-  //     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  //     if (isIOS) return false;
-
-  //     const original = audio.volume;
-  //     audio.volume = 0;
-  //     const canMute = audio.volume === 0;
-  //     audio.volume = original;
-
-  //     return canMute;
-  //   };
-
-  //   const supported = checkVolumeSupport();
-  //   setCanChangeVolume(supported);
-  // }, []);
-
   const formatTime = (time = 0) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60)
@@ -247,26 +194,15 @@ export default function AudioLayout({
   const pauseIcon = useMemo(() => <Icon name='Pause' />, []);
   const playIcon = useMemo(() => <Icon name='Play' />, []);
   const volumeIcon = useMemo(
-    () => (
-      <Icon
-        name={
-          volume === 0
-            ? 'SoundMuteFill'
-            : volume < 0.5
-              ? 'SoundMinFill'
-              : 'SoundMaxFill'
-        }
-      />
-    ),
+    () => <Icon name={getVolumeIconName(volume)} />,
     [volume],
   );
 
   const setVolumeByClientX = (clientX: number) => {
     const rect = volumeRef.current?.getBoundingClientRect();
-    const percent = (clientX - rect!.left) / rect!.width;
-    const value = Math.max(0, Math.min(1, percent));
-
-    setVolume(value);
+    if (!rect) return;
+    const percent = (clientX - rect.left) / rect.width;
+    setVolume(Math.max(0, Math.min(1, percent)));
   };
 
   const startVolumeDrag = (e: React.MouseEvent | React.TouchEvent) => {
@@ -427,13 +363,22 @@ export default function AudioLayout({
           {formatTime(visualTime)} / {formatTime(durationState)}
         </div>
         <div className={`${styles.controls} ${isControlsOpen && styles.open} `}>
-          <button className={styles.speed} onClick={cycleSpeed}>
-            {speed}×
+          <button className={styles.speed} onClick={cyclePlaybackSpeed}>
+            {playbackSpeed}×
           </button>
 
           {canChangeVolume && (
             <div className={styles.volumeWrapper}>
-              <button className={styles.volumeButton}>{volumeIcon}</button>
+              <button
+                type='button'
+                className={styles.volumeButton}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleVolumeMute();
+                }}
+              >
+                {volumeIcon}
+              </button>
 
               <div className={styles.volumePopover}>
                 <div

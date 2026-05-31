@@ -72,6 +72,7 @@ export default function ProfileAccount() {
     effectiveRollPosition,
     handleRollPositionChange,
     setRollPosition,
+    rollerScrollRef,
   } = useAvatarRoller(
     chatIdKey,
     profileMedia.length,
@@ -230,6 +231,7 @@ export default function ProfileAccount() {
               effectiveRollPosition={effectiveRollPosition}
               onRollPositionChange={handleRollPositionChange}
               onAvatarRollerOpen={() => setIsAvatarRollerOpen(true)}
+              rollerScrollRef={rollerScrollRef}
               rollerActionsEnabled
               onRollerMediaDelete={handleRollerMediaDelete}
               onRollerMediaSetPrimary={handleRollerMediaSetPrimary}

@@ -117,6 +117,7 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
     effectiveRollPosition,
     handleRollPositionChange,
     setRollPosition,
+    rollerScrollRef,
   } = useAvatarRoller(
     chatId,
     selectedChat?.media?.length ?? 0,
@@ -387,14 +388,7 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
         showToast(t('toast.avatarDeleteFailed'));
       }
     },
-    [
-      selectedChat,
-      setChats,
-      setRollPosition,
-      showToast,
-      t,
-      fetchChat,
-    ],
+    [selectedChat, setChats, setRollPosition, showToast, t, fetchChat],
   );
 
   const handleRollerMediaSetPrimary = useCallback(
@@ -404,9 +398,7 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
         const updated = await setDisplayMediaAsPrimary(media.id);
         setChats((prev) =>
           prev.map((c) =>
-            c.id === selectedChat.id
-              ? { ...c, primary_media: updated }
-              : c,
+            c.id === selectedChat.id ? { ...c, primary_media: updated } : c,
           ),
         );
         setRollPosition(0);
@@ -483,6 +475,7 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
             effectiveRollPosition={effectiveRollPosition}
             onRollPositionChange={handleRollPositionChange}
             onAvatarRollerOpen={() => setIsAvatarRollerOpen(true)}
+            rollerScrollRef={rollerScrollRef}
             rollerActionsEnabled={
               interlocutorEditVisible || canEditGroupOrChannelAvatar
             }
@@ -530,14 +523,14 @@ const SideBarMedia: React.FC<SideBarMediaProps> = ({ onClose, visible }) => {
               <div className={styles.content} ref={gridRef}>
                 {activeTab === 'members' &&
                   (selectedChat.type === 'G' || selectedChat.type === 'C') && (
-                  <MembersList
-                    chatId={selectedChat.id}
-                    chatType={selectedChat.type}
-                    myRole={selectedChat.my_role}
-                    members={selectedChat.members ?? []}
-                    onCloseSidebar={onClose}
-                  />
-                )}
+                    <MembersList
+                      chatId={selectedChat.id}
+                      chatType={selectedChat.type}
+                      myRole={selectedChat.my_role}
+                      members={selectedChat.members ?? []}
+                      onCloseSidebar={onClose}
+                    />
+                  )}
                 {activeTab === 'media' && mediaFiles.length > 0 && (
                   <MediaGrid
                     ref={mediaGridRef}

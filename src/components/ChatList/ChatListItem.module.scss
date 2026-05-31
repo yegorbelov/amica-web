@@ -104,6 +104,7 @@
 
   &__date {
     font-size: 0.875rem;
+    white-space: nowrap;
   }
 
   &__content-wrapper {
@@ -158,6 +159,10 @@
     height: 20px;
     margin-right: 4px;
     vertical-align: top;
+
+    &--audio {
+      margin-right: 0;
+    }
   }
 
   &__attachment {
@@ -169,9 +174,19 @@
     overflow: hidden;
 
     &--audio-cover {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
       height: 20px;
       width: 20px;
       border-radius: 50%;
+    }
+
+    &--audio-note {
+      width: 16px;
+      height: 16px;
+      color: inherit;
     }
   }
 

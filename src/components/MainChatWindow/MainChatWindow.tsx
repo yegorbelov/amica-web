@@ -30,6 +30,8 @@ import Wallpaper from '@/pages/Wallpaper';
 import type { Message as MessageType } from '@/types';
 import { websocketManager } from '@/utils/websocket-manager';
 import { useToast } from '@/contexts/toast/ToastContextCore';
+import { useAudio } from '@/contexts/audioContext';
+import { MediaHeaderShell } from '../ChatHeader/MediaHeaderShell';
 
 const fullscreenExitIcon = <Icon name='FullscreenExit' />;
 const EMPTY_SELECTED_MESSAGE_IDS = new Set<number>();
@@ -58,6 +60,7 @@ const MainChatWindow: React.FC = () => {
   const { removeMessageFromChat } = useMessagesActions();
   const { setContainerRef, setIsVisible } = useJumpActions();
   const { showToast } = useToast();
+  const { currentMediaId } = useAudio();
 
   const [sideBarVisible, setSideBarVisible] = useState(false);
   const [selectionState, setSelectionState] = useState<{
@@ -637,6 +640,7 @@ const MainChatWindow: React.FC = () => {
             />
           </>
         ))}
+      {!isMobile && !displayedChat && currentMediaId && <MediaHeaderShell />}
       {!isMobile &&
         !selectedChat &&
         (!settingsFullWindow || current === 'chats' || !activeProfileTab) && (

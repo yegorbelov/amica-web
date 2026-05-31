@@ -381,15 +381,53 @@
       margin-top: 0;
     }
   }
+
+  &__avatar-roller-viewport {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    overscroll-behavior-x: contain;
+    touch-action: pan-y;
+    border-radius: inherit;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    &--active {
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: auto;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x;
+
+      @supports (overflow: clip) {
+        overflow-y: clip;
+      }
+    }
+  }
+
+  &__avatar-roller-track {
+    display: contents;
+    border-radius: inherit;
+  }
   &__avatar-wrapper {
+    position: relative;
     display: flex;
     flex-direction: row;
     justify-content: flex-start;
     align-items: center;
     max-width: 100%;
     width: 70px;
+    height: auto;
     aspect-ratio: 1 / 1;
     border-radius: 50%;
+    overflow: hidden;
 
     /* transform (translateX roll) needs its own timing — was sharing 0.3s with width and felt instant */
     transition-property: transform, width, height, border-radius, scale;
@@ -469,17 +507,66 @@
   }
 
   &__avatar-slot {
-    flex: 0 0 100%;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
     position: relative;
-    touch-action: manipulation;
+    flex: 0 0 100%;
+    min-width: 0;
+    min-height: 0;
+    align-self: stretch;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
     border-radius: inherit;
     overflow: hidden;
-    align-self: stretch;
     display: flex;
-    min-height: 0;
+    touch-action: inherit;
+  }
+
+  &__avatar-roller-dots {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    pointer-events: none;
+    padding: 5px 10px;
+    border-radius: 99px;
+    background: rgb(0 0 0 / 18%);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 32%);
+  }
+
+  &__avatar-roller-dots-viewport {
+    overflow-x: hidden;
+    display: flex;
+    align-items: center;
+    min-height: 8px;
+  }
+
+  &__avatar-roller-dots-track {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: transform var(--avatar-roll-duration) var(--avatar-roll-ease);
+  }
+
+  &__avatar-roller-dot {
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 55%);
+    transition:
+      transform var(--avatar-roll-duration) var(--avatar-roll-ease),
+      background-color var(--avatar-roll-duration) var(--avatar-roll-ease),
+      opacity var(--avatar-roll-duration) var(--avatar-roll-ease);
+
+    &--active {
+      background: rgb(255 255 255 / 100%);
+      transform: scale(1.2);
+    }
+
+    &--edge {
+      opacity: 0.45;
+      transform: scale(0.75);
+    }
   }
 }
 

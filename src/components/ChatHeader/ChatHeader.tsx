@@ -1,5 +1,6 @@
 import React, { useState, memo } from 'react';
 import { useSelectedChat } from '@/contexts/ChatContextCore';
+import { useAudio } from '@/contexts/audioContext';
 import { useTranslation } from '@/contexts/languageCore';
 import { useFormatLastSeen } from '@/hooks/useFormatLastSeen';
 import Avatar from '../Avatar/Avatar';
@@ -22,6 +23,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   const { t } = useTranslation();
   const { formatLastSeen } = useFormatLastSeen();
   const { selectedChat } = useSelectedChat();
+  const { currentMediaId } = useAudio();
   const [, setAvatarModalVisible] = useState(false);
 
   const subtitle =
@@ -31,7 +33,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         ? `${selectedChat?.info || ''} ${t('sidebar.subscribersCount')}`
         : formatLastSeen(selectedChat?.info || '');
 
-  if (!selectedChat) return;
+  if (!selectedChat && !currentMediaId) return null;
 
   const handleGoHome = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -45,32 +47,34 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
 
   return (
     <div className={styles['header-container']}>
-      <div className={styles['chat-header']} onClick={onChatInfoClick}>
-        <Button
-          key={'chat-header-back-button'}
-          onClick={handleGoHome}
-          className={styles['chat-header__back-button']}
-        >
-          {arrowIcon}
-        </Button>
+      {selectedChat && (
+        <div className={styles['chat-header']} onClick={onChatInfoClick}>
+          <Button
+            key={'chat-header-back-button'}
+            onClick={handleGoHome}
+            className={styles['chat-header__back-button']}
+          >
+            {arrowIcon}
+          </Button>
 
-        <div className={styles['chat-header__title']}>
-          <span className={styles['chat-header__title-name']}>
-            {selectedChat.name}
-          </span>
-          {subtitle && (
-            <span className={styles['chat-header__title-sub']}>{subtitle}</span>
-          )}
+          <div className={styles['chat-header__title']}>
+            <span className={styles['chat-header__title-name']}>
+              {selectedChat.name}
+            </span>
+            {subtitle && (
+              <span className={styles['chat-header__title-sub']}>{subtitle}</span>
+            )}
+          </div>
+
+          <Avatar
+            key={selectedChat.id}
+            displayName={selectedChat.name || ''}
+            displayMedia={selectedChat.primary_media}
+            className={styles['chat-header__avatar']}
+            onClick={avatarClick}
+          />
         </div>
-
-        <Avatar
-          key={selectedChat.id}
-          displayName={selectedChat.name || ''}
-          displayMedia={selectedChat.primary_media}
-          className={styles['chat-header__avatar']}
-          onClick={avatarClick}
-        />
-      </div>
+      )}
       <MediaHeader />
     </div>
   );
