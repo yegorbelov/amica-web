@@ -398,7 +398,7 @@ $progressive-image-spinner-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www
   z-index: 1;
 }
 
-.documentList {
+:global(.documentList) {
   padding: 8px 8px 0px 8px;
   display: flex;
   flex-direction: column;
@@ -414,13 +414,14 @@ $progressive-image-spinner-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www
   align-items: center;
   flex-shrink: 0;
   max-width: 100%;
-  min-width: 200px;
+  min-width: 180px;
 }
 
 .documentLayoutContentIcon {
-  width: 40px;
   height: 40px;
+  width: auto;
   flex-shrink: 0;
+  margin-left: -5px;
 }
 
 .documentLayoutContentTitle {

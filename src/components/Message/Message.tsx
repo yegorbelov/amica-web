@@ -87,57 +87,54 @@ const Message: React.FC<MessageProps> = ({
     onReactionClickRef.current?.(messageRef.current, reactionType);
   }, []);
 
-  const onPointerDown = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      const msg = messageRef.current;
-      const inSelectionMode = selectionModeRef.current;
+  const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const msg = messageRef.current;
+    const inSelectionMode = selectionModeRef.current;
 
-      if (!inSelectionMode && e.button === 0) {
-        const target = e.target as HTMLElement | null;
-        if (
-          !target?.closest('button') &&
-          !target?.closest('a') &&
-          !target?.closest('[data-reaction-type]')
-        ) {
-          const now = performance.now();
-          const prevTap = lastPointerTapRef.current;
-          const isDoubleTap =
-            prevTap &&
-            prevTap.pointerType === e.pointerType &&
-            now - prevTap.ts <= 280 &&
-            Math.hypot(e.clientX - prevTap.x, e.clientY - prevTap.y) <= 24;
+    if (!inSelectionMode && e.button === 0) {
+      const target = e.target as HTMLElement | null;
+      if (
+        !target?.closest('button') &&
+        !target?.closest('a') &&
+        !target?.closest('[data-reaction-type]')
+      ) {
+        const now = performance.now();
+        const prevTap = lastPointerTapRef.current;
+        const isDoubleTap =
+          prevTap &&
+          prevTap.pointerType === e.pointerType &&
+          now - prevTap.ts <= 280 &&
+          Math.hypot(e.clientX - prevTap.x, e.clientY - prevTap.y) <= 24;
 
-          if (isDoubleTap) {
-            onReactionClickRef.current?.(msg, 'heart');
-            lastPointerTapRef.current = null;
-            return;
-          }
-
-          lastPointerTapRef.current = {
-            ts: now,
-            x: e.clientX,
-            y: e.clientY,
-            pointerType: e.pointerType,
-          };
+        if (isDoubleTap) {
+          onReactionClickRef.current?.(msg, 'heart');
+          lastPointerTapRef.current = null;
+          return;
         }
-      }
 
-      if (!inSelectionMode && e.pointerType === 'mouse' && e.button === 0) {
-        onSelectionGestureCandidateStartRef.current?.(
-          e.pointerId,
-          e.clientX,
-          e.clientY,
-        );
-        return;
+        lastPointerTapRef.current = {
+          ts: now,
+          x: e.clientX,
+          y: e.clientY,
+          pointerType: e.pointerType,
+        };
       }
-      if (!inSelectionMode) return;
-      if (e.pointerType === 'touch') return;
-      e.preventDefault();
-      suppressSelectionClickRef.current = true;
-      onPointerSelectStartRef.current?.(e.pointerId);
-    },
-    [],
-  );
+    }
+
+    if (!inSelectionMode && e.pointerType === 'mouse' && e.button === 0) {
+      onSelectionGestureCandidateStartRef.current?.(
+        e.pointerId,
+        e.clientX,
+        e.clientY,
+      );
+      return;
+    }
+    if (!inSelectionMode) return;
+    if (e.pointerType === 'touch') return;
+    e.preventDefault();
+    suppressSelectionClickRef.current = true;
+    onPointerSelectStartRef.current?.(e.pointerId);
+  }, []);
 
   const handleSelectionClick = useCallback(() => {
     if (suppressSelectionClickRef.current) {
@@ -159,6 +156,10 @@ const Message: React.FC<MessageProps> = ({
 
   const isOwn = message.is_own;
   const hasOnlyMediaFiles = useMemo(
+    () => Array.isArray(message.files) && message.files.length > 0,
+    [message.files],
+  );
+  const hasOnlyVideosOrPhotos = useMemo(
     () =>
       Array.isArray(message.files) &&
       message.files.length > 0 &&
@@ -185,9 +186,7 @@ const Message: React.FC<MessageProps> = ({
       role={selectionMode ? 'button' : undefined}
       tabIndex={selectionMode ? 0 : undefined}
       onKeyDown={
-        selectionMode && onToggleSelect
-          ? handleSelectionKeyDown
-          : undefined
+        selectionMode && onToggleSelect ? handleSelectionKeyDown : undefined
       }
     >
       {selectionMode && (
@@ -204,6 +203,7 @@ const Message: React.FC<MessageProps> = ({
           reelItems={reelItems}
           isOwn={isOwn}
           hasOnlyMediaFiles={hasOnlyMediaFiles}
+          hasOnlyVideosOrPhotos={hasOnlyVideosOrPhotos}
           onReactionClick={handleContentReactionClick}
           isChannel={isChannel}
         />

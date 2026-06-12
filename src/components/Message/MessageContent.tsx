@@ -114,8 +114,8 @@ export interface MessageContentProps {
   reelItems?: MessageType[];
   isOwn: boolean;
   hasOnlyMediaFiles: boolean;
+  hasOnlyVideosOrPhotos: boolean;
   onReactionClick?: (reactionType: string) => void;
-  /** When true, show aggregate view count instead of DM read receipts. */
   isChannel?: boolean;
 }
 
@@ -135,6 +135,7 @@ const MessageContent = memo(
         reelItems,
         isOwn,
         hasOnlyMediaFiles,
+        hasOnlyVideosOrPhotos,
         onReactionClick,
         isChannel = false,
       },
@@ -477,9 +478,7 @@ const MessageContent = memo(
 
             const merged = [...activeItems];
             const hasNewcomer = newTypeSet.size > 0;
-            // When a new reaction appears and another one is removed in the same
-            // update (max user reactions cap), keep the active ordering stable and
-            // avoid inline exiting chips pushing the newcomer to a middle slot.
+
             if (hasNewcomer) {
               return merged;
             }
@@ -612,7 +611,9 @@ const MessageContent = memo(
         ) : null;
       return (
         <div
-          className={styles.message}
+          className={`${styles.message} ${
+            !message.value && hasOnlyMediaFiles ? styles.textEmpty : ''
+          }`}
           ref={(node) => {
             rootRef.current = node;
             const nextTempFull =
@@ -629,9 +630,7 @@ const MessageContent = memo(
           )}
 
           <div
-            className={`${styles.message_div_temp_separator} ${
-              !message.value && hasOnlyMediaFiles ? styles.textEmpty : ''
-            } ${!message.value && hasOnlyMediaFiles ? styles.hasOnlyMediaFiles : ''}`}
+            className={`${styles.message_div_temp_separator} ${hasOnlyVideosOrPhotos ? styles.hasOnlyVideosOrPhotos : ''}`}
           >
             {message.value && (
               <span className={styles.message__text}>{formattedMessage}</span>
@@ -719,7 +718,6 @@ const MessageContent = memo(
                   if (burstTimeoutRef.current) {
                     window.clearTimeout(burstTimeoutRef.current);
                   }
-                  // Safety fallback only; normal completion goes through onEnded.
                   burstTimeoutRef.current = window.setTimeout(
                     () => {
                       setReactionBurst(null);

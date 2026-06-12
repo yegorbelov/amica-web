@@ -11,7 +11,6 @@ import styles from './SmartMediaLayout.module.scss';
 import { Icon } from '../Icons/AutoIcons';
 import { useAudio } from '@/contexts/audioContext';
 import { useSelectedChat, useChatMessages } from '@/contexts/ChatContextCore';
-import { getVolumeIconName } from '@/utils/audio';
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -58,12 +57,6 @@ export default function AudioLayout({
     mediaType,
     setCurrentTime,
     audioRef,
-    volume,
-    setVolume,
-    canChangeVolume,
-    playbackSpeed,
-    cyclePlaybackSpeed,
-    toggleVolumeMute,
   } = useAudio();
   const { selectedChat } = useSelectedChat();
   const { messages } = useChatMessages();
@@ -87,12 +80,9 @@ export default function AudioLayout({
 
   const progressRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const volumeRef = useRef<HTMLDivElement | null>(null);
   const currentTimeRef = useRef(0);
   const [visualTime, setVisualTime] = useState(0);
   const isActiveTrack = currentAudioId === id;
-
-  const [isControlsOpen, setIsControlsOpen] = useState(false);
 
   const [durationState] = useState(duration ?? 0);
 
@@ -189,42 +179,8 @@ export default function AudioLayout({
     return `${minutes}:${seconds}`;
   };
 
-  const volumePercent = volume * 100;
-
   const pauseIcon = useMemo(() => <Icon name='Pause' />, []);
   const playIcon = useMemo(() => <Icon name='Play' />, []);
-  const volumeIcon = useMemo(
-    () => <Icon name={getVolumeIconName(volume)} />,
-    [volume],
-  );
-
-  const setVolumeByClientX = (clientX: number) => {
-    const rect = volumeRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const percent = (clientX - rect.left) / rect.width;
-    setVolume(Math.max(0, Math.min(1, percent)));
-  };
-
-  const startVolumeDrag = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    setVolumeByClientX(getClientX(e));
-
-    const onMouseMove = (moveEvent: MouseEvent | TouchEvent) => {
-      setVolumeByClientX(getClientX(moveEvent));
-    };
-
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      document.removeEventListener('touchmove', onMouseMove);
-      document.removeEventListener('touchend', onMouseUp);
-    };
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-    document.addEventListener('touchmove', onMouseMove);
-    document.addEventListener('touchend', onMouseUp);
-  };
 
   const barWidth = 3;
   const gap = 1;
@@ -320,12 +276,7 @@ export default function AudioLayout({
   }, [progressRef, totalBars, barWidth, gap, drawWaveform]);
 
   return (
-    <div
-      ref={wrapperRef}
-      className={styles.player}
-      onMouseOver={() => setIsControlsOpen(true)}
-      onMouseOut={() => setIsControlsOpen(false)}
-    >
+    <div ref={wrapperRef} className={styles.player}>
       {cover && <img src={cover} alt='' className={styles.cover} />}
 
       <button onClick={togglePlay} className={styles.play}>
@@ -361,39 +312,6 @@ export default function AudioLayout({
       <div className={styles.controlsWrapper}>
         <div className={styles.time}>
           {formatTime(visualTime)} / {formatTime(durationState)}
-        </div>
-        <div className={`${styles.controls} ${isControlsOpen && styles.open} `}>
-          <button className={styles.speed} onClick={cyclePlaybackSpeed}>
-            {playbackSpeed}×
-          </button>
-
-          {canChangeVolume && (
-            <div className={styles.volumeWrapper}>
-              <button
-                type='button'
-                className={styles.volumeButton}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleVolumeMute();
-                }}
-              >
-                {volumeIcon}
-              </button>
-
-              <div className={styles.volumePopover}>
-                <div
-                  ref={volumeRef}
-                  className={styles.volume}
-                  onMouseDown={startVolumeDrag}
-                >
-                  <div
-                    className={styles.volumeFill}
-                    style={{ width: `${volumePercent}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

@@ -1,9 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-} from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import styles from './ChatHeader.module.scss';
 import { useAudio } from '@/contexts/audioContext';
 import { Icon } from '../Icons/AutoIcons';
@@ -17,7 +12,9 @@ const crossIcon = <Icon name='Cross' className={styles.close} />;
 const prevIcon = (
   <Icon name='Arrow' className={styles['media-header__navIcon--prev']} />
 );
-const nextIcon = <Icon name='Arrow' className={styles['media-header__navIcon']} />;
+const nextIcon = (
+  <Icon name='Arrow' className={styles['media-header__navIcon']} />
+);
 
 const PLAYLIST_SWIPE_THRESHOLD = 8;
 
@@ -238,7 +235,7 @@ export const MediaHeader: React.FC = () => {
     if (!hasPlaylist || currentIndex < 0) return;
     prevPlaylistIndexRef.current = currentIndex;
     scrollPlaylistToIndex(currentIndex, false);
-  }, [hasPlaylist, playlistKey, scrollPlaylistToIndex]);
+  }, [hasPlaylist, playlistKey, scrollPlaylistToIndex, currentIndex]);
 
   useEffect(() => {
     if (!hasPlaylist || currentIndex < 0) return;
@@ -416,9 +413,7 @@ export const MediaHeader: React.FC = () => {
               className={styles['media-header__mute']}
               aria-label={isMuted ? 'Unmute' : 'Mute'}
             >
-              <Icon
-                name={isMuted ? 'SoundMuteFill' : 'SoundMaxFill'}
-              />
+              <Icon name={isMuted ? 'SoundMuteFill' : 'SoundMaxFill'} />
             </Button>
           )}
           {!isVideo && (

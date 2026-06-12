@@ -145,7 +145,9 @@ function SmartMediaLayoutInner({ files, items }: InnerProps) {
                   height: item.height,
                 }}
               >
-                {isLikelyVideoFile(item.file) && <VideoLayout file={item.file} />}
+                {isLikelyVideoFile(item.file) && (
+                  <VideoLayout file={item.file} />
+                )}
 
                 {isLikelyImageFile(item.file) && (
                   <ProgressiveImage
@@ -175,7 +177,7 @@ function SmartMediaLayoutInner({ files, items }: InnerProps) {
       )}
 
       {!!documentFiles.length && (
-        <div className={styles.documentList}>
+        <div className={`documentList`}>
           {documentFiles.map((file) => (
             <DocumentLayout key={file.id} file={file} />
           ))}

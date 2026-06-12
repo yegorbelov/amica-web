@@ -9,7 +9,6 @@ export interface AudioContextType {
   playlist: File[] | null;
   mediaType: MediaType | null;
   currentMediaId: number | null;
-  /** @deprecated use currentMediaId with mediaType === 'audio' */
   currentAudioId: number | null;
   isMuted: boolean;
   volume: number;

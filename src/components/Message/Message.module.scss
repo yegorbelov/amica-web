@@ -71,14 +71,7 @@
     padding-left: 0;
   }
 
-  &.textEmpty {
-    position: absolute;
-    top: unset;
-    bottom: 6px;
-    margin-left: auto;
-  }
-
-  &.hasOnlyMediaFiles {
+  &.hasOnlyVideosOrPhotos {
     .message_div_subdata {
       border-radius: 99rem;
       background-color: rgba(0, 0, 0, 0.3);
@@ -307,6 +300,18 @@
   &:has(:global(.video-layout--playerActive)) {
     contain: none;
     overflow: visible;
+  }
+
+  &.textEmpty {
+    .message_div_temp_separator {
+      position: absolute;
+      top: unset;
+      margin-left: auto;
+    }
+
+    :global(.documentList) {
+      padding: 8px;
+    }
   }
 }
 
