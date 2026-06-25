@@ -12,6 +12,7 @@ const AudioGrid: React.FC<AudioGridProps> = ({ files }) => (
     {files.map((file) => (
       <AudioLayout
         key={file.id}
+        name={file.original_name}
         waveform={file.waveform ?? null}
         duration={file.duration ?? 0}
         id={file.id ?? 0}

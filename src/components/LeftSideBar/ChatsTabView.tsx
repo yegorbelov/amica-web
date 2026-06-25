@@ -1,11 +1,5 @@
 // components/Search/UserSearch.tsx
-import React, {
-  memo,
-  useCallback,
-  useState,
-  useRef,
-  useMemo,
-} from 'react';
+import React, { memo, useCallback, useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import SearchInput from '@/components/ui/searchInput/SearchInput';
 import GlobalSearchList from '@/components/GlobalSearchList/GlobalSearchList';

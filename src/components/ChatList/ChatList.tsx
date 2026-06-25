@@ -13,7 +13,7 @@ import { useSearchContext } from '@/contexts/search/SearchContextCore';
 import { useSortedChats } from './useSortedChats';
 import { useAnimatedChatOrder } from './useAnimatedChatOrder';
 import {
-  ChatListLoading,
+  // ChatListLoading,
   ChatListError,
   ChatListEmpty,
 } from './ChatListStates';
@@ -65,7 +65,7 @@ const ChatListContent = memo(function ChatListContent({
 });
 
 function ChatList() {
-  const { chats, loading, error, fetchChats, handleChatClick, deleteChat } =
+  const { chats, error, fetchChats, handleChatClick, deleteChat } =
     useChatMeta();
   const { selectedChatId } = useSelectedChat();
   const { term } = useSearchContext();
@@ -80,7 +80,7 @@ function ChatList() {
 
   const sortedChats = useSortedChats(chats);
   const { displayChats, setChatItemRef } = useAnimatedChatOrder(sortedChats);
-  const shouldShowInitialLoading = loading && chats.length === 0;
+  // const shouldShowInitialLoading = loading && chats.length === 0;
   const [hasPlayedInitialAnimation, setHasPlayedInitialAnimation] =
     useState(false);
   const [isInitialAnimationActive, setIsInitialAnimationActive] =
@@ -114,7 +114,7 @@ function ChatList() {
   }, [shouldStartInitialAnimation]);
 
   const chatListRef = useRef<HTMLDivElement>(null);
-  const isActive = chats.length > 0 && term.length === 0;
+  const isActive = term.length === 0;
   const isEmpty = displayChats.length === 0;
   const contextMenuItems = React.useMemo<MenuItem<string>[]>(
     () =>
@@ -140,11 +140,8 @@ function ChatList() {
     [],
   );
 
-  if (shouldShowInitialLoading) return <ChatListLoading />;
+  // if (shouldShowInitialLoading) return <ChatListLoading />;
   if (error) return <ChatListError message={error} onRetry={fetchChats} />;
-  // if (sortedChats.length === 0 && isEmpty) {
-  //   return <ChatListEmpty text='No chats' />;
-  // }
 
   return (
     <div
@@ -154,11 +151,7 @@ function ChatList() {
       }`}
     >
       {isEmpty ? (
-        <ChatListEmpty
-          text='No chats found'
-          showRefresh
-          onRefresh={fetchChats}
-        />
+        <ChatListEmpty text='No conversations yet' />
       ) : (
         <ChatListContent
           displayChats={displayChats}

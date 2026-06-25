@@ -290,6 +290,7 @@ const Reel: React.FC<ReelProps> = ({ items, onClose }) => {
         <div>
           {/* <div className={styles.filename}>{file.original_name}</div> */}
           <AudioLayout
+            name={file.original_name}
             key={file.id}
             waveform={file.waveform || null}
             duration={file.duration || null}

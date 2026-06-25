@@ -630,7 +630,7 @@ const MessageContent = memo(
           )}
 
           <div
-            className={`${styles.message_div_temp_separator} ${hasOnlyVideosOrPhotos ? styles.hasOnlyVideosOrPhotos : ''}`}
+            className={`${styles.message_div_temp_separator} ${!message.value && hasOnlyVideosOrPhotos ? styles.hasOnlyVideosOrPhotos : ''}`}
           >
             {message.value && (
               <span className={styles.message__text}>{formattedMessage}</span>

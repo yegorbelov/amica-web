@@ -36,6 +36,7 @@ function roundRect(
 }
 
 interface AudioLayoutProps {
+  name: string | null;
   waveform: number[] | null;
   duration: number | null;
   id: number;
@@ -43,6 +44,7 @@ interface AudioLayoutProps {
 }
 
 export default function AudioLayout({
+  // name,
   waveform,
   duration,
   id,
@@ -276,44 +278,49 @@ export default function AudioLayout({
   }, [progressRef, totalBars, barWidth, gap, drawWaveform]);
 
   return (
-    <div ref={wrapperRef} className={styles.player}>
-      {cover && <img src={cover} alt='' className={styles.cover} />}
-
-      <button onClick={togglePlay} className={styles.play}>
-        {isAudioPlaying && currentAudioId === id ? pauseIcon : playIcon}
-      </button>
-
-      <div className={styles.timeline}>
-        <div
-          ref={progressRef}
-          className={styles.progress}
-          onMouseDown={startSeek}
-          onTouchStart={startSeek}
-        >
-          {!waveform && (
-            <div className={styles.progressFillWrapper}>
-              <div
-                className={styles.progressFill}
+    <>
+      {/* <span className={styles.audio_name}>{name}</span> */}
+      <div ref={wrapperRef} className={styles.player}>
+        {cover && <img src={cover} alt='' className={styles.cover} />}
+        <button onClick={togglePlay} className={styles.play}>
+          {isAudioPlaying && currentAudioId === id ? pauseIcon : playIcon}
+        </button>
+        <div className={styles.timeline}>
+          <div
+            ref={progressRef}
+            className={styles.progress}
+            onMouseDown={startSeek}
+            onTouchStart={startSeek}
+          >
+            {!waveform && (
+              <div className={styles.progressFillWrapper}>
+                <div
+                  className={styles.progressFill}
+                  style={{
+                    width: `${(visualTime / safeDuration) * (canvasWidth || 1)}px`,
+                  }}
+                />
+              </div>
+            )}
+            {waveform && (
+              <canvas
+                ref={canvasRef}
+                className={styles.waveformCanvas}
                 style={{
-                  width: `${(visualTime / safeDuration) * (canvasWidth || 1)}px`,
+                  width: '100%',
+                  height: `${height}px`,
+                  display: 'block',
                 }}
               />
-            </div>
-          )}
-          {waveform && (
-            <canvas
-              ref={canvasRef}
-              className={styles.waveformCanvas}
-              style={{ width: '100%', height: `${height}px`, display: 'block' }}
-            />
-          )}
+            )}
+          </div>
+        </div>
+        <div className={styles.controlsWrapper}>
+          <div className={styles.time}>
+            {formatTime(visualTime)} / {formatTime(durationState)}
+          </div>
         </div>
       </div>
-      <div className={styles.controlsWrapper}>
-        <div className={styles.time}>
-          {formatTime(visualTime)} / {formatTime(durationState)}
-        </div>
-      </div>
-    </div>
+    </>
   );
 }

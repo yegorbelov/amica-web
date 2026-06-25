@@ -42,8 +42,7 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onShowLogin }) => {
           : name === 'profile_email'
             ? 'email'
             : name;
-      const next =
-        stateKey === 'email' ? value.trim().toLowerCase() : value;
+      const next = stateKey === 'email' ? value.trim().toLowerCase() : value;
       setForm((prev) => ({ ...prev, [stateKey]: next }));
       if (error) setError(null);
     },
@@ -195,35 +194,15 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onShowLogin }) => {
             </button>
           </>
         ) : null}
-        {/* <fieldset className={styles['form']} hidden={!!verifyEmailSent}>
-          <input
-            ref={usernameRef}
-            name='profile_name'
-            value={form.username}
-            onChange={handleChange}
-            onKeyPress={(e) => handleKeyPress(e, emailRef)}
-            disabled={loading || !!verifyEmailSent}
-            autoComplete='off'
-            data-1p-ignore
-            data-lpignore='true'
-            spellCheck={false}
-            inputMode='text'
-            aria-autocomplete='none'
-            role='textbox'
-            required
-            placeholder={t('signUp.username')}
-          />
-        </fieldset> */}
+
         <fieldset className={styles['form']} hidden={!!verifyEmailSent}>
-          {/* <legend className={styles['form-label']}>Email</legend> */}
-          {/* <legend className={styles['form-label-placeholder']}>Email</legend> */}
           <input
             ref={emailRef}
             name='profile_email'
             type='email'
             value={form.email}
             onChange={handleChange}
-            onKeyPress={(e) => handleKeyPress(e, passwordRef)}
+            onKeyDown={(e) => handleKeyPress(e, passwordRef)}
             disabled={loading || !!verifyEmailSent}
             autoComplete='off'
             data-1p-ignore
@@ -235,12 +214,9 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onShowLogin }) => {
             role='textbox'
             required
             placeholder={t('signUp.email')}
-            style={{ textTransform: 'lowercase' }}
           />
         </fieldset>
         <fieldset className={styles['form']} hidden={!!verifyEmailSent}>
-          {/* <legend className={styles['form-label']}>Password</legend> */}
-          {/* <legend className={styles['form-label-placeholder']}>Password</legend> */}
           <input
             ref={passwordRef}
             name='password'

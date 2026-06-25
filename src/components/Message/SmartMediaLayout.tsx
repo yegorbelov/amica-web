@@ -166,6 +166,7 @@ function SmartMediaLayoutInner({ files, items }: InnerProps) {
         <div className={styles.audioList}>
           {audioFiles.map((file) => (
             <AudioLayout
+              name={file.original_name}
               key={file.id}
               id={file.id}
               waveform={file.waveform || null}

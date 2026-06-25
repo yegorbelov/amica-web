@@ -155,7 +155,7 @@ export function TrustedDeviceLoginWarningBody({
 }
 
 export function DeviceLoginPendingOverlay({
-  trustedDeviceLabel,
+  // trustedDeviceLabel,
   delivery = 'trusted_device',
   onCancel,
   onSubmitOtp,
@@ -165,9 +165,7 @@ export function DeviceLoginPendingOverlay({
   resendBusy,
   resendError,
 }: {
-  /** Trusted session’s browser/OS (no versions), from server; empty if unknown. */
   trustedDeviceLabel?: string;
-  /** `email` = code sent by email (no other active sessions). */
   delivery?: 'trusted_device' | 'email';
   onCancel: () => void;
   onSubmitOtp: (sixDigits: string) => void | Promise<void>;
@@ -215,22 +213,6 @@ export function DeviceLoginPendingOverlay({
               <p className={styles.hint}>
                 {t('login.deviceLoginTrustedWhereHint')}
               </p>
-              <div className={styles.requestDeviceBlock}>
-                {trustedDeviceLabel ? (
-                  <>
-                    <p className={styles.requestDeviceIntro}>
-                      {t('login.deviceLoginTrustedDeviceIntro')}
-                    </p>
-                    <p className={styles.requestDeviceName}>
-                      {trustedDeviceLabel}
-                    </p>
-                  </>
-                ) : (
-                  <p className={styles.requestDeviceIntro}>
-                    {t('login.deviceLoginTrustedDeviceUnknown')}
-                  </p>
-                )}
-              </div>
               <p className={styles.hint}>{t('login.deviceLoginHint')}</p>
             </>
           )}
@@ -272,7 +254,7 @@ export function DeviceLoginPendingOverlay({
           >
             {otpBusy ? '…' : t('login.deviceLoginSubmitCode')}
           </button>
-          <p className={styles.waiting}>{t('login.deviceLoginWaiting')}</p>
+          {/* <p className={styles.waiting}>{t('login.deviceLoginWaiting')}</p> */}
           {onResend ? (
             <>
               {resendError ? (

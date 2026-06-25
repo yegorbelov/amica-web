@@ -93,8 +93,7 @@ export default {
     totpDisableBackupPlaceholder: 'XXXX-XXXX-XXXX-XXXX',
     totpDisableUseBackupInstead: 'Use a recovery code instead',
     totpDisableUseTotpInstead: 'Use authenticator code instead',
-    totpInvalidBackupCode:
-      'That recovery code is invalid or was already used.',
+    totpInvalidBackupCode: 'That recovery code is invalid or was already used.',
     totpDisablePasswordPlaceholder: 'Current password',
     totpTrustedDeviceRequired:
       'Set up or change this only from your trusted device (see Active sessions).',
@@ -216,7 +215,7 @@ export default {
     deviceLoginEmailHint: 'Enter the code from that email below.',
     deviceLoginResendEmail: 'Resend email',
     deviceLoginTrustedWhereHint:
-      'The code appears on another device or browser where you’re already signed in to Amica — open that app or tab and look for the security alert.',
+      'The code appears on another device where you’re already signed in to Amica',
     deviceLoginTrustedDeviceIntro:
       'Your trusted device — open Amica there to approve this sign-in and see the code:',
     deviceLoginTrustedDeviceUnknown:
@@ -285,7 +284,8 @@ export default {
     totpBackupModalTitle: 'Use a backup code',
     totpBackupModalBody:
       'Lost access to your authenticator? Enter one of the one-time backup codes you saved when enabling two-factor authentication.',
-    totpUseBackupCodeButton: "I can't access my authenticator — use a backup code",
+    totpUseBackupCodeButton:
+      "I can't access my authenticator — use a backup code",
     totpUseAuthenticatorButton: 'Back to authenticator code',
   },
   signUp: {
@@ -330,7 +330,8 @@ export default {
     fileItemUploading: 'Sending…',
     fileItemCompressing: 'Processing…',
     removeFile: 'Remove file',
-    channelReadOnly: 'Only channel admins can post. You can read messages here.',
+    channelReadOnly:
+      'Only channel admins can post. You can read messages here.',
   },
   dateGroup: {
     today: 'Today',
@@ -423,7 +424,7 @@ export default {
     createGroupButton: 'Create',
     newChannelTitle: 'New channel',
     newChannelNamePlaceholder: 'Channel name',
-    createChannelButton: 'Create channel',
+    createChannelButton: 'Create',
     chatKindGroup: 'Group',
     chatKindChannel: 'Channel',
     channelBadge: 'Channel',
