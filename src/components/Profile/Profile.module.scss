@@ -357,6 +357,10 @@
   display: flex;
   align-items: center;
   cursor: pointer;
+
+  &:last-of-type .languageInfo::after {
+    content: none;
+  }
 }
 
 .languageInfo {

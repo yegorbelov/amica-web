@@ -6,7 +6,6 @@ export interface UserState {
   user: User | null;
   loading: boolean;
   error: string | null;
-  /** Set when general_info returns active_wallpaper; sync to settings in UI. */
   activeWallpaperFromServer?: WallpaperSetting | null;
 }
 
@@ -16,7 +15,6 @@ export interface ApiResponse {
   refresh?: string;
 }
 
-/** Result of `loginWithPassword` (throws on network/unhandled errors). */
 export type LoginPasswordOutcome =
   | 'session'
   | 'deferred'
@@ -47,46 +45,36 @@ export interface UserContextType extends UserState {
     email?: string;
     emailVerificationOtpId?: string;
   }>;
-  /** `totp_required` → pending second factor; `invalid_*` when verifying. */
   loginWithGoogle: (
     idToken: string,
     secondFactor?: SecondFactorSubmission,
   ) => Promise<
     'success' | 'totp_required' | 'invalid_totp' | 'invalid_backup_code'
   >;
-  /** WebAuthn proves possession; TOTP is not required after passkey auth. */
   loginWithPasskey: (passkeyData: unknown) => Promise<'success'>;
-  /** After Google returned totp_required, submit the 6-digit code or a backup code. */
   pendingTotpSecondFactor: { kind: 'google'; accessToken: string } | null;
-  /** Returns true if the submitted factor was wrong (keep modal open). */
   submitTotpSecondFactor: (
     kind: 'totp' | 'backup',
     value: string,
   ) => Promise<boolean>;
   dismissPendingTotpSecondFactor: () => void;
-  /** Password login: server asked for authenticator code. */
   passwordLoginNeedsTotp: boolean;
   dismissPasswordLoginTotp: () => void;
   logout: () => Promise<void>;
-  /** Clear global auth error (e.g. device-login poll failure) without logging out. */
   dismissAuthError: () => void;
-  /** New device: wait for WS challenge status; trusted device label when known. */
   pendingDeviceLogin: {
     challengeId: string;
     trustedDeviceLabel?: string;
     delivery?: 'trusted_device' | 'email';
   } | null;
   dismissPendingDeviceLogin: () => void;
-  /** e.g. passkey register/finish returned needs_device_confirmation */
   applyDeviceChallenge: (r: {
     challenge_id: string;
     trusted_device?: string;
     delivery?: 'trusted_device' | 'email';
   }) => void;
-  /** Shown once after first full session when server issues backup codes */
   pendingBackupCodes: string[] | null;
   dismissPendingBackupCodes: () => void;
-  /** Apply 200 JSON from login / verify-email-otp / passkey (access+user or device gates). */
   ingestSuccessfulAuthPayload: (
     data: Record<string, unknown>,
     fallbackMessage?: string,

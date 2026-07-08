@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import type { ReactNode } from 'react';
 import { tSync } from '@/contexts/languageCore';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -26,7 +32,11 @@ import type {
   LoginPasswordOutcome,
 } from './UserContextCore';
 import type { File as FileType } from '@/types';
-import { setLastUserId, getLastUserId, deleteChatState } from '@/utils/chatStateStorage';
+import {
+  setLastUserId,
+  getLastUserId,
+  deleteChatState,
+} from '@/utils/chatStateStorage';
 import {
   DeviceLoginPendingOverlay,
   TrustedDeviceLoginRequestBody,
@@ -160,7 +170,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
               ...prev,
               user: data.user!,
               loading: false,
-              activeWallpaperFromServer: data.active_wallpaper ?? prev.activeWallpaperFromServer,
+              activeWallpaperFromServer:
+                data.active_wallpaper ?? prev.activeWallpaperFromServer,
             };
           }
           return {
@@ -370,7 +381,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
       data: Record<string, unknown>,
       fallbackMessage = 'Unexpected auth response',
     ): 'session' | 'deferred' => {
-      if (data.needs_device_confirmation && typeof data.challenge_id === 'string') {
+      if (
+        data.needs_device_confirmation &&
+        typeof data.challenge_id === 'string'
+      ) {
         setDeviceOtpError(null);
         setDeviceResendError(null);
         setPasswordLoginNeedsTotp(false);
@@ -730,7 +744,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
     async (
       username: string,
       password: string,
-      secondFactor?: { kind: 'totp'; code: string } | { kind: 'backup'; code: string },
+      secondFactor?:
+        | { kind: 'totp'; code: string }
+        | { kind: 'backup'; code: string },
     ): Promise<LoginPasswordOutcome> => {
       setState((prev) => ({ ...prev, error: null }));
       try {
@@ -753,10 +769,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
         });
         const data = (await res.json()) as Record<string, unknown>;
         if (!res.ok) {
-          if (
-            res.status === 403 &&
-            data.error === 'email_not_verified'
-          ) {
+          if (res.status === 403 && data.error === 'email_not_verified') {
             setState((prev) => ({
               ...prev,
               error: tSync('login.emailNotVerified'),
@@ -791,7 +804,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
 
   const signupWithCredentials = useCallback(
     async (username: string, email: string, password: string) => {
-      // Avoid global loading: App unmounts login/signup when it is true.
       setState((prev) => ({ ...prev, error: null }));
       await websocketManager.waitForConnection();
       const result = await websocketManager.requestSignup(
@@ -799,6 +811,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
         email,
         password,
       );
+
       if (result.kind === 'verify_email') {
         setState((prev) => ({ ...prev, error: null }));
         return {
@@ -916,10 +929,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   const submitTotpSecondFactor = useCallback(
-    async (
-      kind: 'totp' | 'backup',
-      value: string,
-    ): Promise<boolean> => {
+    async (kind: 'totp' | 'backup', value: string): Promise<boolean> => {
       const p = pendingTotpSecondFactorRef.current;
       if (!p || p.kind !== 'google') return false;
       setState((prev) => ({ ...prev, error: null }));

@@ -7,7 +7,10 @@ import type { Session } from '@/types';
 import { startTransition } from 'react';
 
 function wsReadNested(msg: Record<string, unknown>, key: string): unknown {
-  if (Object.prototype.hasOwnProperty.call(msg, key) && msg[key] !== undefined) {
+  if (
+    Object.prototype.hasOwnProperty.call(msg, key) &&
+    msg[key] !== undefined
+  ) {
     return msg[key];
   }
   const inner = msg.data;
@@ -195,7 +198,7 @@ class WebSocketManager {
   constructor() {
     this.unsubscribeTokenListener = onAccessTokenChange((token) => {
       if (!token) {
-        this.disconnect();
+        // this.disconnect();
         return;
       }
       if (this.isConnected()) {
@@ -733,11 +736,6 @@ class WebSocketManager {
     return this.socket?.readyState === WebSocket.OPEN;
   }
 
-  /**
-   * Returns a promise that resolves when the connection is established (authenticated or anonymous).
-   * If already connected, resolves immediately. Otherwise calls connect() and waits for connection_established or connection_open.
-   * Rejects immediately if the connection is closed (e.g. 4001 Unauthorized when logged out).
-   */
   public waitForConnection(timeoutMs = 15000): Promise<void> {
     if (this.socket?.readyState === WebSocket.OPEN) {
       return Promise.resolve();
