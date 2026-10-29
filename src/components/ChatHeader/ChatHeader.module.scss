@@ -233,7 +233,6 @@
     justify-content: center;
     background: none;
     border: none;
-    color: #fff;
     cursor: pointer;
     opacity: 0.9;
     pointer-events: auto;
@@ -556,7 +555,7 @@
   &__bar__inner {
     width: 100%;
     min-height: 2px;
-    background: #fff;
+    background: var(--body-text-color);
     border-radius: 2px;
     transition: height 0.05s ease-out;
   }

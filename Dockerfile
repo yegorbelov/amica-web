@@ -2,7 +2,6 @@ FROM oven/bun:1-alpine AS build
 
 WORKDIR /app
 
-# Build-only deps (no eslint, stylelint, prettier, husky, lint-staged)
 COPY package.build.json package.json
 
 RUN --mount=type=cache,id=bun-cache,target=/root/.bun/install/cache \

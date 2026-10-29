@@ -4,7 +4,7 @@ import React, {
   useCallback,
   useMemo,
   useRef,
-} from 'react';
+} from "react";
 import type {
   Settings,
   WallpaperSetting,
@@ -13,24 +13,23 @@ import type {
   GradientSuggested,
   SettingsStateValue,
   SettingsActionsValue,
-} from './types';
+} from "./types";
 import {
   websocketManager,
   type WebSocketMessage,
-} from '@/utils/websocket-manager';
-import { apiUpload, apiFetch } from '@/utils/apiFetch';
+} from "@/utils/websocket-manager";
+import { apiUpload, apiFetch } from "@/utils/apiFetch";
 import {
   SettingsStateContext,
   SettingsActionsContext,
   SettingsLiveContext,
   useSettingsActions,
-} from './context';
-import { useUser } from '../UserContextCore';
-import { getLastUserId } from '@/utils/chatStateStorage';
+} from "./context";
+import { useUser } from "../UserContextCore";
+import { getLastUserId } from "@/utils/chatStateStorage";
 
-const STORAGE_KEY_PREFIX = 'app-settings';
+const STORAGE_KEY_PREFIX = "app-settings";
 const SAVE_DEBOUNCE_MS = 400;
-const BLUR_SAVE_DEBOUNCE_MS = 300;
 
 type StoredSettings = Partial<
   Settings & {
@@ -55,7 +54,7 @@ function parseStoredSettings(storageKey: string): StoredSettings {
     if (!saved) return {};
     return JSON.parse(saved) as StoredSettings;
   } catch (e) {
-    console.error('Failed to parse settings', e);
+    console.error("Failed to parse settings", e);
     return {};
   }
 }
@@ -74,51 +73,51 @@ function mergeWallpapers(
 }
 
 const photos = [
-  'abdelhamid-azoui-Zhl3nrozkG0-unsplash.jpg.webp',
-  'anders-jilden-cYrMQA7a3Wc-unsplash.webp',
-  'anders-jilden-GjwsHRIcQjU-unsplash.webp',
-  'andreas-gucklhorn-mawU2PoJWfU-unsplash.webp',
-  'ashim-d-silva-WeYamle9fDM-unsplash.webp',
-  'clay-banks-u27Rrbs9Dwc-unsplash.webp',
-  'cristina-gottardi-CSpjU6hYo_0-unsplash.webp',
-  'dave-hoefler-PEkfSAxeplg-unsplash.jpg.webp',
-  'garrett-parker-DlkF4-dbCOU-unsplash.webp',
-  'ian-dooley-DuBNA1QMpPA-unsplash.webp',
-  'jms-kFHz9Xh3PPU-unsplash.webp',
-  'syuhei-inoue-fvgv3i4_uvI-unsplash.jpg.webp',
-  'tobias-rademacher-NuBvAE6VfSM-unsplash.webp',
-  'urban-vintage-78A265wPiO4-unsplash.webp',
-  'wil-stewart-pHANr-CpbYM-unsplash.webp',
-  'aloe-vera-succulent-macos-big-sur-night-plant-stock-5k-6016x6016-4000.webp',
+  "abdelhamid-azoui-Zhl3nrozkG0-unsplash.jpg.webp",
+  "anders-jilden-cYrMQA7a3Wc-unsplash.webp",
+  "anders-jilden-GjwsHRIcQjU-unsplash.webp",
+  "andreas-gucklhorn-mawU2PoJWfU-unsplash.webp",
+  "ashim-d-silva-WeYamle9fDM-unsplash.webp",
+  "clay-banks-u27Rrbs9Dwc-unsplash.webp",
+  "cristina-gottardi-CSpjU6hYo_0-unsplash.webp",
+  "dave-hoefler-PEkfSAxeplg-unsplash.jpg.webp",
+  "garrett-parker-DlkF4-dbCOU-unsplash.webp",
+  "ian-dooley-DuBNA1QMpPA-unsplash.webp",
+  "jms-kFHz9Xh3PPU-unsplash.webp",
+  "syuhei-inoue-fvgv3i4_uvI-unsplash.jpg.webp",
+  "tobias-rademacher-NuBvAE6VfSM-unsplash.webp",
+  "urban-vintage-78A265wPiO4-unsplash.webp",
+  "wil-stewart-pHANr-CpbYM-unsplash.webp",
+  "aloe-vera-succulent-macos-big-sur-night-plant-stock-5k-6016x6016-4000.webp",
 ];
 
 const videos = [
-  'blue-sky-seen-directly-with-some-clouds_480p_infinity.webm',
-  'ocean.webm',
-  'dusk_sunset.webm',
-  'deep_blue_sky.webm',
+  "blue-sky-seen-directly-with-some-clouds_480p_infinity.webm",
+  "ocean.webm",
+  "dusk_sunset.webm",
+  "deep_blue_sky.webm",
 ];
 
 const defaultWallpapers: WallpaperSetting[] = [
   ...photos.map((file, i) => ({
     id: `default-${i}`,
     url: `../DefaultWallpapers/photo/${file}`,
-    type: 'photo',
+    type: "photo",
   })),
   ...videos.map((file, i) => ({
     id: `default-${i + photos.length}`,
     url: `../DefaultWallpapers/video/${file}`,
-    type: 'video',
+    type: "video",
   })),
 ];
 
 const defaultSettings: Settings = {
-  language: navigator.language || 'en-US',
-  theme: 'system',
-  timeFormat: 'auto',
+  language: navigator.language || "en-US",
+  theme: "system",
+  timeFormat: "auto",
   wallpapers: defaultWallpapers,
   activeWallpaper: defaultWallpapers[0],
-  activeWallpaperEditMode: 'natural',
+  activeWallpaperEditMode: "natural",
   useBackgroundThroughoutTheApp: false,
   wallpaperGlowEnabled: true,
 };
@@ -132,8 +131,7 @@ function SyncWallpaperFromUser() {
     setActiveWallpaper({
       id: activeWallpaperFromServer.id,
       url: activeWallpaperFromServer.url,
-      type: activeWallpaperFromServer.type ?? 'photo',
-      blur: activeWallpaperFromServer.blur ?? 0,
+      type: activeWallpaperFromServer.type ?? "photo",
     });
   }, [activeWallpaperFromServer, setActiveWallpaper]);
   return null;
@@ -163,9 +161,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (liteModeEnabled) {
-      document.documentElement.style.setProperty('--glass-shadow', 'none');
+      document.documentElement.style.setProperty("--glass-shadow", "none");
     } else {
-      document.documentElement.style.removeProperty('--glass-shadow');
+      document.documentElement.style.removeProperty("--glass-shadow");
     }
   }, [liteModeEnabled]);
 
@@ -183,7 +181,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         const keyboard = window.innerHeight - height - offsetTop;
         const safeHeight = keyboard > 0 ? keyboard : 0;
         document.documentElement.style.setProperty(
-          '--keyboard-height',
+          "--keyboard-height",
           `${safeHeight}px`,
         );
         if (safeHeight !== lastHeight) {
@@ -201,14 +199,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     lastHeight = initialSafe;
     setKeyboardHeight(initialSafe);
     document.documentElement.style.setProperty(
-      '--keyboard-height',
+      "--keyboard-height",
       `${initialSafe}px`,
     );
 
-    window.visualViewport.addEventListener('resize', handleKeyboardHeight);
+    window.visualViewport.addEventListener("resize", handleKeyboardHeight);
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId);
-      window.visualViewport.removeEventListener('resize', handleKeyboardHeight);
+      window.visualViewport.removeEventListener("resize", handleKeyboardHeight);
     };
   }, []);
 
@@ -222,8 +220,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       }
     };
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const [settingsFullWindow, setSettingsFullWindow] = useState<boolean>(
@@ -242,7 +240,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       initialParsed.activeWallpaper === null
         ? null
         : initialParsed.activeWallpaper &&
-            typeof initialParsed.activeWallpaper === 'object'
+            typeof initialParsed.activeWallpaper === "object"
           ? (initialParsed.activeWallpaper as WallpaperSetting)
           : defaultWallpapers[0];
 
@@ -260,20 +258,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     };
   });
 
-  const [color, setColor] = useState<string>(initialParsed.color ?? '#2c77d1');
+  const [color, setColor] = useState<string>(initialParsed.color ?? "#2c77d1");
   const [gradient, setGradient] = useState<GradientSuggested | null>(
     initialParsed.gradient ?? null,
   );
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--mainColor', color);
+    document.documentElement.style.setProperty("--mainColor", color);
   }, [color]);
 
   useEffect(() => {
     if (liteModeEnabled) return;
-    const degree = gradient?.degree ?? '168deg';
+    const degree = gradient?.degree ?? "168deg";
     document.documentElement.style.setProperty(
-      '--messageGradientDegree',
+      "--messageGradientDegree",
       degree,
     );
 
@@ -290,7 +288,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         );
         document.documentElement.style.setProperty(
           `--messageStop${i + 1}`,
-          c ? c.stop : lastStop || '100%',
+          c ? c.stop : lastStop || "100%",
         );
       }
     } else {
@@ -298,7 +296,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         document.documentElement.style.setProperty(`--messageColor${i}`, color);
         document.documentElement.style.setProperty(
           `--messageStop${i}`,
-          i === 1 ? '0%' : '100%',
+          i === 1 ? "0%" : "100%",
         );
       }
     }
@@ -306,24 +304,24 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const theme = settings.theme;
-    const resolveTheme = (): 'light' | 'dark' => {
-      if (theme === 'system') {
-        return window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'dark'
-          : 'light';
+    const resolveTheme = (): "light" | "dark" => {
+      if (theme === "system") {
+        return window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
       }
       return theme;
     };
     const applyTheme = () => {
       const resolved = resolveTheme();
-      document.documentElement.setAttribute('data-theme', resolved);
+      document.documentElement.setAttribute("data-theme", resolved);
       document.documentElement.style.colorScheme = resolved;
     };
     applyTheme();
-    if (theme === 'system') {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      mq.addEventListener('change', applyTheme);
-      return () => mq.removeEventListener('change', applyTheme);
+    if (theme === "system") {
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
+      mq.addEventListener("change", applyTheme);
+      return () => mq.removeEventListener("change", applyTheme);
     }
   }, [settings.theme]);
 
@@ -356,12 +354,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const blurPersistTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-
-  const [blur, setBlurState] = useState(0);
-
-  useEffect(() => {
-    setBlurState(settings.activeWallpaper?.blur ?? 0);
-  }, [settings.activeWallpaper?.id, settings.activeWallpaper?.blur]);
 
   useEffect(() => {
     return () => {
@@ -423,32 +415,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const setBlur = useCallback((value: number) => {
-    setBlurState(value);
-    if (blurPersistTimeoutRef.current)
-      clearTimeout(blurPersistTimeoutRef.current);
-    blurPersistTimeoutRef.current = setTimeout(() => {
-      blurPersistTimeoutRef.current = null;
-      setSettings((prev: Settings) => {
-        if (prev.activeWallpaper == null) return prev;
-        return {
-          ...prev,
-          activeWallpaper: {
-            ...prev.activeWallpaper,
-            blur: value,
-          },
-        } as Settings;
-      });
-    }, BLUR_SAVE_DEBOUNCE_MS);
-  }, []);
-
   const setActiveWallpaper = useCallback(
     (wallpaper: WallpaperSetting | null) => {
       setSettings((prev) => {
         if (wallpaper === null) {
           if (prev.activeWallpaper === null) return prev;
           websocketManager.sendMessage({
-            type: 'set_active_wallpaper',
+            type: "set_active_wallpaper",
             data: { id: null },
           });
           return { ...prev, activeWallpaper: null };
@@ -456,7 +429,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         let wallpaperData: WallpaperSetting;
 
-        if (!('url' in wallpaper) || !wallpaper.url) {
+        if (!("url" in wallpaper) || !wallpaper.url) {
           const defaultWall = defaultWallpapers.find(
             (w) => w.id === wallpaper.id,
           );
@@ -471,7 +444,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
 
         websocketManager.sendMessage({
-          type: 'set_active_wallpaper',
+          type: "set_active_wallpaper",
           data: { id: wallpaperData.id },
         });
 
@@ -493,14 +466,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const removeWallpaper = useCallback((id: string) => {
     websocketManager.sendMessage({
-      type: 'delete_user_wallpaper',
+      type: "delete_user_wallpaper",
       data: { id },
     });
   }, []);
 
   const fetchWallpapers = useCallback(async () => {
     try {
-      const res = await apiFetch('/api/wallpapers/');
+      const res = await apiFetch("/api/wallpapers/");
       const data = await res.json();
       const apiWallpapers = Array.isArray(data) ? data : data.wallpapers || [];
       const combinedWallpapers = mergeWallpapers(
@@ -512,7 +485,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         wallpapers: combinedWallpapers,
       }));
     } catch (err) {
-      console.error('Failed to fetch wallpapers', err);
+      console.error("Failed to fetch wallpapers", err);
       setSettings((prev) => ({ ...prev, wallpapers: defaultWallpapers }));
     } finally {
       setLoading(false);
@@ -522,11 +495,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const addUserWallpaper = useCallback(async (wallpaper: File) => {
     try {
       const formData = new FormData();
-      formData.append('file', wallpaper);
+      formData.append("file", wallpaper);
 
-      await apiUpload('/api/wallpapers/', formData);
+      await apiUpload("/api/wallpapers/", formData);
     } catch (error) {
-      console.error('addUserWallpaper error:', error);
+      console.error("addUserWallpaper error:", error);
     }
   }, []);
 
@@ -534,7 +507,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     (data: WebSocketMessage) => {
       if (!data.type) return;
 
-      if (data.type === 'active_wallpaper_updated') {
+      if (data.type === "active_wallpaper_updated") {
         if (data.data == null || data.data.id == null) {
           setActiveWallpaper(null);
         } else {
@@ -547,7 +520,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      if (data.type === 'user_wallpaper_deleted') {
+      if (data.type === "user_wallpaper_deleted") {
         const wallpaperId = data?.id;
         setSettings((prev) => ({
           ...prev,
@@ -561,12 +534,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }));
       }
 
-      if (data.type === 'user_wallpaper_added') {
+      if (data.type === "user_wallpaper_added") {
         const wallpaperData: WallpaperSetting = {
           id: data.data.id,
           type: data.data.type,
           url: data.data.url,
-          blur: 0,
         };
         setSettings((prev) => ({
           ...prev,
@@ -580,11 +552,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    websocketManager.on('message', handleWSMessage);
+    websocketManager.on("message", handleWSMessage);
     if (!websocketManager.isConnected()) {
       websocketManager.connect();
     }
-    return () => websocketManager.off('message', handleWSMessage);
+    return () => websocketManager.off("message", handleWSMessage);
   }, [handleWSMessage]);
 
   const stateValue = useMemo<SettingsStateValue>(
@@ -621,7 +593,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setSetting,
       setActiveWallpaper,
       addUserWallpaper,
-      setBlur,
       removeWallpaper,
       fetchWallpapers,
       setActiveProfileTab,
@@ -640,7 +611,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       fetchWallpapers,
       removeWallpaper,
       setActiveWallpaper,
-      setBlur,
       setSetting,
       setActiveProfileTab,
       pushProfilePage,
@@ -650,10 +620,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     ],
   );
 
-  const liveValue = useMemo(
-    () => ({ blur, setBlur, keyboardHeight }),
-    [blur, setBlur, keyboardHeight],
-  );
+  const liveValue = useMemo(() => ({ keyboardHeight }), [keyboardHeight]);
 
   return (
     <SettingsActionsContext.Provider value={actionsValue}>

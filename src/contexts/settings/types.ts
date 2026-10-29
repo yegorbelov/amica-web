@@ -1,4 +1,4 @@
-export type WallpaperType = 'photo' | 'video' | string;
+export type WallpaperType = "photo" | "video" | string;
 
 export interface GradientSuggested {
   name: string;
@@ -13,18 +13,17 @@ export type WallpaperSetting = {
   id: number | string | null;
   url: string | null;
   type?: WallpaperType;
-  blur?: number;
 };
 
 export type ActiveWallpaperEditMode =
-  | 'natural'
-  | 'black-and-white'
-  | 'colour-wash';
+  | "natural"
+  | "black-and-white"
+  | "colour-wash";
 
 export type Settings = {
   language: string;
-  theme: 'light' | 'dark' | 'system';
-  timeFormat: '12h' | '24h' | 'auto';
+  theme: "light" | "dark" | "system";
+  timeFormat: "12h" | "24h" | "auto";
   wallpapers: WallpaperSetting[];
   activeWallpaper?: WallpaperSetting | null;
   activeWallpaperEditMode?: ActiveWallpaperEditMode;
@@ -33,12 +32,12 @@ export type Settings = {
 };
 
 export type SubTab =
-  | 'account'
-  | 'language'
-  | 'privacy'
-  | 'notifications'
-  | 'appearance'
-  | 'active_sessions'
+  | "account"
+  | "language"
+  | "privacy"
+  | "notifications"
+  | "appearance"
+  | "active_sessions"
   | null;
 
 export interface SettingsStateValue {
@@ -55,10 +54,7 @@ export interface SettingsStateValue {
   liteModeEnabled: boolean;
 }
 
-/** High-churn UI state: subscribe here to avoid re-rendering on full settings. */
 export interface SettingsLiveValue {
-  blur: number;
-  setBlur: (value: number) => void;
   keyboardHeight: number;
 }
 
@@ -69,7 +65,6 @@ export interface SettingsActionsValue {
   setActiveProfileTab: (tab: SubTab) => void;
   pushProfilePage: (tab: SubTab) => void;
   popProfilePage: () => void;
-  setBlur: (value: number) => void;
   removeWallpaper: (id: string) => void;
   fetchWallpapers: () => Promise<void>;
   setAutoplayVideos: (value: boolean) => void;

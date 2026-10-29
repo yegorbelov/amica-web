@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState, memo } from 'react';
-import styles from './RoomPage.module.scss';
-import { useSettings, useBlur } from '@/contexts/settings/context';
+import React, { useEffect, useRef, useState, memo } from "react";
+import styles from "./RoomPage.module.scss";
+import { useSettings } from "@/contexts/settings/context";
 
 const DESKTOP_BREAKPOINT = 768;
 
@@ -16,18 +16,17 @@ const Wallpaper: React.FC<Props> = ({
   isMainOverlay = false,
 }) => {
   const { settings } = useSettings();
-  const { blur } = useBlur();
   const activeWallpaper = settings.activeWallpaper;
   const [isDesktopWidth, setIsDesktopWidth] = useState(
     () =>
-      typeof window !== 'undefined' && window.innerWidth > DESKTOP_BREAKPOINT,
+      typeof window !== "undefined" && window.innerWidth > DESKTOP_BREAKPOINT,
   );
   const lastIsDesktopRef = useRef(isDesktopWidth);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [, setIsPlaying] = useState(false);
 
-  const colourWash = settings.activeWallpaperEditMode === 'colour-wash';
-  const blackAndWhite = settings.activeWallpaperEditMode === 'black-and-white';
+  const colourWash = settings.activeWallpaperEditMode === "colour-wash";
+  const blackAndWhite = settings.activeWallpaperEditMode === "black-and-white";
 
   useEffect(() => {
     const handleResize = () => {
@@ -37,8 +36,8 @@ const Wallpaper: React.FC<Props> = ({
         setIsDesktopWidth(next);
       }
     };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   useEffect(() => {
@@ -62,7 +61,7 @@ const Wallpaper: React.FC<Props> = ({
     if (video.readyState >= 2) {
       playVideo();
     } else {
-      video.addEventListener('canplay', playVideo, { once: true });
+      video.addEventListener("canplay", playVideo, { once: true });
     }
 
     const unlock = () => {
@@ -70,13 +69,13 @@ const Wallpaper: React.FC<Props> = ({
         .play()
         .then(() => setIsPlaying(true))
         .catch(() => {});
-      document.removeEventListener('touchstart', unlock);
+      document.removeEventListener("touchstart", unlock);
     };
-    document.addEventListener('touchstart', unlock, { once: true });
+    document.addEventListener("touchstart", unlock, { once: true });
 
     return () => {
-      video.removeEventListener('canplay', playVideo);
-      document.removeEventListener('touchstart', unlock);
+      video.removeEventListener("canplay", playVideo);
+      document.removeEventListener("touchstart", unlock);
     };
   }, [glow, activeWallpaper?.url]);
 
@@ -92,29 +91,29 @@ const Wallpaper: React.FC<Props> = ({
       <div
         className={styles.wallpaperGlow}
         style={{
-          backgroundColor: colourWash ? 'var(--mainColor)' : 'transparent',
-          filter: `blur(50px) ${blackAndWhite ? 'grayscale(100%)' : ''}`,
+          backgroundColor: colourWash ? "var(--mainColor)" : "transparent",
+          filter: `blur(50px) ${blackAndWhite ? "grayscale(100%)" : ""}`,
         }}
       >
-        {activeWallpaper.type === 'video' ? (
+        {activeWallpaper.type === "video" ? (
           <video
-            src={activeWallpaper.url + '#t=0.001'}
+            src={activeWallpaper.url + "#t=0.001"}
             playsInline
             muted
-            preload='metadata'
-            className='wallpaper'
+            preload="metadata"
+            className="wallpaper"
             style={{
-              mixBlendMode: colourWash ? 'multiply' : 'normal',
+              mixBlendMode: colourWash ? "multiply" : "normal",
             }}
           />
         ) : (
           <img
-            decoding='async'
+            decoding="async"
             src={activeWallpaper.url}
-            alt='Wallpaper'
-            className='wallpaper'
+            alt="Wallpaper"
+            className="wallpaper"
             style={{
-              mixBlendMode: colourWash ? 'multiply' : 'normal',
+              mixBlendMode: colourWash ? "multiply" : "normal",
             }}
           />
         )}
@@ -125,35 +124,35 @@ const Wallpaper: React.FC<Props> = ({
   if (!showWallpaper) return null;
   return (
     <div
-      className={`${styles.wallpaperContainer} ${isMainOverlay ? styles.wallpaperMainOverlay : ''}`}
+      className={`${styles.wallpaperContainer} ${isMainOverlay ? styles.wallpaperMainOverlay : ""}`}
       style={{
-        backgroundColor: colourWash ? 'var(--mainColor)' : 'transparent',
+        backgroundColor: colourWash ? "var(--mainColor)" : "transparent",
       }}
     >
-      {activeWallpaper.type === 'photo' && (
+      {activeWallpaper.type === "photo" && (
         <img
-          decoding='async'
+          decoding="async"
           src={activeWallpaper.url}
-          alt='Wallpaper'
-          className='wallpaper'
+          alt="Wallpaper"
+          className="wallpaper"
           style={{
-            filter: `blur(${blur}px) ${blackAndWhite ? 'grayscale(100%)' : ''}`,
-            mixBlendMode: colourWash ? 'overlay' : 'normal',
+            filter: `blur(${blur}px) ${blackAndWhite ? "grayscale(100%)" : ""}`,
+            mixBlendMode: colourWash ? "overlay" : "normal",
           }}
         />
       )}
-      {activeWallpaper.type === 'video' && (
+      {activeWallpaper.type === "video" && (
         <video
           ref={videoRef}
-          src={activeWallpaper.url + '#t=0.001'}
+          src={activeWallpaper.url + "#t=0.001"}
           playsInline
           muted
           loop
-          preload='metadata'
-          className='wallpaper'
+          preload="metadata"
+          className="wallpaper"
           style={{
-            filter: `blur(${blur}px) ${blackAndWhite ? 'grayscale(100%)' : ''}`,
-            mixBlendMode: colourWash ? 'overlay' : 'normal',
+            filter: `blur(${blur}px) ${blackAndWhite ? "grayscale(100%)" : ""}`,
+            mixBlendMode: colourWash ? "overlay" : "normal",
           }}
         />
       )}
